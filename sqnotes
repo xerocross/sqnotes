@@ -133,8 +133,8 @@ def main():
 
     args = parser.parse_args()
 
-    if args.set_gpg_key_email:
-        set_gpg_key_email(args.set_gpg_key_email)
+    if args.set_gpg_key:
+        set_gpg_key_email(args.set_gpg_key)
     elif args.new:
         add_note()
     elif args.find:
