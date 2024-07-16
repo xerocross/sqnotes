@@ -251,7 +251,27 @@ def edit_note(filename):
         ''', (note_id, keyword_id))
         conn.commit()
 
+
     print(f"Note edited: {filename}")
+
+def search_keywords(keywords):
+    
+    cursor.execute('''
+            SELECT n.filename
+            FROM notes n
+            JOIN note_keywords nk ON n.id = nk.note_id
+            JOIN keywords k ON nk.keyword_id = k.id
+            WHERE k.keyword IN ({})
+            GROUP BY n.filename
+            HAVING COUNT(*) = {}
+        '''.format(  ', '.join('?' for _ in keywords) , len(keywords)), keywords)
+    results = cursor.fetchall()
+    if results:
+        for result in results:
+            note_filename = os.path.join(NOTE_DIR, result[0])
+            decrypt_and_print(note_filename)
+    else:
+        print(f"No notes found with keywords: {keywords}")
 
 def main():
     global TEXT_EDITOR
@@ -284,23 +304,7 @@ def main():
     elif args.edit:
         edit_note(args.edit)
     elif args.keywords:
-        keyword_query = ','.join(args.keywords)
-        cursor.execute('''
-            SELECT n.filename
-            FROM notes n
-            JOIN note_keywords nk ON n.id = nk.note_id
-            JOIN keywords k ON nk.keyword_id = k.id
-            WHERE k.keyword IN ({})
-            GROUP BY n.filename
-            HAVING COUNT(*) = {}
-        '''.format(', '.join('?' for _ in args.keywords), len(args.keywords)), args.keywords)
-        results = cursor.fetchall()
-        if results:
-            for result in results:
-                note_filename = os.path.join(NOTE_DIR, result[0])
-                decrypt_and_print(note_filename)
-        else:
-            print(f"No notes found with keywords: {args.keywords}")
+        search_keywords(args.keywords)
     else:
         parser.print_help()
 
