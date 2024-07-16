@@ -159,7 +159,7 @@ def add_note():
 
 def extract_keywords(content):
     # Extract hashtags using regular expression
-    return re.findall(r'\B#\w+\b', content)
+    return [match[1:] for match in re.findall(r'\B#\w+\b', content)]
 
 # Function to search notes
 def search_notes(search_queries):
