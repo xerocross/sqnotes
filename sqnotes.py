@@ -123,7 +123,7 @@ def add_note():
         temp_enc_file.write(note_content.encode('utf-8'))
 
     # Encrypt the note using the gpg_key_email's public key
-    subprocess.call(['gpg', '--output', note_filename, '--encrypt', '--recipient', GPG_KEY_EMAIL, temp_enc_filename])
+    subprocess.call(['gpg', '--yes', '--batch', '--output', note_filename, '--encrypt', '--recipient', GPG_KEY_EMAIL, temp_enc_filename])
     os.remove(temp_enc_filename)
     print(f"Note added: {note_filename}")
 
@@ -206,7 +206,7 @@ def edit_note(filename):
     with tempfile.NamedTemporaryFile(delete=False) as temp_dec_file:
         temp_dec_filename = temp_dec_file.name
 
-    subprocess.call(['gpg', '--output', temp_dec_filename, '--decrypt', note_path])
+    subprocess.call(['gpg', '--yes', '--batch', '--output', temp_dec_filename, '--decrypt', note_path])
 
     # Open the note with the configured text editor
     subprocess.call([TEXT_EDITOR, temp_dec_filename])
@@ -224,7 +224,7 @@ def edit_note(filename):
         temp_enc_filename = temp_enc_file.name
         temp_enc_file.write(edited_content.encode('utf-8'))
 
-    subprocess.call(['gpg', '--output', note_path, '--encrypt', '--recipient', GPG_KEY_EMAIL, temp_enc_filename])
+    subprocess.call(['gpg', '--yes', '--batch', '--output', note_path, '--encrypt', '--recipient', GPG_KEY_EMAIL, temp_enc_filename])
     os.remove(temp_dec_filename)
     os.remove(temp_enc_filename)
 
