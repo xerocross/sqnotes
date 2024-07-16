@@ -165,35 +165,25 @@ def extract_keywords(content):
 def search_notes(search_queries):
     check_gpg_key_email()
 
-    # Convert all search queries to lowercase
-    search_queries_lower = [query.lower() for query in search_queries]
-
     # Search for the queries in all notes
     for filename in glob.glob(f"{NOTE_DIR}/*.gpg"):
-        with tempfile.NamedTemporaryFile(delete=False) as temp_dec_file:
-            temp_dec_filename = temp_dec_file.name
+        decrypt_and_print(filename, search_queries)
 
-        # Decrypt the note
-        subprocess.call(['gpg', '--yes', '--batch', '--quiet', '--output', temp_dec_filename, '--decrypt', filename])
 
-        with open(temp_dec_filename, 'r') as file:
-            content = file.read()
-            content_lower = content.lower()  # Convert note content to lowercase
-
-            # Check if all search queries are in the note content
-            if all(query in content_lower for query in search_queries_lower):
-                print(f"\n{filename}:\n{content}")
-
-        os.remove(temp_dec_filename)
-
-def decrypt_and_print(filename):
+def decrypt_and_print(filename, search_queries = None):
     # Decrypt and print note content
     with tempfile.NamedTemporaryFile(delete=False) as temp_dec_file:
         temp_dec_filename = temp_dec_file.name
         subprocess.call(['gpg', '--yes', '--batch', '--quiet', '--output', temp_dec_filename, '--decrypt', filename])
         with open(temp_dec_filename, 'r') as file:
             content = file.read()
-            print(f"\n{filename}:\n{content}")
+            if search_queries is not None:
+                content_lower = content.lower()
+                lower_queries = [query.lower() for query in search_queries]
+                if all(query in content_lower for query in lower_queries):
+                    print(f"\n{filename}:\n{content}")
+            else:
+                print(f"\n{filename}:\n{content}")
 
 
 def edit_note(filename):
