@@ -108,7 +108,7 @@ def add_note():
         note_content = file.read().strip()
 
     # Add signature text
-    signature = f"[{GPG_KEY_EMAIL}] [{datetime.now().strftime('%Y-%m-%d %H:%M')}]"
+    signature = f" [{GPG_KEY_EMAIL}] [{datetime.now().strftime('%Y-%m-%d %H:%M')}]"
     note_content += signature
 
     # Delete the temporary file
