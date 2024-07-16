@@ -33,32 +33,34 @@ if os.path.exists(CONFIG_FILE):
 conn = sqlite3.connect(DB_FILE)
 cursor = conn.cursor()
 
-# Create tables if not exists
-cursor.execute('''
-    CREATE TABLE IF NOT EXISTS notes (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        filename TEXT NOT NULL
-    )
-''')
-
-cursor.execute('''
-    CREATE TABLE IF NOT EXISTS keywords (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        keyword TEXT NOT NULL
-    )
-''')
-
-cursor.execute('''
-    CREATE TABLE IF NOT EXISTS note_keywords (
-        note_id INTEGER,
-        keyword_id INTEGER,
-        FOREIGN KEY (note_id) REFERENCES notes(id),
-        FOREIGN KEY (keyword_id) REFERENCES keywords(id),
-        PRIMARY KEY (note_id, keyword_id)
-    )
-''')
-
-conn.commit()
+def setup_database():
+    # Create tables if not exists
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS notes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            filename TEXT NOT NULL
+        )
+    ''')
+    
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS keywords (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            keyword TEXT NOT NULL
+        )
+    ''')
+    
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS note_keywords (
+            note_id INTEGER,
+            keyword_id INTEGER,
+            FOREIGN KEY (note_id) REFERENCES notes(id),
+            FOREIGN KEY (keyword_id) REFERENCES keywords(id),
+            PRIMARY KEY (note_id, keyword_id)
+        )
+    ''')
+    conn.commit()
+    
+setup_database()
 
 def save_config():
     with open(CONFIG_FILE, 'w') as configfile:
