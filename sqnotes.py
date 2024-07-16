@@ -114,9 +114,8 @@ def add_note():
     # Delete the temporary file
     os.remove(temp_filename)
 
-    # Save the encrypted note content to a new note file
-    note_id = len(glob.glob(f"{NOTE_DIR}/*.gpg")) + 1
-    note_filename_slug = f"note_{note_id}.txt.gpg"
+    datetime_string = datetime.now().strftime('%Y%m%d%H%M%S')
+    note_filename_slug = f"{datetime_string}.txt.gpg"
     note_filename = os.path.join(NOTE_DIR, note_filename_slug)
     with tempfile.NamedTemporaryFile(delete=False) as temp_enc_file:
         temp_enc_filename = temp_enc_file.name
@@ -126,6 +125,13 @@ def add_note():
     subprocess.call(['gpg', '--yes', '--batch', '--output', note_filename, '--encrypt', '--recipient', GPG_KEY_EMAIL, temp_enc_filename])
     os.remove(temp_enc_filename)
     print(f"Note added: {note_filename}")
+
+    # Insert note into notes table
+    cursor.execute('''
+            INSERT INTO notes (filename)
+            VALUES (?)
+        ''', (note_filename_slug,))
+    note_id = cursor.lastrowid
 
     # Extract hashtags from note content and insert into keywords table
     keywords = extract_keywords(note_content)
@@ -147,13 +153,6 @@ def add_note():
             VALUES (?, ?)
         ''', (note_id, keyword_id))
         conn.commit()
-
-    # Insert note into notes table
-    cursor.execute('''
-        INSERT INTO notes (id, filename)
-        VALUES (?, ?)
-    ''', (note_id, note_filename_slug))
-    conn.commit()
 
 
 def extract_keywords(content):
@@ -227,6 +226,17 @@ def edit_note(filename):
     subprocess.call(['gpg', '--yes', '--batch', '--output', note_path, '--encrypt', '--recipient', GPG_KEY_EMAIL, temp_enc_filename])
     os.remove(temp_dec_filename)
     os.remove(temp_enc_filename)
+
+    cursor.execute('SELECT id FROM notes WHERE filename = ?', (filename,))
+    result = cursor.fetchone()
+    if result:
+        note_id = result[0]
+    else:
+        cursor.execute('''
+            INSERT INTO notes (filename)
+            VALUES (?)
+        ''', (filename,))
+        note_id = cursor.lastrowid
 
     # Update keywords in the database
     keywords = extract_keywords(edited_content)
