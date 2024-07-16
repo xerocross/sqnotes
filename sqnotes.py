@@ -248,7 +248,7 @@ def edit_note(filename):
         cursor.execute('''
             INSERT INTO note_keywords (note_id, keyword_id)
             VALUES (?, ?)
-        ''', (filename, keyword_id))
+        ''', (note_id, keyword_id))
         conn.commit()
 
     print(f"Note edited: {filename}")
