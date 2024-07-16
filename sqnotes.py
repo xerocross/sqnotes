@@ -285,7 +285,7 @@ def main():
 
     parser = argparse.ArgumentParser(description='SQNote: Secure note-taking script')
     parser.add_argument('-n', '--new', help='Add a new note', action='store_true')
-    parser.add_argument('-f', '--find', help='Find a note by filename')  # Single filename search
+    parser.add_argument('-f', '--find', nargs='+', help='Find substrings in notes (slow: decrypts everything)')  # Allow multiple search queries
     parser.add_argument('-k', '--keywords', nargs='+', help='Search notes by keywords')
     parser.add_argument('-e', '--edit', help='Edit a note', type=str)
     parser.add_argument('--set-gpg-key', help='Set the GPG Key', type=str)
