@@ -13,7 +13,7 @@ import configparser
 # Configurable directory for storing notes and database location
 NOTE_DIR = os.path.expanduser("~/sqnotes")
 CONFIG_DIR = os.path.expanduser("~/.sqnotes")
-DB_FILE = os.path.join(CONFIG_DIR, "sqnotes_index.db")
+DB_FILE = os.path.join(NOTE_DIR, "sqnotes_index.db")
 CONFIG_FILE = os.path.join(CONFIG_DIR, "config.ini")
 
 
