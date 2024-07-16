@@ -81,6 +81,9 @@ def check_gpg_key_email():
         print("Please set the GPG key using the following command:")
         print("  sqnotes --set-gpg-key your_email@example.com")
         exit(1)
+        
+def run_git_command(args):
+    subprocess.call(['git'] + args, cwd=NOTE_DIR)
 
 def set_gpg_key_email(new_gpg_key_email):
     global GPG_KEY_EMAIL
@@ -264,6 +267,7 @@ def main():
     parser.add_argument('-k', '--keywords', nargs='+', help='Search notes by keywords')
     parser.add_argument('-e', '--edit', help='Edit a note', type=str)
     parser.add_argument('--set-gpg-key', help='Set the GPG Key', type=str)
+    parser.add_argument('--git', nargs=argparse.REMAINDER, help='Run a git command in the sqnotes directory')
     
     args = parser.parse_args()
 
@@ -271,6 +275,8 @@ def main():
         set_gpg_key_email(args.set_gpg_key)
     elif args.new:
         add_note()
+    elif args.git:
+        run_git_command(args.git)
     elif args.find:
         search_notes(args.find)
     elif args.edit:
