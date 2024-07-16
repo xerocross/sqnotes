@@ -6,6 +6,8 @@ import glob
 import subprocess
 import tempfile
 import configparser
+from pathlib import Path
+from datetime import datetime
 
 # Configurable directory for storing notes
 NOTE_DIR = os.path.expanduser("~/sqnotes")
@@ -21,64 +23,117 @@ def save_config():
     with open(CONFIG_FILE, 'w') as configfile:
         config.write(configfile)
 
-# get the default gpg_key_email; return None will warn the user
-def get_gpg_key_email():
-    if 'settings' in config and 'gpg_key_email' in config['settings']:
-        return config['settings']['gpg_key_email']
+# Function to get configured text editor, defaulting to None if not set
+def get_text_editor():
+    if 'settings' in config and 'text_editor' in config['settings']:
+        return config['settings']['text_editor']
     else:
         return None
 
-GPG_KEY_EMAIL = get_gpg_key_email()
+# Function to check if a text editor is available
+def is_text_editor_available(editor):
+    try:
+        subprocess.run([editor, '--version'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        return True
+    except FileNotFoundError:
+        return False
 
-if not os.path.exists(NOTE_DIR):
-    os.makedirs(NOTE_DIR)
+# Prompt user to select a text editor if not configured
+def prompt_select_text_editor():
+    editors = ['vim', 'nano', 'emacs', 'gedit']  # List of common terminal text editors
+    available_editors = [editor for editor in editors if is_text_editor_available(editor)]
 
+    if not available_editors:
+        print("Error: No compatible text editor found.")
+        print("Please install one of the following editors: vim, nano, emacs, gedit")
+        exit(1)
+
+    print("Select a text editor to use:")
+    for idx, editor in enumerate(available_editors, start=1):
+        print(f"{idx}. {editor}")
+
+    choice = input("Enter the number of your choice: ")
+    try:
+        choice_idx = int(choice) - 1
+        selected_editor = available_editors[choice_idx]
+        config['settings']['text_editor'] = selected_editor
+        save_config()
+        print(f"Text editor set to: {selected_editor}")
+        return selected_editor
+    except (ValueError, IndexError):
+        print("Invalid choice. Using default editor.")
+        return None
+
+# Set text editor configuration
+def set_text_editor(editor):
+    if is_text_editor_available(editor):
+        config['settings']['text_editor'] = editor
+        save_config()
+        print(f"Text editor set to: {editor}")
+    else:
+        print(f"Error: {editor} is not installed. Please choose a different editor.")
+
+# Function to check if GPG key email is configured
 def check_gpg_key_email():
-    if GPG_KEY_EMAIL is None:
-        print("Error: GPG key not set.")
-        print("Please set the GPG key using the following command:")
+    if 'settings' not in config or 'gpg_key_email' not in config['settings']:
+        print("Error: GPG key email not set.")
+        print("Please set the GPG key email using:")
         print("  sqnotes --set-gpg-key your_email@example.com")
         exit(1)
 
-def set_gpg_key_email(new_gpg_key_email):
-    global GPG_KEY_EMAIL
-    GPG_KEY_EMAIL = new_gpg_key_email
-    if 'settings' not in config:
-        config['settings'] = {}
-    config['settings']['gpg_key_email'] = new_gpg_key_email
-    save_config()
-    print(f"GPG Key Email set to: {GPG_KEY_EMAIL}")
-
+# Function to add a new note
 def add_note():
     check_gpg_key_email()
+
+    # Ensure a text editor is configured
+    TEXT_EDITOR = get_text_editor()
+    if TEXT_EDITOR is None:
+        TEXT_EDITOR = prompt_select_text_editor()
+        if TEXT_EDITOR is None:
+            print("No text editor selected. Exiting.")
+            exit(1)
+
     # Create a temporary file for the new note
     with tempfile.NamedTemporaryFile(delete=False) as temp_file:
         temp_filename = temp_file.name
 
-    # Open Vim to edit the note
-    subprocess.call(['vim', temp_filename])
+    # Open the configured text editor to edit the note
+    subprocess.call([TEXT_EDITOR, temp_filename])
 
     # Read the content from the temporary file
     with open(temp_filename, 'r') as file:
-        note_content = file.read()
+        note_content = file.readlines()
 
-    # Delete the temporary file
-    os.remove(temp_filename)
+    # Append the signature text
+    timestamp = datetime.now().strftime('%Y-%m-%d %H:%M')
+    gpg_signature = f"[{config['settings']['gpg_key_email']}] [{timestamp}]"
+    note_content[-1] = note_content[-1].strip() + ' ' + gpg_signature + '\n'
+
+    # Write the modified content back to the temporary file
+    with open(temp_filename, 'w') as file:
+        file.writelines(note_content)
 
     # Save the encrypted note content to a new note file
     note_id = len(glob.glob(f"{NOTE_DIR}/*.gpg")) + 1
     note_filename = os.path.join(NOTE_DIR, f"note_{note_id}.txt.gpg")
     with tempfile.NamedTemporaryFile(delete=False) as temp_enc_file:
         temp_enc_filename = temp_enc_file.name
-        temp_enc_file.write(note_content.encode('utf-8'))
+        temp_enc_file.write(''.join(note_content).encode('utf-8'))
 
-    # Encrypt the note using the gpg_key_email's public key
-    subprocess.call(['gpg', '--output', note_filename, '--encrypt', '--recipient', GPG_KEY_EMAIL, temp_enc_filename])
+    # Encrypt the note using the configured GPG key email's public key
+    subprocess.call(['gpg', '--output', note_filename, '--encrypt', '--recipient', config['settings']['gpg_key_email'], temp_enc_filename])
     os.remove(temp_enc_filename)
     print(f"Note added: {note_filename}")
 
+    # Delete the temporary file
+    os.remove(temp_filename)
+    
+    
+
+# Function to search notes
 def search_notes(search_queries):
     check_gpg_key_email()
+
     # Convert all search queries to lowercase
     search_queries_lower = [query.lower() for query in search_queries]
 
@@ -100,6 +155,7 @@ def search_notes(search_queries):
 
         os.remove(temp_dec_filename)
 
+# Function to edit a note
 def edit_note(filename):
     check_gpg_key_email()
     note_path = os.path.join(NOTE_DIR, filename)
@@ -107,22 +163,32 @@ def edit_note(filename):
         print(f"Note not found: {filename}")
         return
 
+    # Ensure a text editor is configured
+    TEXT_EDITOR = get_text_editor()
+    if TEXT_EDITOR is None:
+        TEXT_EDITOR = prompt_select_text_editor()
+        if TEXT_EDITOR is None:
+            print("No text editor selected. Exiting.")
+            exit(1)
+
     # Decrypt the note to a temporary file
     with tempfile.NamedTemporaryFile(delete=False) as temp_dec_file:
         temp_dec_filename = temp_dec_file.name
 
     subprocess.call(['gpg', '--output', temp_dec_filename, '--decrypt', note_path])
 
-    # Open the note with vim editor
-    subprocess.call(['vim', temp_dec_filename])
+    # Open the note with the configured text editor
+    subprocess.call([TEXT_EDITOR, temp_dec_filename])
 
     # Encrypt the edited note back to the original file
-    subprocess.call(['gpg', '--output', note_path, '--encrypt', '--recipient', GPG_KEY_EMAIL, temp_dec_filename])
+    subprocess.call(['gpg', '--output', note_path, '--encrypt', '--recipient', config['settings']['gpg_key_email'], temp_dec_filename])
     os.remove(temp_dec_filename)
 
+# Function to run a git command in the sqnotes directory
 def run_git_command(args):
     subprocess.call(['git'] + args, cwd=NOTE_DIR)
 
+# Main function
 def main():
     parser = argparse.ArgumentParser(description='SQNote: Secure note-taking script')
     parser.add_argument('-n', '--new', help='Add a new note', action='store_true')
@@ -130,11 +196,14 @@ def main():
     parser.add_argument('-e', '--edit', help='Edit a note', type=str)
     parser.add_argument('--git', nargs=argparse.REMAINDER, help='Run a git command in the sqnotes directory')
     parser.add_argument('--set-gpg-key', help='Set the GPG Key', type=str)
+    parser.add_argument('--set-text-editor', help='Set the text editor (vim, nano, emacs, gedit)', type=str, choices=['vim', 'nano', 'emacs', 'gedit'])
 
     args = parser.parse_args()
 
     if args.set_gpg_key:
         set_gpg_key_email(args.set_gpg_key)
+    elif args.set_text_editor:
+        set_text_editor(args.set_text_editor)
     elif args.new:
         add_note()
     elif args.find:
