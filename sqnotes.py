@@ -5,17 +5,52 @@ import os
 import glob
 import subprocess
 import tempfile
+import configparser
 
 # Configurable directory for storing notes
 NOTE_DIR = os.path.expanduser("~/sqnotes")
+CONFIG_FILE = os.path.expanduser("~/.sqnotes_config")
 
-# Replace this with the recipient's GPG key ID or email address
-RECIPIENT = "adamfgcross@gmail.com"
+# Load configuration
+config = configparser.ConfigParser()
+if os.path.exists(CONFIG_FILE):
+    config.read(CONFIG_FILE)
+
+# Function to save configuration
+def save_config():
+    with open(CONFIG_FILE, 'w') as configfile:
+        config.write(configfile)
+
+# Set default recipient if not present in config
+def get_recipient():
+    if 'settings' in config and 'recipient' in config['settings']:
+        return config['settings']['recipient']
+    else:
+        return None
+
+RECIPIENT = get_recipient()
 
 if not os.path.exists(NOTE_DIR):
     os.makedirs(NOTE_DIR)
 
+def check_recipient():
+    if RECIPIENT is None:
+        print("Error: GPG recipient not set.")
+        print("Please set the GPG recipient using the following command:")
+        print("  ./script.py --set-recipient your_email@example.com")
+        exit(1)
+
+def set_recipient(new_recipient):
+    global RECIPIENT
+    RECIPIENT = new_recipient
+    if 'settings' not in config:
+        config['settings'] = {}
+    config['settings']['recipient'] = new_recipient
+    save_config()
+    print(f"Recipient set to: {RECIPIENT}")
+
 def add_note():
+    check_recipient()
     # Create a temporary file for the new note
     with tempfile.NamedTemporaryFile(delete=False) as temp_file:
         temp_filename = temp_file.name
@@ -43,6 +78,7 @@ def add_note():
     print(f"Note added: {note_filename}")
 
 def search_notes(search_queries):
+    check_recipient()
     # Convert all search queries to lowercase
     search_queries_lower = [query.lower() for query in search_queries]
 
@@ -65,6 +101,7 @@ def search_notes(search_queries):
         os.remove(temp_dec_filename)
 
 def edit_note(filename):
+    check_recipient()
     note_path = os.path.join(NOTE_DIR, filename)
     if not os.path.exists(note_path):
         print(f"Note not found: {filename}")
@@ -92,10 +129,13 @@ def main():
     parser.add_argument('-f', '--find', nargs='+', help='Find a note')  # Allow multiple search queries
     parser.add_argument('-e', '--edit', help='Edit a note', type=str)
     parser.add_argument('--git', nargs=argparse.REMAINDER, help='Run a git command in the sqnotes directory')
+    parser.add_argument('--set-recipient', help='Set the GPG recipient', type=str)
 
     args = parser.parse_args()
 
-    if args.new:
+    if args.set_recipient:
+        set_recipient(args.set_recipient)
+    elif args.new:
         add_note()
     elif args.find:
         search_notes(args.find)
