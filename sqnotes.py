@@ -165,8 +165,13 @@ def search_notes(search_queries):
     check_gpg_key_email()
 
     # Search for the queries in all notes
+    any_matches = False
     for filename in glob.glob(f"{NOTE_DIR}/*.gpg"):
-        decrypt_and_print(filename, search_queries)
+        was_match = decrypt_and_print(filename, search_queries)
+        if was_match:
+            any_matches = True
+    if not any_matches:
+        print("no notes matches search query")
 
 
 def decrypt_and_print(filename, search_queries = None):
@@ -181,8 +186,12 @@ def decrypt_and_print(filename, search_queries = None):
                 lower_queries = [query.lower() for query in search_queries]
                 if all(query in content_lower for query in lower_queries):
                     print(f"\n{filename}:\n{content}")
+                    return True
+                else:
+                    return False
             else:
                 print(f"\n{filename}:\n{content}")
+                return True
 
 
 def edit_note(filename):
