@@ -3,3 +3,4 @@
 .settings
 /.pytest_cache/
 __pycache__
+venv
