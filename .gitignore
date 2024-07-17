@@ -1,3 +1,5 @@
 .project
 .pydevproject
 .settings
+/.pytest_cache/
+__pycache__
