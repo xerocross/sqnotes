@@ -311,6 +311,17 @@ class SQNotes:
             return self.user_config['settings'][key]
         else:
             return None
+        
+        
+    def list_notes(self):
+        self.NOTES_DIR = self.get_notes_dir_from_config()
+        extension = 'txt.gpg'
+        pattern = os.path.join(self.NOTES_DIR, f"*.{extension}")
+        files = glob.glob(pattern)
+        filenames = [os.path.basename(file) for file in files]
+        for file in filenames:
+            print(file)
+        
     
     def load_setup_configuration(self):
         # Configurable directory for storing notes and database location
@@ -590,6 +601,9 @@ def main():
     subparsers = parser.add_subparsers(dest='command', help='Subcommands')
     parser_add = subparsers.add_parser('new', help='Add a new note.')
     paerser_init = subparsers.add_parser('init', help='Initialize app.')
+    subparsers.add_parser('notes', help='Show a list of all notes.')
+    git_parser = subparsers.add_parser('git', help='Passthrough git commands.')
+    git_parser.add_argument('git_args', nargs=argparse.REMAINDER, help='Arguments for git command')
     
     args = parser.parse_args()
 
@@ -607,6 +621,10 @@ def main():
         else:
             if args.command == 'new':
                 sqnotes.add_note()
+            elif args.command == 'notes':
+                sqnotes.list_notes()
+            elif args.command == 'git':
+                sqnotes.run_git_command(args.git_args)
             elif args.set_gpg_key:
                 sqnotes.set_gpg_key_email(args.set_gpg_key)
             elif args.new:
