@@ -77,6 +77,29 @@ class TestTryToMakePath(unittest.TestCase):
             response = self.sqnotes.try_to_make_path(selected_path)
             self.assertTrue(response, "received false, which indicates failure")
 
+    @patch('os.path.dirname')
+    @patch('os.path.exists')
+    def test_returns_true_if_makes_directory(self, mock_path_exists, mock_dirname):
+        mock_path_exists.side_effect = [False, True]
+        mock_dirname.return_value = 'parentDir'
+        selected_path = 'test_path'
+        with patch('os.mkdir', return_value=True): 
+            response = self.sqnotes.try_to_make_path(selected_path)
+            self.assertTrue(response, "received false, which indicates failure")
+        
+    @patch('os.mkdir')
+    @patch('os.path.dirname')
+    @patch('os.path.exists')
+    def test_returns_false_on_mkdir_exception(self, mock_path_exists, mock_dirname, mock_mkdir):
+        mock_path_exists.side_effect = [False, True]
+        mock_dirname.return_value = 'parentDir'
+        mock_mkdir.side_effect = Exception('unknown error')
+        selected_path = 'test_path'
+        response = self.sqnotes.try_to_make_path(selected_path)
+        self.assertFalse(response, "received true, which indicates success, but should have failed")
+        
+        
+        
 
 class TestDatabaseInteractions(unittest.TestCase):
     pass
