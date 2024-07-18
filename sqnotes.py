@@ -88,6 +88,12 @@ class SQNotes:
         subprocess.call(['gpg', '--yes','--quiet', '--batch', '--output', note_file_path, '--encrypt', '--recipient', self.GPG_KEY_EMAIL, temp_enc_filename])
         os.remove(temp_enc_filename)
         
+        
+        
+    def _get_new_note_name(self):
+        datetime_string = datetime.now().strftime('%Y%m%d%H%M%S')
+        return f"{datetime_string}.txt.gpg"
+         
 
     def add_note(self):
         self.GPG_KEY_EMAIL = self.get_gpg_key_email()
@@ -96,10 +102,7 @@ class SQNotes:
         self.open_database()
         
         note_content = self._get_input_from_text_editor()
-        
-    
-        datetime_string = datetime.now().strftime('%Y%m%d%H%M%S')
-        base_filename = f"{datetime_string}.txt.gpg"
+        base_filename = self._get_new_note_name()
         note_file_path = os.path.join(NOTES_DIR, base_filename)
         self._write_encrypted_note(note_file_path=note_file_path, note_content=note_content)
         
