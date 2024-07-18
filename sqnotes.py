@@ -10,13 +10,8 @@ import re
 import configparser
 from dotenv import load_dotenv
 
-
-VERSION = 2
-DEBUGGING = True
-
 project_root = os.path.dirname(os.path.abspath(__file__))
 env_file_path = os.path.join(project_root, '.production.env')
-
 if os.getenv('TESTING') == 'true':
     env_file_path = os.path.join(project_root, '.test.env')
     load_dotenv(env_file_path)
@@ -24,17 +19,21 @@ else:
     env_file_path = os.path.join(project_root, '.env.production')
     load_dotenv(env_file_path)
 
+VERSION = 2
+DEBUGGING = True
+
+
 
 # # Configurable directory for storing notes and database location
 # DEFAULT_NOTE_DIR = os.path.expanduser(os.getenv('DEFAULT_NOTES_PATH'))
 # CONFIG_DIR = os.path.expanduser(os.getenv('DEFAULT_CONFIG_DIR_PATH'))
 #
 #
-# DB_FILE = os.path.join(DEFAULT_NOTE_DIR, "sqnotes_index.db")
+# DB_PATH = os.path.join(DEFAULT_NOTE_DIR, "sqnotes_index.db")
 #
 #
 # CONFIG_FILE = os.path.join(CONFIG_DIR, "config.ini")
-# DB_FILE = os.path.expanduser(os.getenv('DEFAULT_NOTES_PATH'))
+# DB_PATH = os.path.expanduser(os.getenv('DEFAULT_NOTES_PATH'))
 #
 
 
@@ -57,7 +56,7 @@ else:
 
 
 # # Initialize SQLite connection
-# conn = sqlite3.connect(DB_FILE)
+# conn = sqlite3.connect(DB_PATH)
 # cursor = conn.cursor()
 
 
@@ -82,7 +81,9 @@ else:
 
 def extract_keywords(content):
     # Extract hashtags using regular expression
-    return [match[1:] for match in re.findall(r'\B#\w+\b', content)]
+    tags = [match[1:] for match in re.findall(r'\B#\w+\b', content)]
+    unique_tags = set(tags)
+    return list(unique_tags)
 
 
 
@@ -93,23 +94,102 @@ class NotesDirNotConfiguredException(Exception):
     """Exception raised if the user notes directory is not configured."""
     pass
 
+class DatabaseTableSetupException(Exception):
+    """Exception raised during database table setup."""
+    pass
 
+class NotesDirNotSelectedException(Exception):
+    """Exception raised if user notes directory not specified."""
 
+class NoteNotFoundException(Exception):
+    """Exception raised if attempt to open a note that is not found."""
+    
+class TextEditorNotConfiguredException(Exception):
+    """Raise if attempted to use text editor but not configured."""
 
 class SQNotes:
     
-    def save_config(self):
-        with open(self.CONFIG_FILE, 'w') as configfile:
-            self.user_config.write(configfile)
     
-    def load_setup_configuration(self):
-        # Configurable directory for storing notes and database location
-        self.DEFAULT_NOTE_DIR = os.path.expanduser(os.getenv('DEFAULT_NOTES_PATH'))
-        self.CONFIG_DIR = os.path.expanduser(os.getenv('DEFAULT_CONFIG_DIR_PATH'))
-        self.CONFIG_FILE = os.path.join(self.CONFIG_DIR, "config.ini")
+    def insert_keyword_into_database(self, keyword):
+        self.cursor.execute('SELECT id FROM keywords WHERE keyword = ?', (keyword,))
+        result = self.cursor.fetchone()
+        if result is None:
+            # this keyword does not exist in the database
+            self.cursor.execute('''
+                INSERT OR IGNORE INTO keywords (keyword)
+                VALUES (?)
+            ''', (keyword,))
+            self.conn.commit()
+            keyword_id = self.cursor.lastrowid
+        else:
+            keyword_id = result[0]
+        return keyword_id
+
+    def add_note(self):
+        self.GPG_KEY_EMAIL = self.get_gpg_key_email()
+        self.check_gpg_key_email()
+        self.NOTES_DIR = self.get_notes_dir_from_config()
+        self.open_database()
+        self.TEXT_EDITOR = self.get_configured_text_editor()
         
+        with tempfile.NamedTemporaryFile(delete=False) as temp_file:
+            temp_filename = temp_file.name
+    
+        # Open the text editor to edit the note
+        subprocess.call([self.TEXT_EDITOR, temp_filename])
+    
+        # Read the content from the temporary file
+        with open(temp_filename, 'r') as file:
+            note_content = file.read().strip()
+    
+        # Delete the temporary file
+        os.remove(temp_filename)
+    
+        datetime_string = datetime.now().strftime('%Y%m%d%H%M%S')
+        note_filename_slug = f"{datetime_string}.txt.gpg"
+        note_filename = os.path.join(self.NOTES_DIR, note_filename_slug)
+        with tempfile.NamedTemporaryFile(delete=False) as temp_enc_file:
+            temp_enc_filename = temp_enc_file.name
+            temp_enc_file.write(note_content.encode('utf-8'))
+    
+        # Encrypt the note using the gpg_key_email's public key
+        subprocess.call(['gpg', '--yes', '--batch', '--output', note_filename, '--encrypt', '--recipient', self.GPG_KEY_EMAIL, temp_enc_filename])
+        os.remove(temp_enc_filename)
+        print(f"Note added: {note_filename}")
+    
+        # Insert note into notes table
+        self.cursor.execute('''
+                INSERT INTO notes (filename)
+                VALUES (?)
+            ''', (note_filename_slug,))
+        note_id = self.cursor.lastrowid
+    
+        # Extract hashtags from note content and insert into keywords table
+        keywords = extract_keywords(note_content)
+        keyword_ids = []
+        for keyword in keywords:
+            keyword_id = self.insert_keyword_into_database(keyword)
+            keyword_ids.append(keyword_id)
+    
+        # Insert note and keyword associations into note_keywords table
+        for keyword_id in keyword_ids:
+            self.cursor.execute('''
+                INSERT INTO note_keywords (note_id, keyword_id)
+                VALUES (?, ?)
+            ''', (note_id, keyword_id))
+            self.conn.commit()
+
+    
+    def check_initialized(self):
+        if 'global' in self.user_config and 'initialized' in self.user_config['global']:
+            return (self.user_config['global']['initialized'] == 'yes')
+        else:
+            return False
+    
     
     def create_initial_user_config(self, user_config):
+        if 'global' not in self.user_config:
+            self.user_config['global'] = {}
         user_config['global']['initialized'] = 'no'
         user_config['global']['VERSION'] = VERSION
         
@@ -117,9 +197,140 @@ class SQNotes:
             user_config.write(configfile)
         self.user_config = user_config
     
+    def edit_note(self, filename):
+        self.GPG_KEY_EMAIL = self.get_gpg_key_email()
+        self.check_gpg_key_email()
+        self.NOTES_DIR = self.get_notes_dir_from_config()
+        self.TEXT_EDITOR = self.get_configured_text_editor()
+        self.open_database()
+        
+        note_path = os.path.join(self.NOTES_DIR, filename)
+        if not os.path.exists(note_path):
+            raise NoteNotFoundException()
     
-    def run_git_command(self, args):
-        subprocess.call(['git'] + args, cwd=self.NOTES_DIR)
+        # Decrypt the note to a temporary file
+        with tempfile.NamedTemporaryFile(delete=False) as temp_dec_file:
+            temp_dec_filename = temp_dec_file.name
+    
+        try:
+            decrypt_process = subprocess.run(['gpg', '--yes','--quiet', '--batch', '--output', temp_dec_filename, '--decrypt', note_path], check=True)
+    
+            if decrypt_process.returncode != 0:
+                raise Exception("Decryption failed")
+    
+            # Open the note with the configured text editor
+    
+            edit_process = subprocess.run([self.TEXT_EDITOR, temp_dec_filename], check=True)
+    
+            # Ensure Vim exited properly before proceeding
+            if edit_process.returncode != 0:
+                raise Exception("Editing failed")
+    
+            # Read the edited content from the temporary file
+            with open(temp_dec_filename, 'r') as file:
+                edited_content = file.read().strip()
+    
+            # Encrypt the edited note back to the original file
+            with tempfile.NamedTemporaryFile(delete=False) as temp_enc_file:
+                temp_enc_filename = temp_enc_file.name
+                temp_enc_file.write(edited_content.encode('utf-8'))
+
+            subprocess.call(['gpg', '--yes', '--batch','--quiet', '--output', note_path, '--encrypt', '--recipient', self.GPG_KEY_EMAIL, temp_enc_filename])
+            
+        finally:
+            # Ensure temporary files are deleted
+            if os.path.exists(temp_dec_filename):
+                os.remove(temp_dec_filename)
+            if os.path.exists(temp_enc_filename):
+                os.remove(temp_enc_filename)
+    
+    
+    
+        try:
+            self.cursor.execute('SELECT id FROM notes WHERE filename = ?', (filename,))
+            result = self.cursor.fetchone()
+            if result:
+                note_id = result[0]
+            else:
+                self.cursor.execute('''
+                    INSERT INTO notes (filename)
+                    VALUES (?)
+                ''', (filename,))
+                note_id = self.cursor.lastrowid
+        
+            # Update keywords in the database
+            keywords = extract_keywords(edited_content)
+            keyword_ids = []
+            for keyword in keywords:
+                keyword_id = self.insert_keyword_into_database(keyword)
+                keyword_ids.append(keyword_id)
+        
+            self.cursor.execute('DELETE FROM note_keywords WHERE note_id = ?', (note_id,))
+            self.conn.commit()
+            for keyword_id in keyword_ids:
+                self.cursor.execute('''
+                    INSERT INTO note_keywords (note_id, keyword_id)
+                    VALUES (?, ?)
+                ''', (note_id, keyword_id))
+                self.conn.commit()
+        except Exception as e:
+            print("error")
+            print(e)
+            print("edited content was:")
+            print(edited_content)
+            print("extracted keywords:")
+            print(keywords)
+            print("note id:")
+            print(note_id)
+            
+        print(f"Note edited: {filename}")
+    
+    
+    def get_db_file_path(self, notes_dir):
+        if os.getenv('TESTING') == 'true':
+            return os.getenv('DATABASE_URL')
+        else:    
+            return os.path.join(notes_dir, os.getenv('DEFAULT_DATABASE_NAME'))
+        
+    
+    def get_notes_dir_from_config(self):
+        if 'settings' in self.user_config and 'notes_path' in self.user_config['settings']:
+            self.NOTES_DIR = self.user_config['settings']['notes_path']
+            return self.NOTES_DIR
+        else:
+            raise NotesDirNotConfiguredException()
+        
+    def get_configured_text_editor(self):
+        text_editor = self.get_setting_from_user_config('text_editor')
+        if text_editor is None:
+            raise TextEditorNotConfiguredException()
+        return text_editor
+    
+    def get_setting_from_user_config(self, key):
+        if 'settings' in self.user_config and key in self.user_config['settings']:
+            return self.user_config['settings'][key]
+        else:
+            return None
+    
+    def load_setup_configuration(self):
+        # Configurable directory for storing notes and database location
+        self.DEFAULT_NOTE_DIR = os.path.expanduser(os.getenv('DEFAULT_NOTES_PATH'))
+        self.CONFIG_DIR = os.path.expanduser(os.getenv('DEFAULT_CONFIG_DIR_PATH'))
+        self.CONFIG_FILE = os.path.join(self.CONFIG_DIR, "config.ini")
+        
+        
+    
+    def open_database(self):
+        notes_dir = self.get_notes_dir_from_config()
+        if notes_dir is None:
+            raise NotesDirNotSelectedException()
+        self.DB_PATH = self.get_db_file_path(notes_dir)
+        self.conn = sqlite3.connect(self.DB_PATH)
+        self.cursor = self.conn.cursor()
+        
+        is_database_set_up = self.check_is_database_set_up()
+        if not is_database_set_up:
+            self.setup_database()
     
     def open_or_create_and_open_user_config_file(self):
         # Ensure the configuration directory exists
@@ -135,66 +346,6 @@ class SQNotes:
         else:
             self.create_initial_user_config(user_config=user_config)
     
-    def check_initialized(self):
-        if 'global' in self.user_config and 'initialized' in self.user_config['global']:
-            return (self.user_config['global']['initialized'] == 'yes')
-        else:
-            return False
-    
-    
-    def get_notes_dir_from_config(self):
-        if 'settings' in self.user_config and 'notes_path' in self.user_config['settings']:
-            self.NOTES_DIR = self.user_config['settings']['notes_path']
-        else:
-            raise NotesDirNotConfiguredException()
-    
-    def prompt_to_initialize(self):
-        print("sqnotes not initialized; please run initialization")
-    
-    def search_keywords(self, keywords):
-    
-        self.cursor.execute('''
-                SELECT n.filename
-                FROM notes n
-                JOIN note_keywords nk ON n.id = nk.note_id
-                JOIN keywords k ON nk.keyword_id = k.id
-                WHERE k.keyword IN ({})
-                GROUP BY n.filename
-                HAVING COUNT(*) = {}
-            '''.format(  ', '.join('?' for _ in keywords) , len(keywords)), keywords)
-        results = self.cursor.fetchall()
-        if results:
-            for result in results:
-                note_filename = os.path.join(self.NOTES_DIR, result[0])
-                self.decrypt_and_print(note_filename)
-        else:
-            print(f"No notes found with keywords: {keywords}")
-
-    
-    
-    def try_to_make_path(self, selected_path):
-        
-        if os.path.exists(selected_path):
-            # path exists
-            return True
-        else:
-            directory = os.path.dirname(selected_path)
-            directory_exists = os.path.exists(directory)
-            if directory_exists:
-                try:
-                    os.mkdir(selected_path)
-                    return True
-                except FileExistsError:
-                    # logically this shouldn't happen
-                    print(f"directory '{selected_path}' already exists")
-                    return False
-                except Exception as e:
-                    print(f"an error occurred.")
-                    return False
-            else:
-                print(f"parent directory {directory} does not exist")
-                return False
-                
     
     def prompt_for_user_notes_path(self):
         user_notes_path = None
@@ -221,25 +372,35 @@ class SQNotes:
                 return selected_path
         
     
-    def initialize(self):
-        selected_path = self.prompt_for_user_notes_path()
+    def prompt_to_initialize(self):
+        print("sqnotes not initialized; please run initialization")
         
-        
-        if 'global' not in self.user_config:
-            self.user_config['global'] = {}
-        self.user_config['global']['initialized'] = 'yes'
-        
-        if 'settings' not in self.user_config:
-            self.user_config['settings'] = {}
-        self.user_config['settings']['notes_path'] = selected_path
-        
-        self.save_config()
-        
-    def open_database(self):
-        # Initialize SQLite connection
-        self.conn = sqlite3.connect(self.DB_FILE)
-        self.cursor = self.conn.cursor()
-        
+    def run_git_command(self, args):
+        subprocess.call(['git'] + args, cwd=self.NOTES_DIR)
+    
+    def save_config(self):
+        with open(self.CONFIG_FILE, 'w') as configfile:
+            self.user_config.write(configfile)
+    
+    
+    def search_keywords(self, keywords):
+        self.open_database()
+        self.cursor.execute('''
+                SELECT n.filename
+                FROM notes n
+                JOIN note_keywords nk ON n.id = nk.note_id
+                JOIN keywords k ON nk.keyword_id = k.id
+                WHERE k.keyword IN ({})
+                GROUP BY n.filename
+                HAVING COUNT(*) = {}
+            '''.format(  ', '.join('?' for _ in keywords) , len(keywords)), keywords)
+        results = self.cursor.fetchall()
+        if results:
+            for result in results:
+                note_filename = os.path.join(self.NOTES_DIR, result[0])
+                self.decrypt_and_print(note_filename)
+        else:
+            print(f"No notes found with keywords: {keywords}")
 
     def search_notes(self, search_queries):
         print("there may be some delay here as this requires decrypting all your notes")
@@ -257,162 +418,104 @@ class SQNotes:
             print("no notes match search query")    
         
 
-    def setup_database(self):
-        # Create tables if not exists
-        self.cursor.execute('''
-            CREATE TABLE IF NOT EXISTS notes (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                filename TEXT NOT NULL
-            )
-        ''')
+
+    def try_to_make_path(self, selected_path):
         
-        self.cursor.execute('''
-            CREATE TABLE IF NOT EXISTS keywords (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                keyword TEXT NOT NULL
-            )
-        ''')
-        
-        self.cursor.execute('''
-            CREATE TABLE IF NOT EXISTS note_keywords (
-                note_id INTEGER,
-                keyword_id INTEGER,
-                FOREIGN KEY (note_id) REFERENCES notes(id),
-                FOREIGN KEY (keyword_id) REFERENCES keywords(id),
-                PRIMARY KEY (note_id, keyword_id)
-            )
-        ''')
-        self.conn.commit()
-
-    def add_note(self):
-        self.check_gpg_key_email()
-        # Create a temporary file for the new note
-        with tempfile.NamedTemporaryFile(delete=False) as temp_file:
-            temp_filename = temp_file.name
-    
-        # Open the text editor to edit the note
-        subprocess.call([self.TEXT_EDITOR, temp_filename])
-    
-        # Read the content from the temporary file
-        with open(temp_filename, 'r') as file:
-            note_content = file.read().strip()
-    
-        # Add signature text
-        signature = f" [{GPG_KEY_EMAIL}] [{datetime.now().strftime('%Y-%m-%d %H:%M')}]"
-        note_content += signature
-    
-        # Delete the temporary file
-        os.remove(temp_filename)
-    
-        datetime_string = datetime.now().strftime('%Y%m%d%H%M%S')
-        note_filename_slug = f"{datetime_string}.txt.gpg"
-        note_filename = os.path.join(self.NOTES_DIR, note_filename_slug)
-        with tempfile.NamedTemporaryFile(delete=False) as temp_enc_file:
-            temp_enc_filename = temp_enc_file.name
-            temp_enc_file.write(note_content.encode('utf-8'))
-    
-        # Encrypt the note using the gpg_key_email's public key
-        subprocess.call(['gpg', '--yes', '--batch', '--output', note_filename, '--encrypt', '--recipient', GPG_KEY_EMAIL, temp_enc_filename])
-        os.remove(temp_enc_filename)
-        print(f"Note added: {note_filename}")
-    
-        # Insert note into notes table
-        self.cursor.execute('''
-                INSERT INTO notes (filename)
-                VALUES (?)
-            ''', (note_filename_slug,))
-        note_id = self.cursor.lastrowid
-    
-        # Extract hashtags from note content and insert into keywords table
-        keywords = extract_keywords(note_content)
-        keyword_ids = []
-        for keyword in keywords:
-            self.cursor.execute('''
-                INSERT OR IGNORE INTO keywords (keyword)
-                VALUES (?)
-            ''', (keyword,))
-            self.conn.commit()
-            self.cursor.execute('SELECT id FROM keywords WHERE keyword = ?', (keyword,))
-            keyword_id = self.cursor.fetchone()[0]
-            keyword_ids.append(keyword_id)
-    
-        # Insert note and keyword associations into note_keywords table
-        for keyword_id in keyword_ids:
-            self.cursor.execute('''
-                INSERT INTO note_keywords (note_id, keyword_id)
-                VALUES (?, ?)
-            ''', (note_id, keyword_id))
-            self.conn.commit()
-
-
-    def edit_note(self, filename):
-        self.check_gpg_key_email()
-        raise Exception("haven't programmed self.NOTES_DIR")
-        note_path = os.path.join(self.NOTES_DIR, filename)
-        if not os.path.exists(note_path):
-            print(f"Note not found: {filename}")
-            return
-    
-        # Decrypt the note to a temporary file
-        with tempfile.NamedTemporaryFile(delete=False) as temp_dec_file:
-            temp_dec_filename = temp_dec_file.name
-    
-        subprocess.call(['gpg', '--yes', '--batch', '--output', temp_dec_filename, '--decrypt', note_path])
-    
-        # Open the note with the configured text editor
-        subprocess.call([self.TEXT_EDITOR, temp_dec_filename])
-    
-        # Read the edited content from the temporary file
-        with open(temp_dec_filename, 'r') as file:
-            edited_content = file.read().strip()
-    
-        # Add signature text
-        signature = f"[{GPG_KEY_EMAIL}] [{datetime.now().strftime('%Y-%m-%d %H:%M')}]"
-        edited_content += '\n' + signature
-    
-        # Encrypt the edited note back to the original file
-        with tempfile.NamedTemporaryFile(delete=False) as temp_enc_file:
-            temp_enc_filename = temp_enc_file.name
-            temp_enc_file.write(edited_content.encode('utf-8'))
-    
-        subprocess.call(['gpg', '--yes', '--batch', '--output', note_path, '--encrypt', '--recipient', GPG_KEY_EMAIL, temp_enc_filename])
-        os.remove(temp_dec_filename)
-        os.remove(temp_enc_filename)
-    
-        self.cursor.execute('SELECT id FROM notes WHERE filename = ?', (filename,))
-        result = self.cursor.fetchone()
-        if result:
-            note_id = result[0]
+        if os.path.exists(selected_path):
+            # path exists
+            return True
         else:
-            self.cursor.execute('''
-                INSERT INTO notes (filename)
-                VALUES (?)
-            ''', (filename,))
-            note_id = self.cursor.lastrowid
+            directory = os.path.dirname(selected_path)
+            directory_exists = os.path.exists(directory)
+            if directory_exists:
+                try:
+                    os.mkdir(selected_path)
+                    return True
+                except FileExistsError:
+                    # logically this shouldn't happen
+                    print(f"directory '{selected_path}' already exists")
+                    return False
+                except Exception as e:
+                    print(f"an error occurred: {e}")
+                    return False
+            else:
+                print(f"parent directory {directory} does not exist")
+                return False
+                
     
-        # Update keywords in the database
-        keywords = extract_keywords(edited_content)
-        keyword_ids = []
-        for keyword in keywords:
+    
+    
+    
+    def initialize(self):
+        selected_path = self.prompt_for_user_notes_path()
+        
+        
+        if 'global' not in self.user_config:
+            self.user_config['global'] = {}
+        self.user_config['global']['initialized'] = 'yes'
+        
+        if 'settings' not in self.user_config:
+            self.user_config['settings'] = {}
+        self.user_config['settings']['notes_path'] = selected_path
+        
+        self.save_config()
+        
+    
+        
+
+
+    
+
+    def set_setting_in_user_config(self, key, value):
+        if 'settings' not in self.user_config:
+            self.user_config['settings'] = {}
+        self.user_config['settings'][key]= value
+        self.save_config()
+
+    def check_is_database_set_up(self):
+        is_set_up = (self.get_setting_from_user_config('database_is_setup') == 'yes')
+        return is_set_up
+    
+    def set_database_is_set_up(self):
+        self.set_setting_in_user_config('database_is_setup', 'yes')
+        
+    
+    
+        
+        
+    def setup_database(self):
+        try:
             self.cursor.execute('''
-                INSERT OR IGNORE INTO keywords (keyword)
-                VALUES (?)
-            ''', (keyword,))
+                CREATE TABLE IF NOT EXISTS notes (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    filename TEXT NOT NULL
+                )
+            ''')
+            
+            self.cursor.execute('''
+                CREATE TABLE IF NOT EXISTS keywords (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    keyword TEXT NOT NULL
+                )
+            ''')
+            
+            self.cursor.execute('''
+                CREATE TABLE IF NOT EXISTS note_keywords (
+                    note_id INTEGER,
+                    keyword_id INTEGER,
+                    FOREIGN KEY (note_id) REFERENCES notes(id),
+                    FOREIGN KEY (keyword_id) REFERENCES keywords(id),
+                    PRIMARY KEY (note_id, keyword_id)
+                )
+            ''')
             self.conn.commit()
-            self.cursor.execute('SELECT id FROM keywords WHERE keyword = ?', (keyword,))
-            keyword_id = self.cursor.fetchone()[0]
-            keyword_ids.append(keyword_id)
+        except Exception as e:
+            raise DatabaseTableSetupException()
+        self.set_database_is_set_up()
+        
     
-        self.cursor.execute('DELETE FROM note_keywords WHERE note_id = ?', (filename,))
-        for keyword_id in keyword_ids:
-            self.cursor.execute('''
-                INSERT INTO note_keywords (note_id, keyword_id)
-                VALUES (?, ?)
-            ''', (note_id, keyword_id))
-            self.conn.commit()
+
     
-    
-        print(f"Note edited: {filename}")
         
         
     def decrypt_and_print(self, filename, search_queries = None):
@@ -449,13 +552,12 @@ class SQNotes:
             return None
     
     def set_gpg_key_email(self, new_gpg_key_email):
-        global GPG_KEY_EMAIL
-        GPG_KEY_EMAIL = new_gpg_key_email
+        self.GPG_KEY_EMAIL = new_gpg_key_email
         if 'settings' not in self.user_config:
             self.user_config['settings'] = {}
         self.user_config['settings']['gpg_key_email'] = new_gpg_key_email
         self.save_config()
-        print(f"GPG Key Email set to: {GPG_KEY_EMAIL}")
+        print(f"GPG Key Email set to: {self.GPG_KEY_EMAIL}")
 
     def set_user_notes_configuration(self, selected_path):
         pass
