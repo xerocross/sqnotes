@@ -50,7 +50,11 @@ class TextEditorNotConfiguredException(Exception):
 class DatabaseException(Exception):
     """Raise if an error occurs while interacting with the database."""
 
+class DecryptionFailedException(Exception):
+    """Raise if the GPG decryption process is not successfull."""
 
+class NoteNotFoundInDatabaseException(Exception):
+    """Raise when could not find a note reference in the database."""
 
 class SQNotes:
     
@@ -70,7 +74,7 @@ class SQNotes:
         return keyword_id
 
     def _get_input_from_text_editor(self):
-        self.TEXT_EDITOR = self.get_configured_text_editor()
+        self.TEXT_EDITOR = self._get_configured_text_editor()
         # Open the text editor to edit the note
         with tempfile.NamedTemporaryFile(delete=False) as temp_file:
             temp_filename = temp_file.name
@@ -86,7 +90,8 @@ class SQNotes:
             temp_enc_filename = temp_enc_file.name
             temp_enc_file.write(note_content.encode('utf-8'))
         subprocess.call(['gpg', '--yes','--quiet', '--batch', '--output', note_file_path, '--encrypt', '--recipient', self.GPG_KEY_EMAIL, temp_enc_filename])
-        os.remove(temp_enc_filename)
+        if os.path.exists(temp_enc_file):
+            os.remove(temp_enc_file)
         
         
         
@@ -139,89 +144,71 @@ class SQNotes:
             user_config.write(configfile)
         self.user_config = user_config
     
-    def delete_keywords_from_database_for_note(self, note_id):
+    def _delete_keywords_from_database_for_note(self, note_id):
         self.cursor.execute('DELETE FROM note_keywords WHERE note_id = ?', (note_id,))
         self.conn.commit()
     
     
+    def _decrypt_note_into_temp_file(self, note_path):
+        with tempfile.NamedTemporaryFile(delete=False) as temp_dec_file:
+            temp_dec_filename = temp_dec_file.name
+        decrypt_process = subprocess.run(['gpg', '--yes','--quiet', '--batch', '--output', temp_dec_filename, '--decrypt', note_path], check=True)
+    
+        if decrypt_process.returncode != 0:
+            raise DecryptionFailedException()
+        return temp_dec_filename
+    
+    def _get_edited_note_from_text_editor(self, temp_filename):
+        TEXT_EDITOR = self._get_configured_text_editor()
+        edit_process = subprocess.run([TEXT_EDITOR, temp_filename], check=True)
+    
+        # Ensure Vim exited properly before proceeding
+        if edit_process.returncode != 0:
+            raise Exception("Editing failed")
+        with open(temp_filename, 'r') as file:
+            edited_content = file.read().strip()
+        return edited_content
+    
     def edit_note(self, filename):
         self.GPG_KEY_EMAIL = self.get_gpg_key_email()
         self.check_gpg_key_email()
-        self.NOTES_DIR = self.get_notes_dir_from_config()
-        self.TEXT_EDITOR = self.get_configured_text_editor()
+        NOTES_DIR = self.get_notes_dir_from_config()
+        self.TEXT_EDITOR = self._get_configured_text_editor()
         self.open_database()
         
-        note_path = os.path.join(self.NOTES_DIR, filename)
+        note_path = os.path.join(NOTES_DIR, filename)
         if not os.path.exists(note_path):
             raise NoteNotFoundException()
     
-        # Decrypt the note to a temporary file
-        with tempfile.NamedTemporaryFile(delete=False) as temp_dec_file:
-            temp_dec_filename = temp_dec_file.name
-    
         try:
-            decrypt_process = subprocess.run(['gpg', '--yes','--quiet', '--batch', '--output', temp_dec_filename, '--decrypt', note_path], check=True)
-    
-            if decrypt_process.returncode != 0:
-                raise Exception("Decryption failed")
-    
-            # Open the note with the configured text editor
-    
-            edit_process = subprocess.run([self.TEXT_EDITOR, temp_dec_filename], check=True)
-    
-            # Ensure Vim exited properly before proceeding
-            if edit_process.returncode != 0:
-                raise Exception("Editing failed")
-    
-            # Read the edited content from the temporary file
-            with open(temp_dec_filename, 'r') as file:
-                edited_content = file.read().strip()
-    
-            # Encrypt the edited note back to the original file
-            with tempfile.NamedTemporaryFile(delete=False) as temp_enc_file:
-                temp_enc_filename = temp_enc_file.name
-                temp_enc_file.write(edited_content.encode('utf-8'))
+            temp_dec_filename = self._decrypt_note_into_temp_file(note_path=note_path)
+            edited_content = self._get_edited_note_from_text_editor(temp_filename=temp_dec_filename)
+            self._write_encrypted_note(note_file_path=note_path, note_content=edited_content)
 
-            subprocess.call(['gpg', '--yes', '--batch','--quiet', '--output', note_path, '--encrypt', '--recipient', self.GPG_KEY_EMAIL, temp_enc_filename])
-            
         finally:
-            # Ensure temporary files are deleted
             if os.path.exists(temp_dec_filename):
                 os.remove(temp_dec_filename)
-            if os.path.exists(temp_enc_filename):
-                os.remove(temp_enc_filename)
     
     
     
         try:
-            self.cursor.execute('SELECT id FROM notes WHERE filename = ?', (filename,))
-            result = self.cursor.fetchone()
-            if result:
-                note_id = result[0]
-            else:
-                self.cursor.execute('''
-                    INSERT INTO notes (filename)
-                    VALUES (?)
-                ''', (filename,))
-                note_id = self.cursor.lastrowid
-        
-            # Update keywords in the database
-            keywords = self.extract_keywords(edited_content)
-            keyword_ids = []
-            for keyword in keywords:
-                keyword_id = self.insert_keyword_into_database(keyword)
-                keyword_ids.append(keyword_id)
-        
-            self.delete_keywords_from_database_for_note(note_id)
-            
-            for keyword_id in keyword_ids:
-                self.insert_note_keyword_into_database(note_id, keyword_id)
+            note_id = self._get_note_id_from_database(filename = filename)
+            self._delete_keywords_from_database_for_note(note_id)
+            self._extract_and_save_keywords(note_id=note_id, note_content=edited_content)
+
                 
         except Exception:
             raise DatabaseException()
             
         print(f"Note edited: {filename}")
     
+    def _get_note_id_from_database(self, filename):
+        self.cursor.execute('SELECT id FROM notes WHERE filename = ?', (filename,))
+        result = self.cursor.fetchone()
+        if result:
+            note_id = result[0]
+        else:
+            raise NoteNotFoundInDatabaseException()
     
     def extract_keywords(self, content):
         # Extract hashtags using regular expression
@@ -244,7 +231,7 @@ class SQNotes:
         else:
             raise NotesDirNotConfiguredException()
         
-    def get_configured_text_editor(self):
+    def _get_configured_text_editor(self):
         text_editor = self.get_setting_from_user_config('text_editor')
         if text_editor is None:
             raise TextEditorNotConfiguredException()
