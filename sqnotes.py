@@ -10,21 +10,24 @@ import re
 import configparser
 from dotenv import load_dotenv
 
-project_root = os.path.dirname(os.path.abspath(__file__))
-env_file_path = os.path.join(project_root, '.production.env')
-if os.getenv('TESTING') == 'true':
-    env_file_path = os.path.join(project_root, '.test.env')
-    load_dotenv(env_file_path)
-else:
-    env_file_path = os.path.join(project_root, '.env.production')
-    load_dotenv(env_file_path)
+
 
 VERSION = 2
 DEBUGGING = True
 
+class EnvironmentConfigurationNotFound(Exception):
+    """Raise if the environment configuration file is not found."""
 
-
-
+project_root = os.path.dirname(os.path.abspath(__file__))
+env_file_path = os.path.join(project_root, '.production.env')
+if os.getenv('TESTING') == 'true':
+    env_file_path = os.path.join(project_root, '.test.env')
+else:
+    env_file_path = os.path.join(project_root, '.env.production')
+if not os.path.exists(env_file_path):
+    raise EnvironmentConfigurationNotFound()
+else:
+    load_dotenv(env_file_path)
 
 
 class NotesDirNotConfiguredException(Exception):
@@ -47,8 +50,9 @@ class TextEditorNotConfiguredException(Exception):
 class DatabaseException(Exception):
     """Raise if an error occurs while interacting with the database."""
 
+
+
 class SQNotes:
-    
     
     def insert_keyword_into_database(self, keyword):
         self.cursor.execute('SELECT id FROM keywords WHERE keyword = ?', (keyword,))
