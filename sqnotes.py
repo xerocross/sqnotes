@@ -24,69 +24,6 @@ DEBUGGING = True
 
 
 
-# # Configurable directory for storing notes and database location
-# DEFAULT_NOTE_DIR = os.path.expanduser(os.getenv('DEFAULT_NOTES_PATH'))
-# CONFIG_DIR = os.path.expanduser(os.getenv('DEFAULT_CONFIG_DIR_PATH'))
-#
-#
-# DB_PATH = os.path.join(DEFAULT_NOTE_DIR, "sqnotes_index.db")
-#
-#
-# CONFIG_FILE = os.path.join(CONFIG_DIR, "config.ini")
-# DB_PATH = os.path.expanduser(os.getenv('DEFAULT_NOTES_PATH'))
-#
-
-
-
-
-
-#
-# # Ensure the configuration directory exists
-# if not os.path.exists(CONFIG_DIR):
-#     print(f"creating new config directory {CONFIG_DIR}")
-#     os.makedirs(CONFIG_DIR)
-#
-# # Load configuration
-# config = configparser.ConfigParser()
-# if os.path.exists(CONFIG_FILE):
-#     config.read(CONFIG_FILE)
-#
-
-
-
-
-# # Initialize SQLite connection
-# conn = sqlite3.connect(DB_PATH)
-# cursor = conn.cursor()
-
-
-    
-#
-#
-#
-#
-# GPG_KEY_EMAIL = get_gpg_key_email()
-#
-# if not os.path.exists(DEFAULT_NOTE_DIR):
-#     os.makedirs(DEFAULT_NOTE_DIR)
-
-
-        
-
-
-
-
-
-
-
-def extract_keywords(content):
-    # Extract hashtags using regular expression
-    tags = [match[1:] for match in re.findall(r'\B#\w+\b', content)]
-    unique_tags = set(tags)
-    return list(unique_tags)
-
-
-
 
 
 
@@ -106,6 +43,9 @@ class NoteNotFoundException(Exception):
     
 class TextEditorNotConfiguredException(Exception):
     """Raise if attempted to use text editor but not configured."""
+    
+class DatabaseException(Exception):
+    """Raise if an error occurs while interacting with the database."""
 
 class SQNotes:
     
@@ -157,27 +97,15 @@ class SQNotes:
         os.remove(temp_enc_filename)
         print(f"Note added: {note_filename}")
     
-        # Insert note into notes table
-        self.cursor.execute('''
-                INSERT INTO notes (filename)
-                VALUES (?)
-            ''', (note_filename_slug,))
-        note_id = self.cursor.lastrowid
-    
-        # Extract hashtags from note content and insert into keywords table
-        keywords = extract_keywords(note_content)
+        note_id = self.insert_new_note_into_database(note_filename_base=note_filename_slug)
+        keywords = self.extract_keywords(note_content)
         keyword_ids = []
         for keyword in keywords:
             keyword_id = self.insert_keyword_into_database(keyword)
             keyword_ids.append(keyword_id)
     
-        # Insert note and keyword associations into note_keywords table
         for keyword_id in keyword_ids:
-            self.cursor.execute('''
-                INSERT INTO note_keywords (note_id, keyword_id)
-                VALUES (?, ?)
-            ''', (note_id, keyword_id))
-            self.conn.commit()
+            self.insert_note_keyword_into_database(note_id, keyword_id)
 
     
     def check_initialized(self):
@@ -196,6 +124,11 @@ class SQNotes:
         with open(self.CONFIG_FILE, 'w') as configfile:
             user_config.write(configfile)
         self.user_config = user_config
+    
+    def delete_keywords_from_database_for_note(self, note_id):
+        self.cursor.execute('DELETE FROM note_keywords WHERE note_id = ?', (note_id,))
+        self.conn.commit()
+    
     
     def edit_note(self, filename):
         self.GPG_KEY_EMAIL = self.get_gpg_key_email()
@@ -259,31 +192,28 @@ class SQNotes:
                 note_id = self.cursor.lastrowid
         
             # Update keywords in the database
-            keywords = extract_keywords(edited_content)
+            keywords = self.extract_keywords(edited_content)
             keyword_ids = []
             for keyword in keywords:
                 keyword_id = self.insert_keyword_into_database(keyword)
                 keyword_ids.append(keyword_id)
         
-            self.cursor.execute('DELETE FROM note_keywords WHERE note_id = ?', (note_id,))
-            self.conn.commit()
+            self.delete_keywords_from_database_for_note(note_id)
+            
             for keyword_id in keyword_ids:
-                self.cursor.execute('''
-                    INSERT INTO note_keywords (note_id, keyword_id)
-                    VALUES (?, ?)
-                ''', (note_id, keyword_id))
-                self.conn.commit()
-        except Exception as e:
-            print("error")
-            print(e)
-            print("edited content was:")
-            print(edited_content)
-            print("extracted keywords:")
-            print(keywords)
-            print("note id:")
-            print(note_id)
+                self.insert_note_keyword_into_database(note_id, keyword_id)
+                
+        except Exception:
+            raise DatabaseException()
             
         print(f"Note edited: {filename}")
+    
+    
+    def extract_keywords(self, content):
+        # Extract hashtags using regular expression
+        tags = [match[1:] for match in re.findall(r'\B#\w+\b', content)]
+        unique_tags = set(tags)
+        return list(unique_tags)
     
     
     def get_db_file_path(self, notes_dir):
@@ -312,6 +242,22 @@ class SQNotes:
         else:
             return None
         
+        
+    def insert_new_note_into_database(self, note_filename_base):
+        self.cursor.execute('''
+                INSERT INTO notes (filename)
+                VALUES (?)
+            ''', (note_filename_base,))
+        self.conn.commit()
+        note_id = self.cursor.lastrowid
+        return note_id
+        
+    def insert_note_keyword_into_database(self, note_id, keyword_id):
+        self.cursor.execute('''
+                    INSERT INTO note_keywords (note_id, keyword_id)
+                    VALUES (?, ?)
+                ''', (note_id, keyword_id))
+        self.conn.commit()
         
     def list_notes(self):
         self.NOTES_DIR = self.get_notes_dir_from_config()
@@ -385,6 +331,7 @@ class SQNotes:
     
     def prompt_to_initialize(self):
         print("sqnotes not initialized; please run initialization")
+        
         
     def run_git_command(self, args):
         subprocess.call(['git'] + args, cwd=self.NOTES_DIR)
