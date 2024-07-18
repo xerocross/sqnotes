@@ -69,39 +69,46 @@ class SQNotes:
             keyword_id = result[0]
         return keyword_id
 
-    def add_note(self):
-        self.GPG_KEY_EMAIL = self.get_gpg_key_email()
-        self.check_gpg_key_email()
-        self.NOTES_DIR = self.get_notes_dir_from_config()
-        self.open_database()
+    def _get_input_from_text_editor(self):
         self.TEXT_EDITOR = self.get_configured_text_editor()
-        
+        # Open the text editor to edit the note
         with tempfile.NamedTemporaryFile(delete=False) as temp_file:
             temp_filename = temp_file.name
-    
-        # Open the text editor to edit the note
         subprocess.call([self.TEXT_EDITOR, temp_filename])
-    
-        # Read the content from the temporary file
         with open(temp_filename, 'r') as file:
             note_content = file.read().strip()
-    
-        # Delete the temporary file
         os.remove(temp_filename)
-    
-        datetime_string = datetime.now().strftime('%Y%m%d%H%M%S')
-        note_filename_slug = f"{datetime_string}.txt.gpg"
-        note_filename = os.path.join(self.NOTES_DIR, note_filename_slug)
+        return note_content
+        
+
+    def _write_encrypted_note(self, note_file_path, note_content):
         with tempfile.NamedTemporaryFile(delete=False) as temp_enc_file:
             temp_enc_filename = temp_enc_file.name
             temp_enc_file.write(note_content.encode('utf-8'))
-    
-        # Encrypt the note using the gpg_key_email's public key
-        subprocess.call(['gpg', '--yes', '--batch', '--output', note_filename, '--encrypt', '--recipient', self.GPG_KEY_EMAIL, temp_enc_filename])
+        subprocess.call(['gpg', '--yes','--quiet', '--batch', '--output', note_file_path, '--encrypt', '--recipient', self.GPG_KEY_EMAIL, temp_enc_filename])
         os.remove(temp_enc_filename)
-        print(f"Note added: {note_filename}")
+        
+
+    def add_note(self):
+        self.GPG_KEY_EMAIL = self.get_gpg_key_email()
+        self.check_gpg_key_email()
+        NOTES_DIR = self.get_notes_dir_from_config()
+        self.open_database()
+        
+        note_content = self._get_input_from_text_editor()
+        
     
-        note_id = self.insert_new_note_into_database(note_filename_base=note_filename_slug)
+        datetime_string = datetime.now().strftime('%Y%m%d%H%M%S')
+        base_filename = f"{datetime_string}.txt.gpg"
+        note_file_path = os.path.join(NOTES_DIR, base_filename)
+        self._write_encrypted_note(note_file_path=note_file_path, note_content=note_content)
+        
+        print(f"Note added: {base_filename}")
+    
+        note_id = self._insert_new_note_into_database(note_filename_base=base_filename)
+        self._extract_and_save_keywords(note_id=note_id, note_content=note_content)
+
+    def _extract_and_save_keywords(self, note_id, note_content):
         keywords = self.extract_keywords(note_content)
         keyword_ids = []
         for keyword in keywords:
@@ -110,7 +117,7 @@ class SQNotes:
     
         for keyword_id in keyword_ids:
             self.insert_note_keyword_into_database(note_id, keyword_id)
-
+        
     
     def check_initialized(self):
         if 'global' in self.user_config and 'initialized' in self.user_config['global']:
@@ -247,7 +254,7 @@ class SQNotes:
             return None
         
         
-    def insert_new_note_into_database(self, note_filename_base):
+    def _insert_new_note_into_database(self, note_filename_base):
         self.cursor.execute('''
                 INSERT INTO notes (filename)
                 VALUES (?)
@@ -263,11 +270,16 @@ class SQNotes:
                 ''', (note_id, keyword_id))
         self.conn.commit()
         
-    def list_notes(self):
+
+    def get_notes(self):
         self.NOTES_DIR = self.get_notes_dir_from_config()
         extension = 'txt.gpg'
         pattern = os.path.join(self.NOTES_DIR, f"*.{extension}")
         files = glob.glob(pattern)
+        return files
+        
+    def print_all_notes(self):
+        files = self.get_notes()
         filenames = [os.path.basename(file) for file in files]
         for file in filenames:
             print(file)
@@ -573,7 +585,7 @@ def main():
             if args.command == 'new':
                 sqnotes.add_note()
             elif args.command == 'notes':
-                sqnotes.list_notes()
+                sqnotes.print_all_notes()
             elif args.command == 'git':
                 sqnotes.run_git_command(args.git_args)
             elif args.set_gpg_key:

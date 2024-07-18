@@ -1,17 +1,9 @@
 import unittest
-from unittest.mock import patch, mock_open, MagicMock
+from unittest.mock import patch, mock_open, MagicMock, call
 import os
-# import tempfile
-# from datetime import datetime
-# import sqlite3
-# import subprocess
-# import configparser
-# import re
 import pytest
-from dotenv import load_dotenv
-# from your_script import setup_database, add_note, extract_keywords, set_gpg_key_email, search_notes, edit_note, run_git_command
+import tempfile
 from sqnotes import SQNotes
-
 
 
 @pytest.fixture(scope='session', autouse=True)
@@ -56,13 +48,39 @@ class TestSQNotes(unittest.TestCase):
     # Add more tests here as needed
 
 
-class TestConfigurationSetup(unittest.TestCase):
-    pass
-    # @patch('os.mkdir')
-    # def test_creates_config_if_not_exists(self):
-    #     config_dir = os.getenv('DEFAULT_CONFIG_DIR_PATH')
-    #     pass
-    #
+class TestListFiles(unittest.TestCase):
+
+    def setUp(self):
+        # Create a temporary directory
+        self.test_dir = tempfile.TemporaryDirectory()
+        # Add some test files
+        self.test_files = ['test1.txt.gpg', 'test2.txt.gpg']
+        for file in self.test_files:
+            open(os.path.join(self.test_dir.name, file), 'a').close()
+            
+        self.sqnotes = SQNotes()
+
+    def tearDown(self):
+        self.test_dir.cleanup()
+
+    @patch.object(SQNotes, 'get_notes')
+    def test_print_all_files(self, mock_get_notes):
+        mock_get_notes.return_value = self.test_files
+        with patch('builtins.print') as mocked_print:
+            self.sqnotes.print_all_notes()
+            calls = [
+                call('test1.txt.gpg'),
+                call('test2.txt.gpg'),
+            ]
+            mocked_print.assert_has_calls(calls, any_order=False)
+
+    @patch.object(SQNotes, 'get_notes_dir_from_config')
+    def test_get_notes_returns_list_of_notes_in_notes_dir(self, mock_get_notes_dir):
+        test_dir_name = self.test_dir.name
+        mock_get_notes_dir.return_value = test_dir_name
+        expected_value = [test_dir_name + '/' + base for base in ['test1.txt.gpg', 'test2.txt.gpg']]
+        self.assertEqual(self.sqnotes.get_notes(), expected_value)
+
 
 
 class TestTryToMakePath(unittest.TestCase):
