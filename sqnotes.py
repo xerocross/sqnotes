@@ -90,8 +90,8 @@ class SQNotes:
             temp_enc_filename = temp_enc_file.name
             temp_enc_file.write(note_content.encode('utf-8'))
         subprocess.call(['gpg', '--yes','--quiet', '--batch', '--output', note_file_path, '--encrypt', '--recipient', self.GPG_KEY_EMAIL, temp_enc_filename])
-        if os.path.exists(temp_enc_file):
-            os.remove(temp_enc_file)
+        if os.path.exists(temp_enc_filename):
+            os.remove(temp_enc_filename)
         
         
         
@@ -183,6 +183,8 @@ class SQNotes:
         try:
             temp_dec_filename = self._decrypt_note_into_temp_file(note_path=note_path)
             edited_content = self._get_edited_note_from_text_editor(temp_filename=temp_dec_filename)
+            print("edited_content:")
+            print(edited_content)
             self._write_encrypted_note(note_file_path=note_path, note_content=edited_content)
 
         finally:
