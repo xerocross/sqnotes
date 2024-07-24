@@ -12,7 +12,7 @@ from dotenv import load_dotenv
 
 
 
-VERSION = 2
+VERSION = '0.2'
 DEBUGGING = True
 
 class EnvironmentConfigurationNotFound(Exception):
@@ -586,7 +586,7 @@ class SQNotes:
     def startup(self):
         self.load_setup_configuration()
         self.open_or_create_and_open_user_config_file()
-        self.get_notes_dir_from_config()
+
         
     def set_text_editor_config(self):
         # Check if a text editor is configured, prompt to select one if not
