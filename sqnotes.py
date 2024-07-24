@@ -56,6 +56,12 @@ class DecryptionFailedException(Exception):
 class NoteNotFoundInDatabaseException(Exception):
     """Raise when could not find a note reference in the database."""
 
+class FileInfo:
+        
+    def __init__(self, path, base_name):
+        self.path = path
+        self.base_name = base_name
+
 class SQNotes:
     
     def insert_keyword_into_database(self, keyword):
@@ -67,7 +73,6 @@ class SQNotes:
                 INSERT OR IGNORE INTO keywords (keyword)
                 VALUES (?)
             ''', (keyword,))
-            self.conn.commit()
             keyword_id = self.cursor.lastrowid
         else:
             keyword_id = result[0]
@@ -115,6 +120,7 @@ class SQNotes:
     
         note_id = self._insert_new_note_into_database(note_filename_base=base_filename)
         self._extract_and_save_keywords(note_id=note_id, note_content=note_content)
+        self._commit_transaction()
 
     def _extract_and_save_keywords(self, note_id, note_content):
         keywords = self.extract_keywords(note_content)
@@ -146,7 +152,6 @@ class SQNotes:
     
     def _delete_keywords_from_database_for_note(self, note_id):
         self.cursor.execute('DELETE FROM note_keywords WHERE note_id = ?', (note_id,))
-        self.conn.commit()
     
     
     def _decrypt_note_into_temp_file(self, note_path):
@@ -194,23 +199,35 @@ class SQNotes:
     
     
         try:
-            note_id = self._get_note_id_from_database(filename = filename)
+            note_id = self._get_note_id_from_database_or_raise(filename = filename)
             self._delete_keywords_from_database_for_note(note_id)
             self._extract_and_save_keywords(note_id=note_id, note_content=edited_content)
-
+            self._commit_transaction()
                 
         except Exception:
             raise DatabaseException()
             
         print(f"Note edited: {filename}")
     
-    def _get_note_id_from_database(self, filename):
+    def _get_note_id_from_database_or_raise(self, filename):
         self.cursor.execute('SELECT id FROM notes WHERE filename = ?', (filename,))
         result = self.cursor.fetchone()
         if result:
             note_id = result[0]
+            return note_id
         else:
             raise NoteNotFoundInDatabaseException()
+        
+    def _get_note_id_from_database_or_none(self, filename):
+        self.cursor.execute('SELECT id FROM notes WHERE filename = ?', (filename,))
+        result = self.cursor.fetchone()
+        if result:
+            note_id = result[0]
+            return note_id
+        else:
+            return None
+        
+        
     
     def extract_keywords(self, content):
         # Extract hashtags using regular expression
@@ -219,7 +236,41 @@ class SQNotes:
         return list(unique_tags)
     
     
+    def _get_decrypted_content(self, file_path):
+        with tempfile.NamedTemporaryFile(delete=False) as temp_dec_file:
+            temp_dec_filename = temp_dec_file.name
+            subprocess.call(['gpg', '--yes', '--batch', '--quiet', '--output', temp_dec_filename, '--decrypt', file_path])
+            with open(temp_dec_filename, 'r') as file:
+                content = file.read()
+            if os.path.exists(temp_dec_filename):
+                os.remove(temp_dec_filename)
+        return content
+                
+    
+    def rescan_for_database(self):
+        NOTES_DIR = self.get_notes_dir_from_config()
+        self.open_database()
+        files = self._get_notes(notes_dir = NOTES_DIR)
+        files_info = [FileInfo(path = file, base_name = os.path.basename(file)) for file in files]
+        
+        for file_info in files_info:
+            content = self._get_decrypted_content(file_path=file_info.path)
+            try:
+                note_id = self._get_note_id_from_database_or_none(filename = file_info.base_name)
+                
+                if note_id is None:
+                    note_id = self._insert_new_note_into_database(note_filename_base=file_info.base_name)
+                
+                self._delete_keywords_from_database_for_note(note_id=note_id)
+                self._extract_and_save_keywords(note_id=note_id, note_content=content)
+                self._commit_transaction()
+                    
+            except Exception:
+                raise DatabaseException()
+        print("rescan complete")
+    
     def get_db_file_path(self, notes_dir):
+
         if os.getenv('TESTING') == 'true':
             return os.getenv('DATABASE_URL')
         else:    
@@ -245,13 +296,14 @@ class SQNotes:
         else:
             return None
         
+    def _commit_transaction(self):
+        self.conn.commit()
         
     def _insert_new_note_into_database(self, note_filename_base):
         self.cursor.execute('''
                 INSERT INTO notes (filename)
                 VALUES (?)
             ''', (note_filename_base,))
-        self.conn.commit()
         note_id = self.cursor.lastrowid
         return note_id
         
@@ -260,18 +312,20 @@ class SQNotes:
                     INSERT INTO note_keywords (note_id, keyword_id)
                     VALUES (?, ?)
                 ''', (note_id, keyword_id))
-        self.conn.commit()
         
 
-    def get_notes(self):
-        self.NOTES_DIR = self.get_notes_dir_from_config()
+    # not top-level
+    def _get_notes(self, notes_dir):
+        
+        # self.NOTES_DIR = self.get_notes_dir_from_config()
         extension = 'txt.gpg'
-        pattern = os.path.join(self.NOTES_DIR, f"*.{extension}")
+        pattern = os.path.join(notes_dir, f"*.{extension}")
         files = glob.glob(pattern)
         return files
         
     def print_all_notes(self):
-        files = self.get_notes()
+        notes_dir = self.get_notes_dir_from_config()
+        files = self._get_notes(notes_dir=notes_dir)
         filenames = [os.path.basename(file) for file in files]
         for file in filenames:
             print(file)
@@ -474,7 +528,7 @@ class SQNotes:
                     PRIMARY KEY (note_id, keyword_id)
                 )
             ''')
-            self.conn.commit()
+            self._commit_transaction()
         except Exception as e:
             raise DatabaseTableSetupException()
         self.set_database_is_set_up()
@@ -554,8 +608,9 @@ def main():
     parser.add_argument('--git', nargs=argparse.REMAINDER, help='Run a git command in the sqnotes directory')
     
     subparsers = parser.add_subparsers(dest='command', help='Subcommands')
-    parser_add = subparsers.add_parser('new', help='Add a new note.')
-    paerser_init = subparsers.add_parser('init', help='Initialize app.')
+    subparsers.add_parser('new', help='Add a new note.')
+    subparsers.add_parser('init', help='Initialize app.')
+    subparsers.add_parser('rescan', help='Rescan notes to populate database (useful for troubleshooting certain errors)')
     subparsers.add_parser('notes', help='Show a list of all notes.')
     git_parser = subparsers.add_parser('git', help='Passthrough git commands.')
     git_parser.add_argument('git_args', nargs=argparse.REMAINDER, help='Arguments for git command')
@@ -580,6 +635,8 @@ def main():
                 sqnotes.print_all_notes()
             elif args.command == 'git':
                 sqnotes.run_git_command(args.git_args)
+            elif args.command == 'rescan':
+                sqnotes.rescan_for_database()
             elif args.set_gpg_key:
                 sqnotes.set_gpg_key_email(args.set_gpg_key)
             elif args.new:

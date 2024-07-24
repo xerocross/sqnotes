@@ -28,7 +28,7 @@ class TestSQNotesEditExistingNote(unittest.TestCase):
     @patch.object(SQNotes, '_get_configured_text_editor')
     @patch.object(SQNotes, '_extract_and_save_keywords')
     @patch.object(SQNotes, '_delete_keywords_from_database_for_note')
-    @patch.object(SQNotes, '_get_note_id_from_database')
+    @patch.object(SQNotes, '_get_note_id_from_database_or_raise')
     @patch.object(SQNotes, '_write_encrypted_note')
     @patch.object(SQNotes, 'get_gpg_key_email')
     @patch.object(SQNotes, 'open_database')
@@ -46,18 +46,33 @@ class TestSQNotesEditExistingNote(unittest.TestCase):
         
     @patch('os.remove')
     @patch('os.path.exists')
+    @patch.object(SQNotes, '_commit_transaction')
     @patch.object(SQNotes, '_get_edited_note_from_text_editor')
     @patch.object(SQNotes, '_decrypt_note_into_temp_file')
     @patch.object(SQNotes, '_get_configured_text_editor')
     @patch.object(SQNotes, '_extract_and_save_keywords')
     @patch.object(SQNotes, '_delete_keywords_from_database_for_note')
-    @patch.object(SQNotes, '_get_note_id_from_database')
+    @patch.object(SQNotes, '_get_note_id_from_database_or_raise')
     @patch.object(SQNotes, '_write_encrypted_note')
     @patch.object(SQNotes, 'get_gpg_key_email')
     @patch.object(SQNotes, 'open_database')
     @patch.object(SQNotes, 'get_notes_dir_from_config')
     @patch.object(SQNotes, 'check_gpg_key_email')
-    def test_edit_calls_to_decrypt_note(self, mock_check_gpg_key, mock_get_notes_dir, mock_open_database, mock_get_gpg_key_email, mock_write_encrypted_note, mock_get_note_id, mock_delete_keywords, mock_extract_and_save_keywords, mock_get_editor, mock_decrypt_note, mock_get_edited_note, mock_os_exists, mock_os_remove):
+    def test_edit_calls_to_decrypt_note(self, 
+                                        mock_check_gpg_key, 
+                                        mock_get_notes_dir, 
+                                        mock_open_database, 
+                                        mock_get_gpg_key_email, 
+                                        mock_write_encrypted_note, 
+                                        mock_get_note_id, 
+                                        mock_delete_keywords, 
+                                        mock_extract_and_save_keywords, 
+                                        mock_get_editor, 
+                                        mock_decrypt_note, 
+                                        mock_get_edited_note,
+                                        mock_commit_transaction, 
+                                        mock_os_exists, 
+                                        mock_os_remove):
         mock_get_gpg_key_email.return_value = "test@test.com"
         mock_get_editor.return_value = 'vim'
         mock_os_exists.return_value = True
@@ -110,12 +125,13 @@ class TestSQNotesEditExistingNote(unittest.TestCase):
         
     @patch('os.remove')
     @patch('os.path.exists')
+    @patch.object(SQNotes, '_commit_transaction')
     @patch.object(SQNotes, '_get_edited_note_from_text_editor')
     @patch.object(SQNotes, '_decrypt_note_into_temp_file')
     @patch.object(SQNotes, '_get_configured_text_editor')
     @patch.object(SQNotes, '_extract_and_save_keywords')
     @patch.object(SQNotes, '_delete_keywords_from_database_for_note')
-    @patch.object(SQNotes, '_get_note_id_from_database')
+    @patch.object(SQNotes, '_get_note_id_from_database_or_raise')
     @patch.object(SQNotes, '_write_encrypted_note')
     @patch.object(SQNotes, 'get_gpg_key_email')
     @patch.object(SQNotes, 'open_database')
@@ -132,7 +148,8 @@ class TestSQNotesEditExistingNote(unittest.TestCase):
                                                            mock_extract_and_save_keywords, 
                                                            mock_get_editor, 
                                                            mock_decrypt_note, 
-                                                           mock_get_edited_note, 
+                                                           mock_get_edited_note,
+                                                           mock_commit_transaction, 
                                                            mock_os_exists, 
                                                            mock_os_remove):
         mock_get_gpg_key_email.return_value = "test@test.com"
@@ -187,12 +204,13 @@ class TestSQNotesEditExistingNote(unittest.TestCase):
 
     @patch('os.remove')
     @patch('os.path.exists')
+    @patch.object(SQNotes, '_commit_transaction')
     @patch.object(SQNotes, '_get_edited_note_from_text_editor')
     @patch.object(SQNotes, '_decrypt_note_into_temp_file')
     @patch.object(SQNotes, '_get_configured_text_editor')
     @patch.object(SQNotes, '_extract_and_save_keywords')
     @patch.object(SQNotes, '_delete_keywords_from_database_for_note')
-    @patch.object(SQNotes, '_get_note_id_from_database')
+    @patch.object(SQNotes, '_get_note_id_from_database_or_raise')
     @patch.object(SQNotes, '_write_encrypted_note')
     @patch.object(SQNotes, 'get_gpg_key_email')
     @patch.object(SQNotes, 'open_database')
@@ -209,7 +227,8 @@ class TestSQNotesEditExistingNote(unittest.TestCase):
                                                            mock_extract_and_save_keywords, 
                                                            mock_get_editor, 
                                                            mock_decrypt_note, 
-                                                           mock_get_edited_note, 
+                                                           mock_get_edited_note,
+                                                           mock_commit_transaction, 
                                                            mock_os_exists, 
                                                            mock_os_remove):
         mock_get_gpg_key_email.return_value = "test@test.com"
