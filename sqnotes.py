@@ -20,14 +20,7 @@ class EnvironmentConfigurationNotFound(Exception):
 
 project_root = os.path.dirname(os.path.abspath(__file__))
 env_file_path = os.path.join(project_root, '.production.env')
-if os.getenv('TESTING') == 'true':
-    env_file_path = os.path.join(project_root, '.test.env')
-else:
-    env_file_path = os.path.join(project_root, '.env.production')
-if not os.path.exists(env_file_path):
-    raise EnvironmentConfigurationNotFound()
-else:
-    load_dotenv(env_file_path)
+load_dotenv(env_file_path)
 
 
 class NotesDirNotConfiguredException(Exception):
@@ -38,6 +31,9 @@ class DatabaseTableSetupException(Exception):
     """Exception raised during database table setup."""
     pass
 
+class DatabaseException(Exception):
+    """Exception raised if a database error occurs."""
+
 class NotesDirNotSelectedException(Exception):
     """Exception raised if user notes directory not specified."""
 
@@ -47,7 +43,7 @@ class NoteNotFoundException(Exception):
 class TextEditorNotConfiguredException(Exception):
     """Raise if attempted to use text editor but not configured."""
     
-class DatabaseException(Exception):
+class SQNotesDatabaseException(Exception):
     """Raise if an error occurs while interacting with the database."""
 
 class DecryptionFailedException(Exception):
@@ -55,6 +51,9 @@ class DecryptionFailedException(Exception):
 
 class NoteNotFoundInDatabaseException(Exception):
     """Raise when could not find a note reference in the database."""
+    
+class TestDatabaseURLNotFoundInConfig(Exception):
+    """Raise when could not get test database URL from test config."""
 
 class SQNotes:
     
@@ -113,8 +112,19 @@ class SQNotes:
         
         print(f"Note added: {base_filename}")
     
-        note_id = self._insert_new_note_into_database(note_filename_base=base_filename)
-        self._extract_and_save_keywords(note_id=note_id, note_content=note_content)
+        try:
+            note_id = self._insert_new_note_into_database(note_filename_base=base_filename)
+            
+            self._extract_and_save_keywords(note_id=note_id, note_content=note_content)
+        
+            self._commit_transaction()
+        except sqlite3.Error as e:
+            # Rollback in case of error
+            self.conn.rollback()
+            print(f"Transaction failed and rolled back. Error: {e}")
+
+    def _commit_transaction(self):
+        self.conn.commit()
 
     def _extract_and_save_keywords(self, note_id, note_content):
         keywords = self.extract_keywords(note_content)
@@ -195,10 +205,10 @@ class SQNotes:
             note_id = self._get_note_id_from_database(filename = filename)
             self._delete_keywords_from_database_for_note(note_id)
             self._extract_and_save_keywords(note_id=note_id, note_content=edited_content)
-
+            self._commit_transaction()
                 
         except Exception:
-            raise DatabaseException()
+            raise SQNotesDatabaseException()
             
         print(f"Note edited: {filename}")
     
@@ -217,10 +227,16 @@ class SQNotes:
         return list(unique_tags)
     
     
-    def get_db_file_path(self, notes_dir):
+    def get_db_file_path(self):
         if os.getenv('TESTING') == 'true':
-            return os.getenv('DATABASE_URL')
-        else:    
+            database_url = os.getenv('TEST_DATABASE_URL')
+            if database_url is None:
+                raise TestDatabaseURLNotFoundInConfig()
+            return database_url
+        else:
+            notes_dir = self.get_notes_dir_from_config()
+            if notes_dir is None:
+                raise NotesDirNotSelectedException()
             return os.path.join(notes_dir, os.getenv('DEFAULT_DATABASE_NAME'))
         
     
@@ -249,9 +265,16 @@ class SQNotes:
                 INSERT INTO notes (filename)
                 VALUES (?)
             ''', (note_filename_base,))
-        self.conn.commit()
+        # self.conn.commit()
         note_id = self.cursor.lastrowid
         return note_id
+    
+
+    def _get_cursor(self):
+        return self.cursor
+    
+    def _get_db_connection(self):
+        return self.conn
         
     def insert_note_keyword_into_database(self, note_id, keyword_id):
         self.cursor.execute('''
@@ -284,16 +307,14 @@ class SQNotes:
         
     
     def open_database(self):
-        notes_dir = self.get_notes_dir_from_config()
-        if notes_dir is None:
-            raise NotesDirNotSelectedException()
-        self.DB_PATH = self.get_db_file_path(notes_dir)
+        self.DB_PATH = self.get_db_file_path()
+        print(f"database file path is {self.DB_PATH}")
         self.conn = sqlite3.connect(self.DB_PATH)
         self.cursor = self.conn.cursor()
         
         is_database_set_up = self.check_is_database_set_up()
         if not is_database_set_up:
-            self.setup_database()
+            self._setup_database()
     
     def open_or_create_and_open_user_config_file(self):
         # Ensure the configuration directory exists
@@ -447,7 +468,7 @@ class SQNotes:
     
         
         
-    def setup_database(self):
+    def _setup_database(self):
         try:
             self.cursor.execute('''
                 CREATE TABLE IF NOT EXISTS notes (
@@ -478,9 +499,7 @@ class SQNotes:
         self.set_database_is_set_up()
         
     
-
     
-        
         
     def decrypt_and_print(self, filename, search_queries = None):
         with tempfile.NamedTemporaryFile(delete=False) as temp_dec_file:

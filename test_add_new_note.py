@@ -16,6 +16,7 @@ class TestSQNotesCreateNewNote(unittest.TestCase):
         self.test_dir = tempfile.TemporaryDirectory()
         self.sqnotes = SQNotes()
 
+    @patch.object(SQNotes, '_commit_transaction')
     @patch.object(SQNotes, '_get_new_note_name')
     @patch.object(SQNotes, '_extract_and_save_keywords')
     @patch.object(SQNotes, '_insert_new_note_into_database')
@@ -25,7 +26,17 @@ class TestSQNotesCreateNewNote(unittest.TestCase):
     @patch.object(SQNotes, 'open_database')
     @patch.object(SQNotes, 'get_notes_dir_from_config')
     @patch.object(SQNotes, 'check_gpg_key_email')
-    def test_calls_to_get_input_from_text_editor(self, mock_check_gpg_key, mock_get_notes_dir, mock_open_database, mock_get_input, mock_get_gpg_key_email, mock_write_encrypted_note, mock_insert_new_note_in_database, mock_extract_keywords, mock_get_new_note_name):
+    def test_calls_to_get_input_from_text_editor(self, 
+                                                 mock_check_gpg_key, 
+                                                 mock_get_notes_dir, 
+                                                 mock_open_database, 
+                                                 mock_get_input, 
+                                                 mock_get_gpg_key_email, 
+                                                 mock_write_encrypted_note, 
+                                                 mock_insert_new_note_in_database, 
+                                                 mock_extract_keywords, 
+                                                 mock_get_new_note_name,
+                                                 mock_commit_transaction):
         mock_get_new_note_name.return_value = "test.txt.gpg"
         mock_check_gpg_key.return_value = True
         mock_get_notes_dir.return_value = self.test_dir.name
@@ -35,6 +46,7 @@ class TestSQNotesCreateNewNote(unittest.TestCase):
         self.sqnotes.add_note()
         mock_get_input.assert_called_once()
         
+    @patch.object(SQNotes, '_commit_transaction')
     @patch.object(SQNotes, '_get_new_note_name')
     @patch.object(SQNotes, '_extract_and_save_keywords')
     @patch.object(SQNotes, '_insert_new_note_into_database')
@@ -44,7 +56,17 @@ class TestSQNotesCreateNewNote(unittest.TestCase):
     @patch.object(SQNotes, 'open_database')
     @patch.object(SQNotes, 'get_notes_dir_from_config')
     @patch.object(SQNotes, 'check_gpg_key_email')
-    def test_passes_content_from_editor_into_write_function(self, mock_check_gpg_key, mock_get_notes_dir, mock_open_database, mock_get_input, mock_get_gpg_key_email, mock_write_encrypted_note, mock_insert_new_note_in_database, mock_extract_keywords, mock_get_new_note_name):
+    def test_passes_content_from_editor_into_write_function(self, 
+                                                            mock_check_gpg_key, 
+                                                            mock_get_notes_dir, 
+                                                            mock_open_database, 
+                                                            mock_get_input, 
+                                                            mock_get_gpg_key_email, 
+                                                            mock_write_encrypted_note, 
+                                                            mock_insert_new_note_in_database, 
+                                                            mock_extract_keywords, 
+                                                            mock_get_new_note_name,
+                                                            mock_commit_transaction):
         mock_get_new_note_name.return_value = "test.txt.gpg"
         mock_check_gpg_key.return_value = True
         mock_get_notes_dir.return_value = self.test_dir.name
@@ -56,7 +78,7 @@ class TestSQNotesCreateNewNote(unittest.TestCase):
         mock_write_encrypted_note.assert_called_once()
         self.assertEqual(called_kwargs['note_content'], "test content")
         
-        
+    @patch.object(SQNotes, '_commit_transaction')
     @patch.object(SQNotes, '_get_new_note_name')
     @patch.object(SQNotes, '_extract_and_save_keywords')
     @patch.object(SQNotes, '_insert_new_note_into_database')
@@ -66,7 +88,17 @@ class TestSQNotesCreateNewNote(unittest.TestCase):
     @patch.object(SQNotes, 'open_database')
     @patch.object(SQNotes, 'get_notes_dir_from_config')
     @patch.object(SQNotes, 'check_gpg_key_email')
-    def test_passes_new_note_name_into_write_function(self, mock_check_gpg_key, mock_get_notes_dir, mock_open_database, mock_get_input, mock_get_gpg_key_email, mock_write_encrypted_note, mock_insert_new_note_in_database, mock_extract_keywords, mock_get_new_note_name):
+    def test_passes_new_note_name_into_write_function(self, 
+                                                      mock_check_gpg_key, 
+                                                      mock_get_notes_dir, 
+                                                      mock_open_database, 
+                                                      mock_get_input, 
+                                                      mock_get_gpg_key_email, 
+                                                      mock_write_encrypted_note, 
+                                                      mock_insert_new_note_in_database, 
+                                                      mock_extract_keywords, 
+                                                      mock_get_new_note_name,
+                                                      mock_commit_transaction):
         mock_get_new_note_name.return_value = 'test.txt.gpg'
         mock_check_gpg_key.return_value = True
         mock_get_notes_dir.return_value = self.test_dir.name
@@ -79,6 +111,7 @@ class TestSQNotesCreateNewNote(unittest.TestCase):
         self.assertEqual(called_kwargs['note_file_path'], self.test_dir.name + os.sep + 'test.txt.gpg')
         
 
+    @patch.object(SQNotes, '_commit_transaction')
     @patch.object(SQNotes, '_get_new_note_name')
     @patch.object(SQNotes, '_extract_and_save_keywords')
     @patch.object(SQNotes, '_insert_new_note_into_database')
@@ -88,7 +121,17 @@ class TestSQNotesCreateNewNote(unittest.TestCase):
     @patch.object(SQNotes, 'open_database')
     @patch.object(SQNotes, 'get_notes_dir_from_config')
     @patch.object(SQNotes, 'check_gpg_key_email')
-    def test_prints_message_saying_note_was_created(self, mock_check_gpg_key, mock_get_notes_dir, mock_open_database, mock_get_input, mock_get_gpg_key_email, mock_write_encrypted_note, mock_insert_new_note_in_database, mock_extract_keywords, mock_get_new_note_name):
+    def test_prints_message_saying_note_was_created(self, 
+                                                    mock_check_gpg_key, 
+                                                    mock_get_notes_dir, 
+                                                    mock_open_database, 
+                                                    mock_get_input, 
+                                                    mock_get_gpg_key_email, 
+                                                    mock_write_encrypted_note, 
+                                                    mock_insert_new_note_in_database, 
+                                                    mock_extract_keywords, 
+                                                    mock_get_new_note_name,
+                                                    mock_commit_transaction):
         mock_get_new_note_name.return_value = "test.txt.gpg"
         mock_check_gpg_key.return_value = True
         mock_get_notes_dir.return_value = self.test_dir.name
@@ -104,7 +147,11 @@ class TestSQNotesCreateNewNote(unittest.TestCase):
     @patch('os.path.exists')
     @patch('tempfile.NamedTemporaryFile')
     @patch('subprocess.call')
-    def test_write_function_calls_subprocess_with_gpg(self, mock_subprocess_call, mock_tempfile, mock_os_exists, mock_os_remove):
+    def test_write_function_calls_subprocess_with_gpg(self, 
+                                                      mock_subprocess_call, 
+                                                      mock_tempfile, 
+                                                      mock_os_exists, 
+                                                      mock_os_remove):
         mock_temp_file = MagicMock(spec=tempfile.NamedTemporaryFile)
         mock_temp_file.name = "mock_temp_file_name"
         mock_temp_file.write = lambda *args, **kwargs: None 
@@ -123,7 +170,11 @@ class TestSQNotesCreateNewNote(unittest.TestCase):
     @patch('os.path.exists')
     @patch('tempfile.NamedTemporaryFile')
     @patch('subprocess.call')
-    def test_write_function_calls_gpg_with_output_as_note_name(self, mock_subprocess_call, mock_tempfile, mock_os_exists, mock_os_remove):
+    def test_write_function_calls_gpg_with_output_as_note_name(self, 
+                                                               mock_subprocess_call, 
+                                                               mock_tempfile, 
+                                                               mock_os_exists, 
+                                                               mock_os_remove):
         mock_temp_file = MagicMock(spec=tempfile.NamedTemporaryFile)
         mock_temp_file.name = "mock_temp_file_name"
         mock_temp_file.write = lambda *args, **kwargs: None 
@@ -145,7 +196,11 @@ class TestSQNotesCreateNewNote(unittest.TestCase):
     @patch.object(SQNotes, '_get_configured_text_editor')
     @patch('tempfile.NamedTemporaryFile')
     @patch('subprocess.call')
-    def test_input_function_gets_text_editor_from_config(self, mock_subprocess_call, mock_tempfile, mock_get_text_editor, mock_os_remove):
+    def test_input_function_gets_text_editor_from_config(self, 
+                                                         mock_subprocess_call, 
+                                                         mock_tempfile, 
+                                                         mock_get_text_editor, 
+                                                         mock_os_remove):
         
         mock_get_text_editor.return_value = 'vim'
         # Mock tempfile.NamedTemporaryFile context manager
@@ -171,7 +226,11 @@ class TestSQNotesCreateNewNote(unittest.TestCase):
     @patch.object(SQNotes, '_get_configured_text_editor')
     @patch('tempfile.NamedTemporaryFile')
     @patch('subprocess.call')
-    def test_input_function_calls_subprocess_with_correct_temp_filename(self, mock_subprocess_call, mock_tempfile, mock_get_text_editor, mock_os_remove):
+    def test_input_function_calls_subprocess_with_correct_temp_filename(self, 
+                                                                        mock_subprocess_call, 
+                                                                        mock_tempfile, 
+                                                                        mock_get_text_editor, 
+                                                                        mock_os_remove):
         
         mock_get_text_editor.return_value = 'vim'
         # Mock tempfile.NamedTemporaryFile context manager
@@ -198,7 +257,11 @@ class TestSQNotesCreateNewNote(unittest.TestCase):
     @patch.object(SQNotes, '_get_configured_text_editor')
     @patch('tempfile.NamedTemporaryFile')
     @patch('subprocess.call')
-    def test_input_function_returns_content_from_text_editor(self, mock_subprocess_call, mock_tempfile, mock_get_text_editor, mock_os_remove):
+    def test_input_function_returns_content_from_text_editor(self, 
+                                                             mock_subprocess_call, 
+                                                             mock_tempfile, 
+                                                             mock_get_text_editor, 
+                                                             mock_os_remove):
         
         # Mock tempfile.NamedTemporaryFile context manager
         mock_temp_file = MagicMock(spec=tempfile.NamedTemporaryFile)
