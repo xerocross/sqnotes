@@ -41,12 +41,18 @@ class TestCLIInitializedCommandsReferredCorrectly(unittest.TestCase):
     @patch.object(SQNotes, 'check_initialized', lambda x : True)
     @patch.object(SQNotes, 'add_note')
     def test_new_command_refers_to_add_note_method(self, mock_add_note):
+        """
+            The new command refers to the add_node method.
+        """
         self.run_cli(['sqnotes', 'new'])
         mock_add_note.assert_called_once()
     
     @patch.object(SQNotes, 'check_initialized', lambda x : True)
     @patch.object(SQNotes, 'print_all_notes')
     def test_notes_command_refers_to_print_notes_method(self, mock_print_all_notes):
+        """
+            The notes-list command refers to the print notes method.
+        """
         self.run_cli(['sqnotes', 'notes-list'])
         mock_print_all_notes.assert_called_once()
         
@@ -93,6 +99,19 @@ class TestCLIInitializedCommandsReferredCorrectly(unittest.TestCase):
     def test_search_text_command_refers_to_edit_note_method(self, mock_search_notes):
         self.run_cli(['sqnotes', 'search', '--text', 'apple', 'pear'])
         mock_search_notes.assert_called_once_with(['apple', 'pear'])
+        
+        
+    @patch.object(SQNotes, 'check_initialized', lambda x : True)
+    @patch.object(SQNotes, 'set_gpg_key_email')
+    def test_set_gpg_key_i_command_refers_to_set_gpg_key_method(self, mock_set_gpg_key_email):
+        self.run_cli(['sqnotes', 'set-gpg-key', '-i', 'test@domain'])
+        mock_set_gpg_key_email.assert_called_once_with('test@domain')
+        
+    @patch.object(SQNotes, 'check_initialized', lambda x : True)
+    @patch.object(SQNotes, 'set_gpg_key_email')
+    def test_set_gpg_key_ID_command_refers_to_set_gpg_key_method(self, mock_set_gpg_key_email):
+        self.run_cli(['sqnotes', 'set-gpg-key', '--id', 'test@domain'])
+        mock_set_gpg_key_email.assert_called_once_with('test@domain')
 
 
 if __name__ == '__main__':
