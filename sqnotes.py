@@ -121,7 +121,10 @@ class SQNotes:
         self.GPG_KEY_EMAIL = self.get_gpg_key_email()
         self.check_gpg_key_email()
         NOTES_DIR = self.get_notes_dir_from_config()
+        self.check_text_editor_is_configured()
         self.open_database()
+        
+        
         
         note_content = self._get_input_from_text_editor()
         base_filename = self._get_new_note_name()
@@ -203,6 +206,7 @@ class SQNotes:
         self.GPG_KEY_EMAIL = self.get_gpg_key_email()
         self.check_gpg_key_email()
         NOTES_DIR = self.get_notes_dir_from_config()
+        self.check_text_editor_is_configured
         self.TEXT_EDITOR = self._get_configured_text_editor()
         self.open_database()
         
@@ -314,6 +318,10 @@ class SQNotes:
         if text_editor is None:
             raise TextEditorNotConfiguredException()
         return text_editor
+    
+    def _is_text_editor_configured(self):
+        text_editor = self.get_setting_from_user_config('text_editor')
+        return text_editor is not None and text_editor != ''
     
     def get_setting_from_user_config(self, key):
         if 'settings' in self.user_config and key in self.user_config['settings']:
@@ -620,13 +628,12 @@ class SQNotes:
         self.open_or_create_and_open_user_config_file()
 
         
-    def set_text_editor_config(self):
+    def check_text_editor_is_configured(self):
         # Check if a text editor is configured, prompt to select one if not
-        if 'settings' in self.user_config and 'text_editor' in self.user_config['settings']:
-            TEXT_EDITOR = self.user_config['settings']['text_editor']
-        else:
-            TEXT_EDITOR = input("No text editor configured. Please enter the path to your preferred text editor.")
-            self.user_config['settings'] = {'text_editor': TEXT_EDITOR}
+        is_configured = self._is_text_editor_configured()
+        if not is_configured:
+            TEXT_EDITOR = input("No text editor configured. Please enter the path to your preferred terminal text editor (e.g. 'vim', 'nano')> ")
+            self.set_setting_in_user_config('text_editor', TEXT_EDITOR)
             self.save_config()
 
 
