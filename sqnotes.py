@@ -594,13 +594,8 @@ class SQNotes:
         
         self.save_config()
         
-    
-        
 
-
-    
-
-    def set_setting_in_user_config(self, key, value):
+    def _set_setting_in_user_config(self, key, value):
         if 'settings' not in self.user_config:
             self.user_config['settings'] = {}
         self.user_config['settings'][key]= value
@@ -611,7 +606,7 @@ class SQNotes:
         return is_set_up
     
     def set_database_is_set_up(self):
-        self.set_setting_in_user_config('database_is_setup', 'yes')
+        self._set_setting_in_user_config('database_is_setup', 'yes')
         
         
     def setup_database(self):
@@ -683,39 +678,33 @@ class SQNotes:
     
     def set_gpg_key_email(self, new_gpg_key_email):
         self.GPG_KEY_EMAIL = new_gpg_key_email
-        if 'settings' not in self.user_config:
-            self.user_config['settings'] = {}
-        self.user_config['settings']['gpg_key_email'] = new_gpg_key_email
-        self.save_config()
+        key = "gpg_key_email"
+        self._set_setting_in_user_config(key=key, value=new_gpg_key_email)
         print(f"GPG Key set to: {self.GPG_KEY_EMAIL}")
 
-    def set_user_notes_configuration(self, selected_path):
-        pass
-        
     
     def startup(self):
         self.load_setup_configuration()
         self.open_or_create_and_open_user_config_file()
 
-        
     def check_text_editor_is_configured(self):
         # Check if a text editor is configured, prompt to select one if not
         is_configured = self._is_text_editor_configured()
         if not is_configured:
             TEXT_EDITOR = input("No text editor configured. Please enter the path to your preferred terminal text editor (e.g. 'vim', 'nano')> ")
-            self.set_setting_in_user_config('text_editor', TEXT_EDITOR)
+            self._set_setting_in_user_config('text_editor', TEXT_EDITOR)
             self.save_config()
 
 
 def main():
     parser = argparse.ArgumentParser(
-        description='SQNote: Secure note-taking script',
+        description='SQNote: Secure note-taking command-line utility.',
         epilog=epilog_text,
         formatter_class=argparse.RawTextHelpFormatter
         )
     parser.add_argument('--debug', 
                     action='store_true', 
-                    help='Enable debugging mode with detailed error messages')
+                    help='Enable debugging mode with detailed log messages')
     
     subparsers = parser.add_subparsers(dest='command', help='Subcommands')
     
