@@ -39,13 +39,13 @@ class TestCLIInitializedCommandsReferredCorrectly(unittest.TestCase):
         return mock_stdout.getvalue()
     
     @patch.object(SQNotes, 'check_initialized', lambda x : True)
-    @patch.object(SQNotes, 'add_note')
-    def test_new_command_refers_to_add_note_method(self, mock_add_note):
+    @patch.object(SQNotes, 'new_note')
+    def test_new_command_refers_to_new_note_method(self, mock_new_note):
         """
-            The new command refers to the add_node method.
+            The new command refers to the new_note method.
         """
         self.run_cli(['sqnotes', 'new'])
-        mock_add_note.assert_called_once()
+        mock_new_note.assert_called_once()
     
     @patch.object(SQNotes, 'check_initialized', lambda x : True)
     @patch.object(SQNotes, 'notes_list')

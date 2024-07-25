@@ -118,7 +118,7 @@ class SQNotes:
         return f"{datetime_string}.txt.gpg"
          
 
-    def add_note(self):
+    def new_note(self):
         self.GPG_KEY_EMAIL = self.get_gpg_key_email()
         self.check_gpg_key_email()
         NOTES_DIR = self.get_notes_dir_from_config()
@@ -678,7 +678,7 @@ def main():
             return
         else:
             if args.command == 'new':
-                sqnotes.add_note()
+                sqnotes.new_note()
             elif args.command == 'notes-list':
                 sqnotes.notes_list()
             elif args.command == 'set-gpg-key':
