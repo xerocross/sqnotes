@@ -11,21 +11,10 @@ import configparser
 from dotenv import load_dotenv
 import logging
 import interface_copy
+import sys
 
 VERSION = '0.2'
-DEBUGGING = True
-
-logging.basicConfig(
-    level=logging.DEBUG,  # Set the logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',  # Log message format
-    handlers=[
-        logging.StreamHandler()  # Logs will be output to the console
-        # You can also add a file handler if needed:
-        # logging.FileHandler('app.log')
-    ]
-)
-
-logger = logging.getLogger('SQNotes')
+DEBUGGING = '--debug' in sys.argv
 
 
 class EnvironmentConfigurationNotFound(Exception):
@@ -41,6 +30,34 @@ if not os.path.exists(env_file_path):
     raise EnvironmentConfigurationNotFound()
 else:
     load_dotenv(env_file_path)
+
+
+
+def setup_logger():
+    logger = logging.getLogger('SQNotes')
+    logger.setLevel(logging.DEBUG)
+    for handler in logger.handlers[:]:
+        logger.removeHandler(handler)
+    
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    
+    CONFIG_DIR = os.path.expanduser(os.getenv('DEFAULT_CONFIG_DIR_PATH'))
+    LOG_FILE = os.path.join(CONFIG_DIR, 'sqnotes.log')
+    file_handler = logging.FileHandler(LOG_FILE)
+    file_handler.setLevel(logging.DEBUG)
+    file_handler.setFormatter(formatter)
+    logger.addHandler(file_handler)
+    
+    if DEBUGGING:
+        console_handler = logging.StreamHandler(sys.stdout)
+        console_handler.setLevel(logging.DEBUG)  # Log all levels to console
+        console_handler.setFormatter(formatter)
+        logger.addHandler(console_handler)
+    
+    return logger
+
+
+logger = setup_logger()
 
 
 class NotesDirNotConfiguredException(Exception):
@@ -637,10 +654,12 @@ class SQNotes:
 
 def main():
     parser = argparse.ArgumentParser(description='SQNote: Secure note-taking script')
-    
-    
+    parser.add_argument('--debug', 
+                    action='store_true', 
+                    help='Enable debugging mode with detailed error messages')
     
     subparsers = parser.add_subparsers(dest='command', help='Subcommands')
+    
     subparsers.add_parser('new', help='Add a new note.')
     
     subparsers.add_parser('init', help='Initialize app.')
