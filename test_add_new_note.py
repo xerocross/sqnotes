@@ -268,6 +268,68 @@ class TestSQNotesCreateNewNote(unittest.TestCase):
         
         
         
+class TestSQNotesNewNoteDatabaseInteractions(unittest.TestCase):
+    
+    @patch.object(SQNotes, 'check_is_database_set_up', lambda x : False)
+    @patch.object(SQNotes, 'get_db_file_path', lambda x,y : ':memory:')
+    @patch.object(SQNotes, 'get_notes_dir_from_config', lambda x : "")
+    @patch.object(SQNotes,'set_database_is_set_up', lambda x : None)
+    def setUp(self):
+        self.sqnotes = SQNotes()
+        self.sqnotes.open_database()
+        self.connection = self.sqnotes._get_database_connection()
+        self.cursor = self.sqnotes._get_database_cursor()
+        
+    
+    def tearDown(self):
+
+        self.connection.close()
+    
+    def test_insert_note_into_database_function(self):
+        test_base_filename = "note_1.txt"
+        note_id = self.sqnotes._insert_new_note_into_database(note_filename_base=test_base_filename)
+        
+        self.cursor.execute("SELECT id, filename FROM notes WHERE id = ?", (note_id,))
+        result = self.cursor.fetchone()
+        self.assertEqual(result[1], test_base_filename)
+        self.connection.execute('ROLLBACK;')
+        
+        
+    @patch.object(SQNotes, '_extract_keywords', lambda x,y : ['apple', 'banana'])
+    def test_extract_and_save_keywords(self):
+        
+        test_note_content = "#apple pear #banana"
+        test_base_filename = "note_1.txt"
+        note_id = self.sqnotes._insert_new_note_into_database(note_filename_base=test_base_filename)
+        
+        self.sqnotes._extract_and_save_keywords(note_id=note_id, note_content=test_note_content)
+        
+        
+        self.cursor.execute('SELECT id FROM keywords WHERE keyword = ?', ('apple',))
+        result = self.cursor.fetchone()
+        database_contains_apple_keyword = result is not None
+        
+        self.cursor.execute('SELECT id FROM keywords WHERE keyword = ?', ('banana',))
+        result = self.cursor.fetchone()
+        database_contains_banana_keyword = result is not None
+        
+        self.assertTrue(database_contains_apple_keyword and database_contains_banana_keyword)
+        self.connection.execute('ROLLBACK;')
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
         
         
         

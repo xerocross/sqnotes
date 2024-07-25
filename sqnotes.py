@@ -77,7 +77,7 @@ class FileInfo:
 
 class SQNotes:
     
-    def insert_keyword_into_database(self, keyword):
+    def _insert_keyword_into_database(self, keyword):
         self.cursor.execute('SELECT id FROM keywords WHERE keyword = ?', (keyword,))
         result = self.cursor.fetchone()
         if result is None:
@@ -125,8 +125,6 @@ class SQNotes:
         self.check_text_editor_is_configured()
         self.open_database()
         
-        
-        
         note_content = self._get_input_from_text_editor()
         base_filename = self._get_new_note_name()
         note_file_path = os.path.join(NOTES_DIR, base_filename)
@@ -139,10 +137,10 @@ class SQNotes:
         self._commit_transaction()
 
     def _extract_and_save_keywords(self, note_id, note_content):
-        keywords = self.extract_keywords(note_content)
+        keywords = self._extract_keywords(note_content)
         keyword_ids = []
         for keyword in keywords:
-            keyword_id = self.insert_keyword_into_database(keyword)
+            keyword_id = self._insert_keyword_into_database(keyword)
             keyword_ids.append(keyword_id)
     
         for keyword_id in keyword_ids:
@@ -259,7 +257,7 @@ class SQNotes:
         
         
     
-    def extract_keywords(self, content):
+    def _extract_keywords(self, content):
         # Extract hashtags using regular expression
         tags = [match[1:] for match in re.findall(r'\B#\w+\b', content)]
         unique_tags = set(tags)
