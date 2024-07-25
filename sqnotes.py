@@ -78,6 +78,9 @@ class NoteNotFoundInDatabaseException(Exception):
 
 class TextEditorSubprocessException(Exception):
     """Raise when an exception occurs in calling the text editor in a subprocess."""
+    
+class GPGSubprocessException(Exception):
+    """Raise when an exception or error occurs in calling gpg in a subprocess."""
 
 class FileInfo:
         
@@ -124,11 +127,21 @@ class SQNotes:
         with tempfile.NamedTemporaryFile(delete=False) as temp_enc_file:
             temp_enc_filename = temp_enc_file.name
             temp_enc_file.write(note_content.encode('utf-8'))
-        subprocess.call(['gpg', '--yes','--quiet', '--batch', '--output', note_file_path, '--encrypt', '--recipient', self.GPG_KEY_EMAIL, temp_enc_filename])
-        if os.path.exists(temp_enc_filename):
-            os.remove(temp_enc_filename)
-        
-        
+        try:
+            response = subprocess.call(['gpg', '--yes','--quiet', '--batch', '--output', note_file_path, '--encrypt', '--recipient', self.GPG_KEY_EMAIL, temp_enc_filename])
+            if os.path.exists(temp_enc_filename):
+                os.remove(temp_enc_filename)
+            if response != 0:
+                raise GPGSubprocessException()
+        except Exception as e:
+            logger.error("encountered an error while calling gpg as a subprocess")
+            logger.error(e)
+            # make sure we remove the temp file
+            if os.path.exists(temp_enc_filename):
+                os.remove(temp_enc_filename)
+            
+            raise GPGSubprocessException()
+
         
     def _get_new_note_name(self):
         datetime_string = datetime.now().strftime('%Y%m%d%H%M%S')
@@ -159,7 +172,15 @@ class SQNotes:
         
         base_filename = self._get_new_note_name()
         note_file_path = os.path.join(NOTES_DIR, base_filename)
-        self._write_encrypted_note(note_file_path=note_file_path, note_content=note_content)
+        try:
+            self._write_encrypted_note(note_file_path=note_file_path, note_content=note_content)
+        except GPGSubprocessException as e:
+            logger.error(e)
+            message = interface_copy.GPG_SUBPROCESS_MESSAGE() + '\n' + interface_copy.EXITING()
+            logger.error(message)
+            print(message)
+            exit(1)
+            
         
         note_added_message = interface_copy.NOTE_ADDED().format(base_filename)
         print(note_added_message)

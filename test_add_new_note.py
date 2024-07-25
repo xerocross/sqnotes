@@ -2,7 +2,8 @@ import unittest
 from unittest.mock import patch, mock_open, MagicMock, call
 import os
 import pytest
-from sqnotes import SQNotes, TextEditorSubprocessException
+from sqnotes import SQNotes, TextEditorSubprocessException,\
+    GPGSubprocessException
 import tempfile
 import sqlite3
 
@@ -225,6 +226,7 @@ class TestSQNotesCreateNewNote(unittest.TestCase):
     @patch('tempfile.NamedTemporaryFile')
     @patch('subprocess.call')
     def test_write_function_calls_subprocess_with_gpg(self, mock_subprocess_call, mock_tempfile, mock_os_exists, mock_os_remove):
+        mock_subprocess_call.return_value = 0 #success
         mock_temp_file = MagicMock(spec=tempfile.NamedTemporaryFile)
         mock_temp_file.name = "mock_temp_file_name"
         mock_temp_file.write = lambda *args, **kwargs: None 
@@ -248,7 +250,7 @@ class TestSQNotesCreateNewNote(unittest.TestCase):
         mock_temp_file.name = "mock_temp_file_name"
         mock_temp_file.write = lambda *args, **kwargs: None 
         mock_tempfile.return_value.__enter__.return_value = mock_temp_file
-        
+        mock_subprocess_call.return_value = 0
         mock_os_exists.return_value = True
         
         self.sqnotes.GPG_KEY_EMAIL = "test@test.com"
@@ -260,6 +262,44 @@ class TestSQNotesCreateNewNote(unittest.TestCase):
         mock_subprocess_call.assert_called_once()
         self.assertEqual(first_call[4], '--output')
         self.assertEqual(first_call[5], file_path)
+    
+    @patch('os.remove')
+    @patch('os.path.exists')
+    @patch('tempfile.NamedTemporaryFile')
+    @patch('subprocess.call')
+    def test_write_function_raises_exception_if_gpg_subprocess_raises_exception(self, mock_subprocess_call, mock_tempfile, mock_os_exists, mock_os_remove):
+        mock_temp_file = MagicMock(spec=tempfile.NamedTemporaryFile)
+        mock_temp_file.name = "mock_temp_file_name"
+        mock_temp_file.write = lambda *args, **kwargs: None 
+        mock_tempfile.return_value.__enter__.return_value = mock_temp_file
+        mock_os_exists.return_value = True
+        mock_subprocess_call.side_effect = Exception
+        
+        self.sqnotes.GPG_KEY_EMAIL = "test@test.com"
+        file_path = self.test_dir.name + os.sep + 'test.txt.gpg'
+        text_content = 'test content'
+        with self.assertRaises(GPGSubprocessException):
+            self.sqnotes._write_encrypted_note(file_path, text_content)
+        
+    @patch('os.remove')
+    @patch('os.path.exists')
+    @patch('tempfile.NamedTemporaryFile')
+    @patch('subprocess.call')
+    def test_write_function_raises_exception_if_gpg_subprocess_returns_error_code(self, mock_subprocess_call, mock_tempfile, mock_os_exists, mock_os_remove):
+        mock_temp_file = MagicMock(spec=tempfile.NamedTemporaryFile)
+        mock_temp_file.name = "mock_temp_file_name"
+        mock_temp_file.write = lambda *args, **kwargs: None 
+        mock_tempfile.return_value.__enter__.return_value = mock_temp_file
+        mock_os_exists.return_value = True
+        mock_subprocess_call.return_value = 1
+        
+        self.sqnotes.GPG_KEY_EMAIL = "test@test.com"
+        file_path = self.test_dir.name + os.sep + 'test.txt.gpg'
+        text_content = 'test content'
+        with self.assertRaises(GPGSubprocessException):
+            self.sqnotes._write_encrypted_note(file_path, text_content)
+        
+    
     
     @patch('os.remove')
     @patch.object(SQNotes, '_get_configured_text_editor')
@@ -337,8 +377,72 @@ class TestSQNotesCreateNewNote(unittest.TestCase):
         self.assertEqual(note_content, 'Mock note content')
 
         
+    @patch.object(SQNotes, '_get_configured_text_editor', lambda x: 'vim')
+    @patch.object(SQNotes, 'open_database', lambda x: None)
+    @patch.object(SQNotes, 'check_text_editor_is_configured', lambda _ : None)
+    @patch.object(SQNotes, '_insert_new_note_into_database', lambda x : None)
+    @patch.object(SQNotes, '_extract_and_save_keywords', lambda x : None)
+    @patch.object(SQNotes, '_commit_transaction', lambda x : None)
+    @patch.object(SQNotes, '_get_new_note_name')
+    @patch.object(SQNotes, '_write_encrypted_note')
+    @patch.object(SQNotes, 'get_gpg_key_email')
+    @patch.object(SQNotes, '_get_input_from_text_editor')
+    @patch.object(SQNotes, 'get_notes_dir_from_config')
+    @patch.object(SQNotes, 'check_gpg_key_email')
+    def test_exits_on_gpg_subprocess_exception_during_write(self, 
+                                                 mock_check_gpg_key, 
+                                                 mock_get_notes_dir, 
+                                                 mock_get_input, 
+                                                 mock_get_gpg_key_email, 
+                                                 mock_write_encrypted_note, 
+                                                 mock_get_new_note_name):
+        mock_get_new_note_name.return_value = "test.txt.gpg"
+        mock_get_input.return_value = "test input"
+        mock_check_gpg_key.return_value = True
+        mock_get_notes_dir.return_value = self.test_dir.name
+        mock_get_gpg_key_email.return_value = "test@test.com"
+        mock_write_encrypted_note.return_value = True
+        mock_write_encrypted_note.side_effect = GPGSubprocessException()
+        
+        with self.assertRaises(SystemExit) as ex:
+            self.sqnotes.new_note()
+            self.assertEqual(ex.exception.code, 1)
         
         
+    @patch.object(SQNotes, '_get_configured_text_editor', lambda x: 'vim')
+    @patch.object(SQNotes, 'open_database', lambda x: None)
+    @patch.object(SQNotes, 'check_text_editor_is_configured', lambda _ : None)
+    @patch.object(SQNotes, '_insert_new_note_into_database', lambda x : None)
+    @patch.object(SQNotes, '_extract_and_save_keywords', lambda x : None)
+    @patch.object(SQNotes, '_commit_transaction', lambda x : None)
+    @patch.object(SQNotes, '_get_new_note_name')
+    @patch.object(SQNotes, '_write_encrypted_note')
+    @patch.object(SQNotes, 'get_gpg_key_email')
+    @patch.object(SQNotes, '_get_input_from_text_editor')
+    @patch.object(SQNotes, 'get_notes_dir_from_config')
+    @patch.object(SQNotes, 'check_gpg_key_email')
+    @patch('builtins.print')
+    def test_prints_error_message_on_gpg_subprocess_exception_during_write(self, 
+                                                 mock_print_function,
+                                                 mock_check_gpg_key, 
+                                                 mock_get_notes_dir, 
+                                                 mock_get_input, 
+                                                 mock_get_gpg_key_email, 
+                                                 mock_write_encrypted_note, 
+                                                 mock_get_new_note_name):
+        mock_get_new_note_name.return_value = "test.txt.gpg"
+        mock_get_input.return_value = "test input"
+        mock_check_gpg_key.return_value = True
+        mock_get_notes_dir.return_value = self.test_dir.name
+        mock_get_gpg_key_email.return_value = "test@test.com"
+        mock_write_encrypted_note.return_value = True
+        mock_write_encrypted_note.side_effect = GPGSubprocessException()
+        
+        with self.assertRaises(SystemExit):
+            self.sqnotes.new_note()
+            output = get_all_mocked_print_output(mocked_print=mock_print_function)
+            self.assertIn('Encountered an error while attempting to call GPG', output)
+            
         
 class TestSQNotesNewNoteDatabaseInteractions(unittest.TestCase):
     

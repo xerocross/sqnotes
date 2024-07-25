@@ -8,3 +8,4 @@ EXITING = lambda : 'Exiting now'
 COULD_NOT_OPEN_DATABASE = lambda : 'SQNotes could not open the database.'
 NOTE_ADDED = lambda : "Note added: {}"
 TEXT_EDITOR_SUBPROCESS_ERROR = lambda : "Encountered an error attempting to open the configured text editor: '{}'."
+GPG_SUBPROCESS_MESSAGE = lambda : "Encountered an error while attempting to call GPG."
