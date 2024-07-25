@@ -12,6 +12,7 @@ from dotenv import load_dotenv
 import logging
 import interface_copy
 import sys
+from epilog_text import epilog_text
 
 VERSION = '0.2'
 DEBUGGING = '--debug' in sys.argv
@@ -691,7 +692,11 @@ class SQNotes:
 
 
 def main():
-    parser = argparse.ArgumentParser(description='SQNote: Secure note-taking script')
+    parser = argparse.ArgumentParser(
+        description='SQNote: Secure note-taking script',
+        epilog=epilog_text,
+        formatter_class=argparse.RawTextHelpFormatter
+        )
     parser.add_argument('--debug', 
                     action='store_true', 
                     help='Enable debugging mode with detailed error messages')
