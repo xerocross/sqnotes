@@ -9,11 +9,23 @@ import sqlite3
 import re
 import configparser
 from dotenv import load_dotenv
-
-
+import logging
 
 VERSION = '0.2'
 DEBUGGING = True
+
+logging.basicConfig(
+    level=logging.DEBUG,  # Set the logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',  # Log message format
+    handlers=[
+        logging.StreamHandler()  # Logs will be output to the console
+        # You can also add a file handler if needed:
+        # logging.FileHandler('app.log')
+    ]
+)
+
+logger = logging.getLogger('SQNotes')
+
 
 class EnvironmentConfigurationNotFound(Exception):
     """Raise if the environment configuration file is not found."""
@@ -139,6 +151,19 @@ class SQNotes:
         else:
             return False
     
+    
+    def _get_all_keywords_from_database(self):
+        self.cursor.execute('SELECT keyword FROM keywords')
+        rows = self.cursor.fetchall()
+        keywords = [row[0] for row in rows]
+        return keywords
+    
+    
+    def print_all_keywords(self):
+        self.open_database()
+        keywords = self._get_all_keywords_from_database()
+        for kw in keywords:
+            print(kw)
     
     def create_initial_user_config(self, user_config):
         if 'global' not in self.user_config:
@@ -337,15 +362,25 @@ class SQNotes:
         self.CONFIG_DIR = os.path.expanduser(os.getenv('DEFAULT_CONFIG_DIR_PATH'))
         self.CONFIG_FILE = os.path.join(self.CONFIG_DIR, "config.ini")
         
-        
+    def _get_database_cursor(self):
+        return self.cursor
+    
+    def _get_database_connection(self):
+        return self.conn
     
     def open_database(self):
         notes_dir = self.get_notes_dir_from_config()
         if notes_dir is None:
             raise NotesDirNotSelectedException()
         self.DB_PATH = self.get_db_file_path(notes_dir)
-        self.conn = sqlite3.connect(self.DB_PATH)
-        self.cursor = self.conn.cursor()
+        try:
+            print(f"opening database at {self.DB_PATH}")
+            self.conn = sqlite3.connect(self.DB_PATH)
+            self.cursor = self.conn.cursor()
+        except sqlite3.OperationalError as e:
+            logger.error(f"could not open database at {self.DB_PATH}")
+            logger.error(e)
+            raise DatabaseException()
         
         is_database_set_up = self.check_is_database_set_up()
         if not is_database_set_up:
@@ -499,12 +534,11 @@ class SQNotes:
     def set_database_is_set_up(self):
         self.set_setting_in_user_config('database_is_setup', 'yes')
         
-    
-    
-        
         
     def setup_database(self):
         try:
+            print("creating tables")
+            logger.debug("creating tables in database")
             self.cursor.execute('''
                 CREATE TABLE IF NOT EXISTS notes (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -612,6 +646,7 @@ def main():
     subparsers.add_parser('init', help='Initialize app.')
     subparsers.add_parser('rescan', help='Rescan notes to populate database (useful for troubleshooting certain errors)')
     subparsers.add_parser('notes', help='Show a list of all notes.')
+    subparsers.add_parser('keywords', help='Print all keywords from database.')
     git_parser = subparsers.add_parser('git', help='Passthrough git commands.')
     git_parser.add_argument('git_args', nargs=argparse.REMAINDER, help='Arguments for git command')
     
@@ -635,6 +670,8 @@ def main():
                 sqnotes.print_all_notes()
             elif args.command == 'git':
                 sqnotes.run_git_command(args.git_args)
+            elif args.command == 'keywords':
+                sqnotes.print_all_keywords()
             elif args.command == 'rescan':
                 sqnotes.rescan_for_database()
             elif args.set_gpg_key:
