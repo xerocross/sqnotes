@@ -459,12 +459,10 @@ class SQNotes:
 
     def search_notes(self, search_queries):
         print("there may be some delay here as this requires decrypting all your notes")
-        self.GPG_KEY_EMAIL = self.get_gpg_key_email()
-        self.check_gpg_key_email()
         
         # Search for the queries in all notes
         any_matches = False
-        notes_dir = self.NOTES_DIR
+        notes_dir = self.get_notes_dir_from_config()
         for filename in glob.glob(f"{notes_dir}/*.gpg"):
             was_match = self.decrypt_and_print(filename, search_queries)
             if was_match:
