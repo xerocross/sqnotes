@@ -83,6 +83,9 @@ class DecryptionFailedException(Exception):
 class NoteNotFoundInDatabaseException(Exception):
     """Raise when could not find a note reference in the database."""
 
+class TextEditorSubprocessException(Exception):
+    """Raise when an exception occurs in calling the text editor in a subprocess."""
+
 class FileInfo:
         
     def __init__(self, path, base_name):
@@ -106,11 +109,18 @@ class SQNotes:
         return keyword_id
 
     def _get_input_from_text_editor(self):
-        self.TEXT_EDITOR = self._get_configured_text_editor()
-        # Open the text editor to edit the note
+        TEXT_EDITOR = self._get_configured_text_editor()
         with tempfile.NamedTemporaryFile(delete=False) as temp_file:
             temp_filename = temp_file.name
-        subprocess.call([self.TEXT_EDITOR, temp_filename])
+        try:
+            response = subprocess.call([TEXT_EDITOR, temp_filename])
+            if response != 0:
+                raise TextEditorSubprocessException()
+        except Exception as e:
+            logger.error("an exception occurred while attempting the text editor subprocess")
+            logger.error(e)
+            raise TextEditorSubprocessException()
+        
         with open(temp_filename, 'r') as file:
             note_content = file.read().strip()
         os.remove(temp_filename)

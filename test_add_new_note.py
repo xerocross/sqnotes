@@ -2,7 +2,7 @@ import unittest
 from unittest.mock import patch, mock_open, MagicMock, call
 import os
 import pytest
-from sqnotes import SQNotes
+from sqnotes import SQNotes, TextEditorSubprocessException
 import tempfile
 import sqlite3
 
@@ -564,5 +564,42 @@ class TestSQNotesCreateNewNoteDatabaseErrors(unittest.TestCase):
             arguments_list = [args[0] for args, _ in call_args]
             all_outtext = " ".join(arguments_list)
             self.assertIn('unknown error', all_outtext)
-
+            
+            
+    @patch('os.remove')
+    @patch.object(SQNotes, '_get_configured_text_editor')
+    @patch('tempfile.NamedTemporaryFile')
+    @patch('subprocess.call')
+    def test_get_input_raises_exception_on_failing_subprocess_with_exception(self, mock_subprocess_call, mock_tempfile, mock_get_text_editor, mock_os_remove):
         
+        mock_get_text_editor.return_value = 'vim'
+        # Mock tempfile.NamedTemporaryFile context manager
+        mock_temp_file = MagicMock(spec=tempfile.NamedTemporaryFile)
+        mock_temp_filename = "mock_temp_file_name"
+        mock_temp_file.name = mock_temp_filename
+        mock_tempfile.return_value.__enter__.return_value = mock_temp_file
+        mock_subprocess_call.side_effect = Exception()
+
+        with self.assertRaises(TextEditorSubprocessException):
+            self.sqnotes._get_input_from_text_editor()
+        
+
+    @patch('os.remove')
+    @patch.object(SQNotes, '_get_configured_text_editor')
+    @patch('tempfile.NamedTemporaryFile')
+    @patch('subprocess.call')
+    def test_get_input_raises_exception_on_failing_subprocess_with_nonzero_response(self, mock_subprocess_call, mock_tempfile, mock_get_text_editor, mock_os_remove):
+        
+        mock_get_text_editor.return_value = 'vim'
+        # Mock tempfile.NamedTemporaryFile context manager
+        mock_temp_file = MagicMock(spec=tempfile.NamedTemporaryFile)
+        mock_temp_filename = "mock_temp_file_name"
+        mock_temp_file.name = mock_temp_filename
+        mock_tempfile.return_value.__enter__.return_value = mock_temp_file
+        mock_subprocess_call.return_value = 1
+
+        with self.assertRaises(TextEditorSubprocessException):
+            self.sqnotes._get_input_from_text_editor()
+        
+
+
