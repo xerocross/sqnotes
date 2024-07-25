@@ -6,6 +6,13 @@ from sqnotes import SQNotes, TextEditorSubprocessException
 import tempfile
 import sqlite3
 
+
+def get_all_mocked_print_output(mocked_print):
+    call_args = mocked_print.call_args_list
+    arguments_list = [args[0] for args, _ in call_args]
+    all_outtext = " ".join(arguments_list)
+    return all_outtext
+
 @pytest.fixture(scope='session', autouse=True)
 def set_test_environment():
     os.environ['TESTING'] = 'true'
@@ -47,6 +54,70 @@ class TestSQNotesCreateNewNote(unittest.TestCase):
         mock_write_encrypted_note.return_value = True
         self.sqnotes.new_note()
         mock_get_input.assert_called_once()
+        
+    @patch.object(SQNotes, '_get_configured_text_editor', lambda x: 'vim')
+    @patch.object(SQNotes, 'open_database', lambda x: None)
+    @patch.object(SQNotes, 'check_text_editor_is_configured', lambda _ : None)
+    @patch.object(SQNotes, '_insert_new_note_into_database', lambda x : None)
+    @patch.object(SQNotes, '_extract_and_save_keywords', lambda x : None)
+    @patch.object(SQNotes, '_commit_transaction', lambda x : None)
+    @patch.object(SQNotes, '_get_new_note_name')
+    @patch.object(SQNotes, '_write_encrypted_note')
+    @patch.object(SQNotes, 'get_gpg_key_email')
+    @patch.object(SQNotes, '_get_input_from_text_editor')
+    @patch.object(SQNotes, 'get_notes_dir_from_config')
+    @patch.object(SQNotes, 'check_gpg_key_email')
+    def test_on_text_editor_subprocess_exception_prints_proper_message(self, 
+                                                 mock_check_gpg_key, 
+                                                 mock_get_notes_dir, 
+                                                 mock_get_input, 
+                                                 mock_get_gpg_key_email, 
+                                                 mock_write_encrypted_note, 
+                                                 mock_get_new_note_name):
+        mock_get_new_note_name.return_value = "test.txt.gpg"
+        mock_check_gpg_key.return_value = True
+        mock_get_notes_dir.return_value = self.test_dir.name
+        mock_get_input.side_effect = TextEditorSubprocessException()
+        mock_get_gpg_key_email.return_value = "test@test.com"
+        mock_write_encrypted_note.return_value = True
+        
+        with self.assertRaises(SystemExit):
+            with patch('builtins.print') as mocked_print:
+                self.sqnotes.new_note()
+                printed_text = get_all_mocked_print_output(mocked_print)
+                self.assertIn("Encountered an error attempting to open the configured text editor", printed_text)
+
+        
+    @patch.object(SQNotes, '_get_configured_text_editor', lambda x: 'vim')
+    @patch.object(SQNotes, 'open_database', lambda x: None)
+    @patch.object(SQNotes, 'check_text_editor_is_configured', lambda _ : None)
+    @patch.object(SQNotes, '_insert_new_note_into_database', lambda x : None)
+    @patch.object(SQNotes, '_extract_and_save_keywords', lambda x : None)
+    @patch.object(SQNotes, '_commit_transaction', lambda x : None)
+    @patch.object(SQNotes, '_get_new_note_name')
+    @patch.object(SQNotes, '_write_encrypted_note')
+    @patch.object(SQNotes, 'get_gpg_key_email')
+    @patch.object(SQNotes, '_get_input_from_text_editor')
+    @patch.object(SQNotes, 'get_notes_dir_from_config')
+    @patch.object(SQNotes, 'check_gpg_key_email')
+    def test_on_text_editor_subprocess_exception_exits(self, 
+                                                 mock_check_gpg_key, 
+                                                 mock_get_notes_dir, 
+                                                 mock_get_input, 
+                                                 mock_get_gpg_key_email, 
+                                                 mock_write_encrypted_note, 
+                                                 mock_get_new_note_name):
+        mock_get_new_note_name.return_value = "test.txt.gpg"
+        mock_check_gpg_key.return_value = True
+        mock_get_notes_dir.return_value = self.test_dir.name
+        mock_get_input.side_effect = TextEditorSubprocessException()
+        mock_get_gpg_key_email.return_value = "test@test.com"
+        mock_write_encrypted_note.return_value = True
+        
+        with self.assertRaises(SystemExit) as ex:
+            self.sqnotes.new_note()
+            self.assertEqual(ex.exception.code, 1)
+
         
     @patch.object(SQNotes, 'check_text_editor_is_configured', lambda _ : None)
     @patch.object(SQNotes, '_commit_transaction')

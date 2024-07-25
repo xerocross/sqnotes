@@ -156,8 +156,14 @@ class SQNotes:
             print(message)
             exit(1)
 
-                
-        note_content = self._get_input_from_text_editor()
+        try:        
+            note_content = self._get_input_from_text_editor()
+        except TextEditorSubprocessException:
+            message = interface_copy.TEXT_EDITOR_SUBPROCESS_ERROR().format(self._get_configured_text_editor())
+            logger.error(message)
+            print(message)
+            exit(1)
+        
         base_filename = self._get_new_note_name()
         note_file_path = os.path.join(NOTES_DIR, base_filename)
         self._write_encrypted_note(note_file_path=note_file_path, note_content=note_content)
