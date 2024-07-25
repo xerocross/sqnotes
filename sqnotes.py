@@ -16,7 +16,8 @@ from epilog_text import epilog_text
 
 VERSION = '0.2'
 DEBUGGING = '--debug' in sys.argv
-
+ASCII_ARMOR_CONFIG_KEY = "armor"
+GPG_VERIFIED_KEY = "gpg_verified"
 
 class EnvironmentConfigurationNotFound(Exception):
     """Raise if the environment configuration file is not found."""
@@ -81,6 +82,9 @@ class TextEditorSubprocessException(Exception):
     
 class GPGSubprocessException(Exception):
     """Raise when an exception or error occurs in calling gpg in a subprocess."""
+    
+class CouldNotRunGPG(Exception):
+    """Raise when a command is called that requires GPG and GPG is not available."""
 
 class FileInfo:
         
@@ -124,11 +128,18 @@ class SQNotes:
         
 
     def _write_encrypted_note(self, note_file_path, note_content):
+        
+        
         with tempfile.NamedTemporaryFile(delete=False) as temp_enc_file:
             temp_enc_filename = temp_enc_file.name
             temp_enc_file.write(note_content.encode('utf-8'))
+            
+        subprocess_command = ['gpg', '--yes','--quiet', '--batch', '--output', note_file_path, '--encrypt', '--recipient', self.GPG_KEY_EMAIL, temp_enc_filename]
+        if self._is_use_ascii_armor():
+            subprocess_command.insert(1, '--armor')
+            
         try:
-            response = subprocess.call(['gpg', '--yes','--quiet', '--batch', '--output', note_file_path, '--encrypt', '--recipient', self.GPG_KEY_EMAIL, temp_enc_filename])
+            response = subprocess.call(subprocess_command)
             if os.path.exists(temp_enc_filename):
                 os.remove(temp_enc_filename)
             if response != 0:
@@ -144,11 +155,14 @@ class SQNotes:
 
         
     def _get_new_note_name(self):
+        is_use_armor = self._is_use_ascii_armor()
+        extension = 'txt' if is_use_armor else "txt.gpg"
         datetime_string = datetime.now().strftime('%Y%m%d%H%M%S')
-        return f"{datetime_string}.txt.gpg"
+        return f"{datetime_string}.{extension}"
          
 
     def new_note(self):
+        self._check_gpg_verified()
         self.GPG_KEY_EMAIL = self.get_gpg_key_email()
         self.check_gpg_key_email()
         NOTES_DIR = self.get_notes_dir_from_config()
@@ -248,14 +262,27 @@ class SQNotes:
     def _delete_keywords_from_database_for_note(self, note_id):
         self.cursor.execute('DELETE FROM note_keywords WHERE note_id = ?', (note_id,))
     
+    def _delete_temp_file(self, temp_file):
+        if os.path.exists(temp_file):
+                os.remove(temp_file)
     
     def _decrypt_note_into_temp_file(self, note_path):
         with tempfile.NamedTemporaryFile(delete=False) as temp_dec_file:
             temp_dec_filename = temp_dec_file.name
-        decrypt_process = subprocess.run(['gpg', '--yes','--quiet', '--batch', '--output', temp_dec_filename, '--decrypt', note_path], check=True)
-    
-        if decrypt_process.returncode != 0:
-            raise DecryptionFailedException()
+        try:
+            decrypt_process = subprocess.run(['gpg', '--yes','--quiet', '--batch', '--output', temp_dec_filename, '--decrypt', note_path], check=True)
+        except Exception as e:
+            logger.error(e)
+            
+            self._delete_temp_file(temp_file=temp_dec_filename)
+            
+            raise GPGSubprocessException()
+        
+        if decrypt_process != 0:
+            logger.error(f"decrypt process returned code {decrypt_process}")
+            self._delete_temp_file(temp_file=temp_dec_filename)
+            raise GPGSubprocessException()
+        
         return temp_dec_filename
     
     def _get_edited_note_from_text_editor(self, temp_filename):
@@ -281,13 +308,19 @@ class SQNotes:
         if not os.path.exists(note_path):
             raise NoteNotFoundException()
     
+        temp_dec_filename = ''
         try:
             temp_dec_filename = self._decrypt_note_into_temp_file(note_path=note_path)
             edited_content = self._get_edited_note_from_text_editor(temp_filename=temp_dec_filename)
             print("edited_content:")
             print(edited_content)
             self._write_encrypted_note(note_file_path=note_path, note_content=edited_content)
-
+        except GPGSubprocessException as e:
+            logger.error(e)
+            message = interface_copy.GPG_SUBPROCESS_MESSAGE() + '\n' + interface_copy.EXITING()
+            print(message)
+            logger.error(message)
+            exit(1)
         finally:
             if os.path.exists(temp_dec_filename):
                 os.remove(temp_dec_filename)
@@ -351,7 +384,9 @@ class SQNotes:
     def _get_decrypted_content(self, file_path):
         with tempfile.NamedTemporaryFile(delete=False) as temp_dec_file:
             temp_dec_filename = temp_dec_file.name
+            
             subprocess.call(['gpg', '--yes', '--batch', '--quiet', '--output', temp_dec_filename, '--decrypt', file_path])
+            
             with open(temp_dec_filename, 'r') as file:
                 content = file.read()
             if os.path.exists(temp_dec_filename):
@@ -433,12 +468,13 @@ class SQNotes:
 
     # not top-level
     def _get_notes(self, notes_dir):
-        
-        # self.NOTES_DIR = self.get_notes_dir_from_config()
-        extension = 'txt.gpg'
-        pattern = os.path.join(notes_dir, f"*.{extension}")
-        files = glob.glob(pattern)
-        return files
+        extensions = ['txt.gpg', 'txt']
+        all_notes = []
+        for ex in extensions:
+            pattern = os.path.join(notes_dir, f"*.{ex}")
+            files = glob.glob(pattern)
+            all_notes.extend(files)
+        return all_notes
         
     def notes_list(self):
         logger.debug("printing notes list")
@@ -553,12 +589,14 @@ class SQNotes:
             print(f"No notes found with keywords: {keywords}")
 
     def search_notes(self, search_queries):
-        print("there may be some delay here as this requires decrypting all your notes")
+        print(interface_copy.SOME_DELAY_FOR_DECRYPTION())
         
         # Search for the queries in all notes
         any_matches = False
         notes_dir = self.get_notes_dir_from_config()
-        for filename in glob.glob(f"{notes_dir}/*.gpg"):
+        notes = self._get_notes(notes_dir=notes_dir)
+        
+        for filename in notes:
             was_match = self.decrypt_and_print(filename, search_queries)
             if was_match:
                 any_matches = True
@@ -591,8 +629,21 @@ class SQNotes:
                 return False
                 
     
+    def _check_gpg_verified(self):
+        is_gpg_verified = self._get_gpg_verified()
+        if not is_gpg_verified:
+            is_gpg_available = self._verify_gpg()
+            if is_gpg_available:
+                self._set_gpg_verified()
+            else:
+                raise CouldNotRunGPG()
+        
     
+    def _set_gpg_verified(self):
+        self._set_setting_in_user_config(key=GPG_VERIFIED_KEY, value='yes')
     
+    def _get_gpg_verified(self):
+        return (self.get_setting_from_user_config(key=GPG_VERIFIED_KEY) =='yes')
     
     def initialize(self):
         selected_path = self.prompt_for_user_notes_path()
@@ -605,9 +656,16 @@ class SQNotes:
         if 'settings' not in self.user_config:
             self.user_config['settings'] = {}
         self.user_config['settings']['notes_path'] = selected_path
-        
+        self.user_config['settings'][ASCII_ARMOR_CONFIG_KEY] = "yes"
         self.save_config()
         
+        
+        gpg_verified = self._verify_gpg()
+        if not gpg_verified:
+            print(interface_copy.NEED_TO_INSTALL_GPG)
+        else:
+            self._set_gpg_verified()
+            
 
     def _set_setting_in_user_config(self, key, value):
         if 'settings' not in self.user_config:
@@ -677,6 +735,15 @@ class SQNotes:
                     return True
 
 
+    def _is_use_ascii_armor(self):
+        return (self.get_setting_from_user_config(key=ASCII_ARMOR_CONFIG_KEY) == "yes")
+
+    def _set_use_ascii_armor(self, isUseArmor):
+        value = 'yes' if isUseArmor else 'no'
+        self._set_setting_in_user_config(key=ASCII_ARMOR_CONFIG_KEY, value=value)
+        logger.debug(f"set {ASCII_ARMOR_CONFIG_KEY}=yes")
+
+
     def check_gpg_key_email(self):
         if self.GPG_KEY_EMAIL is None:
             print("Error: GPG key not set.")
@@ -696,6 +763,34 @@ class SQNotes:
         self._set_setting_in_user_config(key=key, value=new_gpg_key_email)
         print(f"GPG Key set to: {self.GPG_KEY_EMAIL}")
 
+    
+    def apply_armor(self):
+        notes_dir = self.get_notes_dir_from_config()
+        notes = self._get_notes(notes_dir=notes_dir)
+
+        notes_without_armor = filter(lambda filename : filename.endswith('.gpg'), notes)
+        
+        for note_path in notes_without_armor:
+            new_file_path = note_path[:-4]
+            temp_dec_filename = self._decrypt_note_into_temp_file(note_path=note_path)
+            
+    
+    
+    def _verify_gpg(self):
+        print(interface_copy.CALLING_GPG_VERSION())
+        command = ['gpg', '--version', '--quiet']
+        try:
+            subprocess.call(command)
+        except Exception as e:
+            logger.error(e)
+            return False
+        return True
+            
+            
+    def check_gpg_installed(self):
+        is_can_run_version = self._verify_gpg()
+        message = interface_copy.GPG_VERIFIED() if is_can_run_version else interface_copy.GPG_NOT_RUN()
+        print(message)
     
     def startup(self):
         self.load_setup_configuration()
@@ -732,12 +827,28 @@ def main():
     set_gpg_key_subparser = subparsers.add_parser('set-gpg-key', help='Set the GPG key.')
     set_gpg_key_subparser.add_argument('-i', '--id', help='GPG key email/identifier.', type=str)
     
+    use_armor_subparser = subparsers.add_parser('use-ascii-armor', help='Configure use of ASCII armor for encryption')
+    group = use_armor_subparser.add_mutually_exclusive_group(required=True)
+    group.add_argument('-y',
+        '--yes', 
+        action='store_true', 
+        help='Set to use ASCII armor for encryption'
+    )
+    group.add_argument('-n',
+        '--no', 
+        action='store_true', 
+        help='Set not to use ASCII armor for encryption'
+    )
+    
     keyword_search_subparser = subparsers.add_parser('keywords', help='Find notes keyword. (Fast because searches plaintext database.)')
     keyword_search_subparser.add_argument('-k', '--keywords', nargs='+', help='Search notes by keywords')
     
     subparsers.add_parser('rescan', help='Rescan notes to populate database (useful for troubleshooting certain errors)')
     subparsers.add_parser('notes-list', help='Show a list of all notes (scans notes directory)')
     subparsers.add_parser('print-keywords', help='Print all keywords from database.')
+    
+    subparsers.add_parser('verify-gpg', help='Verify that SQNotes can run GPG for encryption/decryption')
+    
     git_parser = subparsers.add_parser('git', help='Passthrough git commands.')
     git_parser.add_argument('git_args', nargs=argparse.REMAINDER, help='Arguments for git command')
     
@@ -762,8 +873,15 @@ def main():
                 sqnotes.new_note()
             elif args.command == 'notes-list':
                 sqnotes.notes_list()
+            elif args.command == 'verify-gpg':
+                sqnotes.check_gpg_installed()
             elif args.command == 'set-gpg-key':
                 sqnotes.set_gpg_key_email(args.id)
+            elif args.command == 'use-ascii-armor':
+                if args.yes:
+                    sqnotes._set_use_ascii_armor(isUseArmor=True)
+                elif args.no:
+                    sqnotes._set_use_ascii_armor(isUseArmor=False)
             elif args.command == 'search':
                 sqnotes.search_notes(args.text)
             elif args.command == 'keywords':

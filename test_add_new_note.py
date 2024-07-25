@@ -25,6 +25,8 @@ class TestSQNotesCreateNewNote(unittest.TestCase):
         self.test_dir = tempfile.TemporaryDirectory()
         self.sqnotes = SQNotes()
 
+    @patch.object(SQNotes,'_check_gpg_verified', lambda x : None)
+    @patch.object(SQNotes, '_is_use_ascii_armor', lambda _ : False)
     @patch.object(SQNotes, 'check_text_editor_is_configured', lambda _ : None)
     @patch.object(SQNotes, '_commit_transaction')
     @patch.object(SQNotes, '_get_new_note_name')
@@ -56,6 +58,7 @@ class TestSQNotesCreateNewNote(unittest.TestCase):
         self.sqnotes.new_note()
         mock_get_input.assert_called_once()
         
+    @patch.object(SQNotes,'_check_gpg_verified', lambda x : None)
     @patch.object(SQNotes, '_get_configured_text_editor', lambda x: 'vim')
     @patch.object(SQNotes, 'open_database', lambda x: None)
     @patch.object(SQNotes, 'check_text_editor_is_configured', lambda _ : None)
@@ -88,7 +91,7 @@ class TestSQNotesCreateNewNote(unittest.TestCase):
                 printed_text = get_all_mocked_print_output(mocked_print)
                 self.assertIn("Encountered an error attempting to open the configured text editor", printed_text)
 
-        
+    @patch.object(SQNotes,'_check_gpg_verified', lambda x : None)
     @patch.object(SQNotes, '_get_configured_text_editor', lambda x: 'vim')
     @patch.object(SQNotes, 'open_database', lambda x: None)
     @patch.object(SQNotes, 'check_text_editor_is_configured', lambda _ : None)
@@ -119,7 +122,7 @@ class TestSQNotesCreateNewNote(unittest.TestCase):
             self.sqnotes.new_note()
             self.assertEqual(ex.exception.code, 1)
 
-        
+    @patch.object(SQNotes,'_check_gpg_verified', lambda x : None)
     @patch.object(SQNotes, 'check_text_editor_is_configured', lambda _ : None)
     @patch.object(SQNotes, '_commit_transaction')
     @patch.object(SQNotes, '_get_new_note_name')
@@ -154,6 +157,8 @@ class TestSQNotesCreateNewNote(unittest.TestCase):
         mock_write_encrypted_note.assert_called_once()
         self.assertEqual(called_kwargs['note_content'], "test content")
         
+        
+    @patch.object(SQNotes,'_check_gpg_verified', lambda x : None)
     @patch.object(SQNotes, 'check_text_editor_is_configured', lambda _ : None)
     @patch.object(SQNotes, '_commit_transaction')
     @patch.object(SQNotes, '_get_new_note_name')
@@ -187,6 +192,7 @@ class TestSQNotesCreateNewNote(unittest.TestCase):
         mock_write_encrypted_note.assert_called_once()
         self.assertEqual(called_kwargs['note_file_path'], self.test_dir.name + os.sep + 'test.txt.gpg')
         
+    @patch.object(SQNotes,'_check_gpg_verified', lambda x : None)
     @patch.object(SQNotes, 'check_text_editor_is_configured', lambda _ : None)
     @patch.object(SQNotes, '_commit_transaction')
     @patch.object(SQNotes, '_get_new_note_name')
@@ -221,6 +227,7 @@ class TestSQNotesCreateNewNote(unittest.TestCase):
             expected_text = f"Note added: test.txt.gpg"
             mocked_print.assert_called_once_with(expected_text)
         
+    @patch.object(SQNotes, '_is_use_ascii_armor', lambda _ : False)
     @patch('os.remove')
     @patch('os.path.exists')
     @patch('tempfile.NamedTemporaryFile')
@@ -241,6 +248,7 @@ class TestSQNotesCreateNewNote(unittest.TestCase):
         mock_subprocess_call.assert_called_once()
         self.assertEqual(first_call[0], 'gpg')
     
+    @patch.object(SQNotes, '_is_use_ascii_armor', lambda _ : False)
     @patch('os.remove')
     @patch('os.path.exists')
     @patch('tempfile.NamedTemporaryFile')
@@ -263,6 +271,7 @@ class TestSQNotesCreateNewNote(unittest.TestCase):
         self.assertEqual(first_call[4], '--output')
         self.assertEqual(first_call[5], file_path)
     
+    @patch.object(SQNotes, '_is_use_ascii_armor', lambda _ : False)
     @patch('os.remove')
     @patch('os.path.exists')
     @patch('tempfile.NamedTemporaryFile')
@@ -281,6 +290,7 @@ class TestSQNotesCreateNewNote(unittest.TestCase):
         with self.assertRaises(GPGSubprocessException):
             self.sqnotes._write_encrypted_note(file_path, text_content)
         
+    @patch.object(SQNotes, '_is_use_ascii_armor', lambda _ : False)
     @patch('os.remove')
     @patch('os.path.exists')
     @patch('tempfile.NamedTemporaryFile')
@@ -353,6 +363,8 @@ class TestSQNotesCreateNewNote(unittest.TestCase):
         first_called_args = called_args[0]
         self.assertEqual(first_called_args[1], mock_temp_filename)
 
+
+
     
     @patch('os.remove')
     @patch.object(SQNotes, '_get_configured_text_editor')
@@ -376,7 +388,7 @@ class TestSQNotesCreateNewNote(unittest.TestCase):
         # Assert the returned note_content is as expected
         self.assertEqual(note_content, 'Mock note content')
 
-        
+    @patch.object(SQNotes,'_check_gpg_verified', lambda x : None)
     @patch.object(SQNotes, '_get_configured_text_editor', lambda x: 'vim')
     @patch.object(SQNotes, 'open_database', lambda x: None)
     @patch.object(SQNotes, 'check_text_editor_is_configured', lambda _ : None)
@@ -409,6 +421,7 @@ class TestSQNotesCreateNewNote(unittest.TestCase):
             self.assertEqual(ex.exception.code, 1)
         
         
+    @patch.object(SQNotes,'_check_gpg_verified', lambda x : None)
     @patch.object(SQNotes, '_get_configured_text_editor', lambda x: 'vim')
     @patch.object(SQNotes, 'open_database', lambda x: None)
     @patch.object(SQNotes, 'check_text_editor_is_configured', lambda _ : None)
@@ -516,6 +529,7 @@ class TestSQNotesCreateNewNoteDatabaseErrors(unittest.TestCase):
         self.test_dir = tempfile.TemporaryDirectory()
         self.sqnotes = SQNotes()
 
+    @patch.object(SQNotes,'_check_gpg_verified', lambda x : None)
     @patch.object(SQNotes, 'check_text_editor_is_configured', lambda _ : None)
     @patch.object(SQNotes, '_commit_transaction')
     @patch.object(SQNotes, '_get_new_note_name')
@@ -553,7 +567,7 @@ class TestSQNotesCreateNewNoteDatabaseErrors(unittest.TestCase):
                 printed_message = print_args[0]
                 self.assertIn('could not open', printed_message)
 
-        
+    @patch.object(SQNotes,'_check_gpg_verified', lambda x : None)        
     @patch.object(SQNotes, 'check_text_editor_is_configured', lambda _ : None)
     @patch.object(SQNotes, '_commit_transaction')
     @patch.object(SQNotes, '_get_new_note_name')
@@ -590,7 +604,7 @@ class TestSQNotesCreateNewNoteDatabaseErrors(unittest.TestCase):
 
         
         
-        
+    @patch.object(SQNotes,'_check_gpg_verified', lambda x : None)
     @patch.object(SQNotes, 'check_text_editor_is_configured', lambda _ : None)
     @patch.object(SQNotes, '_commit_transaction')
     @patch.object(SQNotes, '_get_new_note_name')
@@ -628,7 +642,9 @@ class TestSQNotesCreateNewNoteDatabaseErrors(unittest.TestCase):
                 printed_message = print_args[0]
                 self.assertIn('unknown error', printed_message)
 
-        
+
+    @patch.object(SQNotes,'_check_gpg_verified', lambda x : None)
+    @patch.object(SQNotes,'_check_gpg_verified', lambda x : None)
     @patch.object(SQNotes, 'check_text_editor_is_configured', lambda _ : None)
     @patch.object(SQNotes, '_commit_transaction')
     @patch.object(SQNotes, '_get_new_note_name')
@@ -663,7 +679,7 @@ class TestSQNotesCreateNewNoteDatabaseErrors(unittest.TestCase):
                 self.sqnotes.new_note()
                 self.assertEqual(cm.exception.code, 1)
 
-        
+    @patch.object(SQNotes,'_check_gpg_verified', lambda x : None)
     @patch.object(SQNotes, 'check_text_editor_is_configured', lambda _ : None)
     @patch.object(SQNotes, '_commit_transaction')
     @patch.object(SQNotes, '_get_new_note_name')
@@ -702,7 +718,7 @@ class TestSQNotesCreateNewNoteDatabaseErrors(unittest.TestCase):
             self.assertIn('database error', all_outtext)
 
         
-        
+    @patch.object(SQNotes,'_check_gpg_verified', lambda x : None)
     @patch.object(SQNotes, 'check_text_editor_is_configured', lambda _ : None)
     @patch.object(SQNotes, '_commit_transaction')
     @patch.object(SQNotes, '_get_new_note_name')

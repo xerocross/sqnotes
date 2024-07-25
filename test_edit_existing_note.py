@@ -3,8 +3,9 @@ from unittest.mock import patch, mock_open, MagicMock, call, Mock
 import os
 import pytest
 from sqnotes import SQNotes, NoteNotFoundException,\
-    NoteNotFoundInDatabaseException
+    NoteNotFoundInDatabaseException, GPGSubprocessException
 import tempfile
+from test_add_new_note import get_all_mocked_print_output
 
 @pytest.fixture(scope='session', autouse=True)
 def set_test_environment():
@@ -45,12 +46,12 @@ class TestSQNotesEditExistingNote(unittest.TestCase):
             self.sqnotes.edit_note(filename=self.temp_filename)
         
         
-    @patch('os.remove')
-    @patch('os.path.exists')
-    @patch.object(SQNotes, '_commit_transaction')
+    @patch('os.remove', lambda x: None)
+    @patch('os.path.exists', lambda x: True)
+    @patch.object(SQNotes, '_get_configured_text_editor', lambda x: 'vim')
+    @patch.object(SQNotes, '_commit_transaction', lambda x: None)
     @patch.object(SQNotes, '_get_edited_note_from_text_editor')
     @patch.object(SQNotes, '_decrypt_note_into_temp_file')
-    @patch.object(SQNotes, '_get_configured_text_editor')
     @patch.object(SQNotes, '_extract_and_save_keywords')
     @patch.object(SQNotes, '_delete_keywords_from_database_for_note')
     @patch.object(SQNotes, '_get_note_id_from_database_or_raise')
@@ -67,16 +68,10 @@ class TestSQNotesEditExistingNote(unittest.TestCase):
                                         mock_write_encrypted_note, 
                                         mock_get_note_id, 
                                         mock_delete_keywords, 
-                                        mock_extract_and_save_keywords, 
-                                        mock_get_editor, 
+                                        mock_extract_and_save_keywords,
                                         mock_decrypt_note, 
-                                        mock_get_edited_note,
-                                        mock_commit_transaction, 
-                                        mock_os_exists, 
-                                        mock_os_remove):
+                                        mock_get_edited_note):
         mock_get_gpg_key_email.return_value = "test@test.com"
-        mock_get_editor.return_value = 'vim'
-        mock_os_exists.return_value = True
         mock_check_gpg_key.return_value = True
         mock_get_notes_dir.return_value = self.test_dir
         
@@ -85,12 +80,86 @@ class TestSQNotesEditExistingNote(unittest.TestCase):
         _, called_kwargs = mock_decrypt_note.call_args
         self.assertEqual(called_kwargs['note_path'], self.temp_filepath)
         
+    @patch('os.remove', lambda x: None)
+    @patch('os.path.exists', lambda x: True)
+    @patch.object(SQNotes, '_get_configured_text_editor', lambda x: 'vim')
+    @patch.object(SQNotes, '_commit_transaction', lambda x: None)
+    @patch.object(SQNotes, '_get_edited_note_from_text_editor')
+    @patch.object(SQNotes, '_decrypt_note_into_temp_file')
+    @patch.object(SQNotes, '_extract_and_save_keywords')
+    @patch.object(SQNotes, '_delete_keywords_from_database_for_note')
+    @patch.object(SQNotes, '_get_note_id_from_database_or_raise')
+    @patch.object(SQNotes, '_write_encrypted_note')
+    @patch.object(SQNotes, 'get_gpg_key_email')
+    @patch.object(SQNotes, 'open_database')
+    @patch.object(SQNotes, 'get_notes_dir_from_config')
+    @patch.object(SQNotes, 'check_gpg_key_email')
+    def test_exits_if_decryption_raises_gpg_subprocess_exception(self, 
+                                        mock_check_gpg_key, 
+                                        mock_get_notes_dir, 
+                                        mock_open_database, 
+                                        mock_get_gpg_key_email, 
+                                        mock_write_encrypted_note, 
+                                        mock_get_note_id, 
+                                        mock_delete_keywords, 
+                                        mock_extract_and_save_keywords,
+                                        mock_decrypt_note, 
+                                        mock_get_edited_note):
+        mock_get_gpg_key_email.return_value = "test@test.com"
+        mock_check_gpg_key.return_value = True
+        mock_get_notes_dir.return_value = self.test_dir
+        mock_decrypt_note.side_effect = GPGSubprocessException()
+    
+        with self.assertRaises(SystemExit) as ex:
+            self.sqnotes.edit_note(filename=self.temp_filename)
+        self.assertEqual(ex.exception.code, 1)
+
+        
+    @patch('os.remove', lambda x: None)
+    @patch('os.path.exists', lambda x: True)
+    @patch('builtins.print')
+    @patch.object(SQNotes, '_get_configured_text_editor', lambda x: 'vim')
+    @patch.object(SQNotes, '_commit_transaction', lambda x: None)
+    @patch.object(SQNotes, '_get_edited_note_from_text_editor')
+    @patch.object(SQNotes, '_decrypt_note_into_temp_file')
+    @patch.object(SQNotes, '_extract_and_save_keywords')
+    @patch.object(SQNotes, '_delete_keywords_from_database_for_note')
+    @patch.object(SQNotes, '_get_note_id_from_database_or_raise')
+    @patch.object(SQNotes, '_write_encrypted_note')
+    @patch.object(SQNotes, 'get_gpg_key_email')
+    @patch.object(SQNotes, 'open_database')
+    @patch.object(SQNotes, 'get_notes_dir_from_config')
+    @patch.object(SQNotes, 'check_gpg_key_email')
+    def test_prints_gpg_error_if_decryption_raises_gpg_subprocess_exception(self, 
+                                        mock_check_gpg_key, 
+                                        mock_get_notes_dir, 
+                                        mock_open_database, 
+                                        mock_get_gpg_key_email, 
+                                        mock_write_encrypted_note, 
+                                        mock_get_note_id, 
+                                        mock_delete_keywords, 
+                                        mock_extract_and_save_keywords,
+                                        mock_decrypt_note, 
+                                        mock_get_edited_note,
+                                        mock_print):
+        mock_get_gpg_key_email.return_value = "test@test.com"
+        mock_check_gpg_key.return_value = True
+        mock_get_notes_dir.return_value = self.test_dir
+        mock_decrypt_note.side_effect = GPGSubprocessException()
+        
+        with self.assertRaises(SystemExit):
+            self.sqnotes.edit_note(filename=self.temp_filename)
+        output = get_all_mocked_print_output(mocked_print=mock_print)
+        self.assertIn('Encountered an error while attempting to call GPG.', output)
+            
+            
+            
+        
     @patch('subprocess.run')
     @patch('tempfile.NamedTemporaryFile')
-    def test_descrypt_calls_gpg_subprocess_with_tempfile_name(self, mock_tempfile, mock_subprocess):
-        mock_subprocess_result = Mock()
-        mock_subprocess_result.returncode = 0
-        mock_subprocess.return_value = mock_subprocess_result
+    def test_decrypt_calls_gpg_subprocess_with_tempfile_name(self, mock_tempfile, mock_subprocess):
+
+        mock_subprocess.return_value = 0
         
         mock_temp_file = MagicMock(spec=tempfile.NamedTemporaryFile)
         mock_temp_file.name = "mock_temp_file_name"
@@ -106,10 +175,9 @@ class TestSQNotesEditExistingNote(unittest.TestCase):
         
     @patch('subprocess.run')
     @patch('tempfile.NamedTemporaryFile')
-    def test_descrypt_calls_gpg_subprocess_with_decrypt_note_path(self, mock_tempfile, mock_subprocess):
-        mock_subprocess_result = Mock()
-        mock_subprocess_result.returncode = 0
-        mock_subprocess.return_value = mock_subprocess_result
+    def test_decrypt_calls_gpg_subprocess_with_decrypt_note_path(self, mock_tempfile, mock_subprocess):
+
+        mock_subprocess.return_value = 0
         
         mock_temp_file = MagicMock(spec=tempfile.NamedTemporaryFile)
         mock_temp_file.name = "mock_temp_file_name"
@@ -122,6 +190,39 @@ class TestSQNotesEditExistingNote(unittest.TestCase):
         first_call = called_args[0]
         self.assertEqual(first_call[0], 'gpg')
         self.assertEqual(first_call[7], note_path)
+        
+    @patch('subprocess.run')
+    @patch('tempfile.NamedTemporaryFile')
+    def test_decrypt_calls_raises_gpg_subprocess_exception_if_subprocess_raises_exception(self, 
+                                                                                           mock_tempfile, 
+                                                                                           mock_subprocess):
+
+        mock_subprocess.side_effect = Exception()
+        
+        mock_temp_file = MagicMock(spec=tempfile.NamedTemporaryFile)
+        mock_temp_file.name = "mock_temp_file_name"
+        mock_temp_file.write = lambda *args, **kwargs: None 
+        mock_tempfile.return_value.__enter__.return_value = mock_temp_file
+        note_path = "test path"
+        with self.assertRaises(GPGSubprocessException):
+            self.sqnotes._decrypt_note_into_temp_file(note_path = note_path)
+        
+    @patch('subprocess.run')
+    @patch('tempfile.NamedTemporaryFile')
+    def test_decrypt_calls_raises_gpg_subprocess_exception_if_subprocess_returns_error_code(self, 
+                                                                                           mock_tempfile, 
+                                                                                           mock_subprocess):
+
+        mock_subprocess.return_value = 1
+        mock_temp_file = MagicMock(spec=tempfile.NamedTemporaryFile)
+        mock_temp_file.name = "mock_temp_file_name"
+        mock_temp_file.write = lambda *args, **kwargs: None 
+        mock_tempfile.return_value.__enter__.return_value = mock_temp_file
+        note_path = "test path"
+        with self.assertRaises(GPGSubprocessException):
+            self.sqnotes._decrypt_note_into_temp_file(note_path = note_path)
+        
+        
         
         
     @patch('os.remove')
