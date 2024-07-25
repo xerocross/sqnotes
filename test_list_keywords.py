@@ -59,8 +59,6 @@ class TestSQNotesGetAllKeywords(unittest.TestCase):
         
         
     def tearDown(self):
-        # Roll back the transaction
-        
         # Close the connection
         self.connection.close()
     
