@@ -697,10 +697,6 @@ def main():
                 sqnotes.print_all_keywords()
             elif args.command == 'rescan':
                 sqnotes.rescan_for_database()
-            elif args.set_gpg_key:
-                sqnotes.set_gpg_key_email(args.set_gpg_key)
-            elif args.keywords:
-                sqnotes.search_keywords(args.keywords)
             else:
                 parser.print_help()
 
