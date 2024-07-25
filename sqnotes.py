@@ -645,7 +645,7 @@ def main():
     subparsers.add_parser('new', help='Add a new note.')
     subparsers.add_parser('init', help='Initialize app.')
     subparsers.add_parser('rescan', help='Rescan notes to populate database (useful for troubleshooting certain errors)')
-    subparsers.add_parser('notes', help='Show a list of all notes.')
+    subparsers.add_parser('notes', help='Show a list of all notes (scans notes directory)')
     subparsers.add_parser('keywords', help='Print all keywords from database.')
     git_parser = subparsers.add_parser('git', help='Passthrough git commands.')
     git_parser.add_argument('git_args', nargs=argparse.REMAINDER, help='Arguments for git command')
