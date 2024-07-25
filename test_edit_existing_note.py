@@ -2,7 +2,8 @@ import unittest
 from unittest.mock import patch, mock_open, MagicMock, call, Mock
 import os
 import pytest
-from sqnotes import SQNotes, NoteNotFoundException
+from sqnotes import SQNotes, NoteNotFoundException,\
+    NoteNotFoundInDatabaseException
 import tempfile
 
 @pytest.fixture(scope='session', autouse=True)
@@ -246,4 +247,72 @@ class TestSQNotesEditExistingNote(unittest.TestCase):
         _, called_kwargs = mock_write_encrypted_note.call_args
         self.assertEqual(called_kwargs['note_file_path'], self.temp_filepath)
         self.assertEqual(called_kwargs['note_content'], "note content")
+
+class TestSQNotesEditNoteDatabaseInteractions(unittest.TestCase):
+    
+    @patch.object(SQNotes, 'check_is_database_set_up', lambda x : False)
+    @patch.object(SQNotes, 'get_db_file_path', lambda x,y : ':memory:')
+    @patch.object(SQNotes, 'get_notes_dir_from_config', lambda x : "")
+    @patch.object(SQNotes,'set_database_is_set_up', lambda x : None)
+    def setUp(self):
+        self.sqnotes = SQNotes()
+        self.sqnotes.open_database()
+        self.connection = self.sqnotes._get_database_connection()
+        self.cursor = self.sqnotes._get_database_cursor()
+        
+        
+        
+    def test_get_note_id_from_database_gets_id_if_note_exists(self):
+        """
+            If note is in the database, calling to get the note id from the
+            filename correctly finds the note and gets the id.
+        """
+        test_filename = "note_1.txt"
+        self.cursor.execute("INSERT INTO notes (filename) VALUES (?)", (test_filename,))
+        test_note_id = self.cursor.lastrowid
+        
+        received_note_id = self.sqnotes._get_note_id_from_database_or_raise(filename=test_filename)
+        self.assertEqual(received_note_id, test_note_id, "did not get correct id from database")
+        self.connection.execute('ROLLBACK;')
+        
+        
+    def test_get_note_id_from_database__or_raise_raises_if_note_does_not_exist(self):
+        """
+            If note is not in the database, calling to get the note id from the
+            filename raises NoteNotFoundInDatabaseException
+        """
+
+        test_filename = "note_1.txt"
+        with self.assertRaises(NoteNotFoundInDatabaseException):
+            self.sqnotes._get_note_id_from_database_or_raise(filename=test_filename)
+
+    def test_deletes_keywords_from_note_before_adding_new_keywords(self):
+        test_filename = "note_1.txt"
+        note_id = 5
+        keyword_id = 1
+        self.cursor.execute("INSERT INTO keywords (id, keyword) VALUES (?, ?)", (keyword_id, 'apple'))
+        self.cursor.execute("INSERT INTO notes (id, filename) VALUES (?, ?)", (note_id, test_filename))
+        self.cursor.execute("INSERT INTO note_keywords (note_id, keyword_id) VALUES (?, ?)", (note_id, keyword_id))
+        self.cursor.execute("SELECT * from note_keywords WHERE note_id = ?", (note_id,))
+        rows = self.cursor.fetchall()
+        a_keyword_existed_before_delete = len(rows) == 1
+        
+        self.sqnotes._delete_keywords_from_database_for_note(note_id)
+        
+        self.cursor.execute("SELECT * from note_keywords WHERE note_id = ?", (note_id,))
+        
+        rows = self.cursor.fetchall()
+        no_keywords_existed_after_delete = len(rows) == 0
+        self.assertTrue(a_keyword_existed_before_delete and no_keywords_existed_after_delete)
+        self.connection.execute('ROLLBACK;')
+
+
+
+
+
+
+
+
+
+
 

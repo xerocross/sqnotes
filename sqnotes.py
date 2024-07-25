@@ -64,10 +64,6 @@ class NotesDirNotConfiguredException(Exception):
     """Exception raised if the user notes directory is not configured."""
     pass
 
-class DatabaseTableSetupException(Exception):
-    """Exception raised during database table setup."""
-    pass
-
 class NotesDirNotSelectedException(Exception):
     """Exception raised if user notes directory not specified."""
 
@@ -140,18 +136,42 @@ class SQNotes:
         self.check_gpg_key_email()
         NOTES_DIR = self.get_notes_dir_from_config()
         self.check_text_editor_is_configured()
-        self.open_database()
         
+        
+        try:
+            self.open_database()
+        except Exception as e:
+            message = interface_copy.COULD_NOT_OPEN_DATABASE() + ' ' + interface_copy.EXITING()
+            print(message)
+            exit(1)
+
+                
         note_content = self._get_input_from_text_editor()
         base_filename = self._get_new_note_name()
         note_file_path = os.path.join(NOTES_DIR, base_filename)
         self._write_encrypted_note(note_file_path=note_file_path, note_content=note_content)
         
-        print(f"Note added: {base_filename}")
+        note_added_message = interface_copy.NOTE_ADDED().format(base_filename)
+        print(note_added_message)
     
-        note_id = self._insert_new_note_into_database(note_filename_base=base_filename)
-        self._extract_and_save_keywords(note_id=note_id, note_content=note_content)
-        self._commit_transaction()
+        try:
+            note_id = self._insert_new_note_into_database(note_filename_base=base_filename)
+            self._extract_and_save_keywords(note_id=note_id, note_content=note_content)
+            self._commit_transaction()
+        except Exception as e:
+            is_database_exception = self._check_for_database_exception(e)
+            if is_database_exception:
+                message = interface_copy.DATABASE_EXCEPTION_MESSAGE() + '\n' + interface_copy.DATA_NOT_SAVED()
+                logger.error(message)
+                logger.error(e)
+                print(message)
+            else:
+                message = interface_copy.UNKNOWN_ERROR() + '\n' + interface_copy.DATA_NOT_SAVED()
+                logger.error(message)
+                logger.error(e)
+                print(interface_copy.UNKNOWN_ERROR() + '\n' + interface_copy.DATA_NOT_SAVED())
+
+            
 
     def _extract_and_save_keywords(self, note_id, note_content):
         keywords = self._extract_keywords(note_content)
@@ -273,6 +293,22 @@ class SQNotes:
             return None
         
         
+    def _check_for_database_exception(self, e):
+        return (isinstance(e, sqlite3.IntegrityError) 
+            or isinstance(e, sqlite3.OperationalError)
+            or isinstance(e, sqlite3.ProgrammingError)
+            or isinstance(e, sqlite3.DataError)
+            or isinstance(e, sqlite3.InternalError)
+            or isinstance(e, sqlite3.InterfaceError)
+            or isinstance(e, sqlite3.DatabaseError)
+            or isinstance(e, sqlite3.NotSupportedError)
+            )
+        
+    def _handle_database_exception(self, e):
+        logger.error("encountered a database exception")
+        logger.error(e)
+        print(interface_copy.DATABASE_EXCEPTION_MESSAGE())
+
     
     def _extract_keywords(self, content):
         # Extract hashtags using regular expression
@@ -354,6 +390,7 @@ class SQNotes:
                 VALUES (?)
             ''', (note_filename_base,))
         note_id = self.cursor.lastrowid
+        logger.debug(f"insert new note filename : {note_filename_base}, id : {note_id}")
         return note_id
         
     def insert_note_keyword_into_database(self, note_id, keyword_id):
@@ -373,10 +410,12 @@ class SQNotes:
         return files
         
     def notes_list(self):
+        logger.debug("printing notes list")
         notes_dir = self.get_notes_dir_from_config()
         files = self._get_notes(notes_dir=notes_dir)
         filenames = [os.path.basename(file) for file in files]
         for file in filenames:
+            logger.debug(f"note found: {file}")
             print(file)
         
     
@@ -397,17 +436,18 @@ class SQNotes:
         if notes_dir is None:
             raise NotesDirNotSelectedException()
         self.DB_PATH = self.get_db_file_path(notes_dir)
+        logger.debug(f"opening database at {self.DB_PATH}")
         try:
-            print(f"opening database at {self.DB_PATH}")
             self.conn = sqlite3.connect(self.DB_PATH)
             self.cursor = self.conn.cursor()
-        except sqlite3.OperationalError as e:
+        except Exception as e:
             logger.error(f"could not open database at {self.DB_PATH}")
             logger.error(e)
-            raise DatabaseException()
+            raise e
         
         is_database_set_up = self.check_is_database_set_up()
         if not is_database_set_up:
+            logger.debug("found database not set up")
             self.setup_database()
     
     def open_or_create_and_open_user_config_file(self):
@@ -558,35 +598,33 @@ class SQNotes:
         
         
     def setup_database(self):
-        try:
-            print("creating tables")
-            logger.debug("creating tables in database")
-            self.cursor.execute('''
-                CREATE TABLE IF NOT EXISTS notes (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    filename TEXT NOT NULL
-                )
-            ''')
-            
-            self.cursor.execute('''
-                CREATE TABLE IF NOT EXISTS keywords (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    keyword TEXT NOT NULL
-                )
-            ''')
-            
-            self.cursor.execute('''
-                CREATE TABLE IF NOT EXISTS note_keywords (
-                    note_id INTEGER,
-                    keyword_id INTEGER,
-                    FOREIGN KEY (note_id) REFERENCES notes(id),
-                    FOREIGN KEY (keyword_id) REFERENCES keywords(id),
-                    PRIMARY KEY (note_id, keyword_id)
-                )
-            ''')
-            self._commit_transaction()
-        except Exception as e:
-            raise DatabaseTableSetupException()
+        print(interface_copy.SETTING_UP_DATABASE_MESSAGE())
+        logger.debug("setting up the database tables")
+        self.cursor.execute('''
+            CREATE TABLE IF NOT EXISTS notes (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                filename TEXT NOT NULL
+            )
+        ''')
+        
+        self.cursor.execute('''
+            CREATE TABLE IF NOT EXISTS keywords (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                keyword TEXT NOT NULL
+            )
+        ''')
+        
+        self.cursor.execute('''
+            CREATE TABLE IF NOT EXISTS note_keywords (
+                note_id INTEGER,
+                keyword_id INTEGER,
+                FOREIGN KEY (note_id) REFERENCES notes(id),
+                FOREIGN KEY (keyword_id) REFERENCES keywords(id),
+                PRIMARY KEY (note_id, keyword_id)
+            )
+        ''')
+        self._commit_transaction()
+
         self.set_database_is_set_up()
         
     

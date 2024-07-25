@@ -71,7 +71,7 @@ class TestListFiles(unittest.TestCase):
         mock_get_notes.return_value = self.test_files
         mock_get_notes_dir.return_value = "sqnotes"
         with patch('builtins.print') as mocked_print:
-            self.sqnotes.print_all_notes()
+            self.sqnotes.notes_list()
             calls = [
                 call('test1.txt.gpg'),
                 call('test2.txt.gpg'),
