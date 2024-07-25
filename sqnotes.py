@@ -10,6 +10,7 @@ import re
 import configparser
 from dotenv import load_dotenv
 import logging
+import interface_copy
 
 VERSION = '0.2'
 DEBUGGING = True
@@ -600,8 +601,7 @@ class SQNotes:
     def check_gpg_key_email(self):
         if self.GPG_KEY_EMAIL is None:
             print("Error: GPG key not set.")
-            print("Please set the GPG key using the following command:")
-            print("  sqnotes --set-gpg-key your_email@example.com")
+            print("Please set the GPG key. (Refer to help menu `-h`.)")
             exit(1)
             
     def get_gpg_key_email(self):
@@ -617,7 +617,7 @@ class SQNotes:
             self.user_config['settings'] = {}
         self.user_config['settings']['gpg_key_email'] = new_gpg_key_email
         self.save_config()
-        print(f"GPG Key Email set to: {self.GPG_KEY_EMAIL}")
+        print(f"GPG Key set to: {self.GPG_KEY_EMAIL}")
 
     def set_user_notes_configuration(self, selected_path):
         pass
@@ -639,21 +639,31 @@ class SQNotes:
 
 def main():
     parser = argparse.ArgumentParser(description='SQNote: Secure note-taking script')
-    parser.add_argument('-n', '--new', help='Add a new note', action='store_true')
-    parser.add_argument('-f', '--find', nargs='+', help='Find substrings in notes (slow: decrypts everything into temporary files for search)')  # Allow multiple search queries
-    parser.add_argument('-k', '--keywords', nargs='+', help='Search notes by keywords')
-    parser.add_argument('-e', '--edit', help='Edit a note', type=str)
-    parser.add_argument('--set-gpg-key', help='Set the GPG Key', type=str)
-    parser.add_argument('--git', nargs=argparse.REMAINDER, help='Run a git command in the sqnotes directory')
+    
+    
     
     subparsers = parser.add_subparsers(dest='command', help='Subcommands')
     subparsers.add_parser('new', help='Add a new note.')
+    
     subparsers.add_parser('init', help='Initialize app.')
+    
+    search_subparser = subparsers.add_parser('search', help='Find notes by full text search. (Slow because requires full decryption.)')
+    search_subparser.add_argument('-t', '--text', nargs='+', help='Search strings.')
+    
+    set_gpg_key_subparser = subparsers.add_parser('set-gpg-key', help='Set the GPG key.')
+    set_gpg_key_subparser.add_argument('-i', '--id', help='GPG key email/identifier.', type=str)
+    
+    keyword_search_subparser = subparsers.add_parser('keywords', help='Find notes keyword. (Fast because searches plaintext database.)')
+    keyword_search_subparser.add_argument('-k', '--keywords', nargs='+', help='Search notes by keywords')
+    
     subparsers.add_parser('rescan', help='Rescan notes to populate database (useful for troubleshooting certain errors)')
-    subparsers.add_parser('notes', help='Show a list of all notes (scans notes directory)')
-    subparsers.add_parser('keywords', help='Print all keywords from database.')
+    subparsers.add_parser('notes-list', help='Show a list of all notes (scans notes directory)')
+    subparsers.add_parser('print-keywords', help='Print all keywords from database.')
     git_parser = subparsers.add_parser('git', help='Passthrough git commands.')
     git_parser.add_argument('git_args', nargs=argparse.REMAINDER, help='Arguments for git command')
+    
+    edit_parser = subparsers.add_parser('edit', help='Edit a note.')
+    edit_parser.add_argument('-n', '--note', help='Note base filename.', type=str)
     
     args = parser.parse_args()
 
@@ -666,29 +676,29 @@ def main():
     else:
         initialized = sqnotes.check_initialized()
         if not initialized:
-            print("SQNotes is not initialized; please initialize now. (Run sqnotes with -h to see the help menu.)")
+            print(interface_copy.SQNOTES_NOT_INITIALIZED_MESSAGE)
             return
         else:
             if args.command == 'new':
                 sqnotes.add_note()
-            elif args.command == 'notes':
+            elif args.command == 'notes-list':
                 sqnotes.print_all_notes()
+            elif args.command == 'set-gpg-key':
+                sqnotes.set_gpg_key_email(args.id)
+            elif args.command == 'search':
+                sqnotes.search_notes(args.text)
+            elif args.command == 'keywords':
+                sqnotes.search_keywords(args.keywords)
+            elif args.command == 'edit':
+                sqnotes.edit_note(args.note)
             elif args.command == 'git':
                 sqnotes.run_git_command(args.git_args)
-            elif args.command == 'keywords':
+            elif args.command == 'print-keywords':
                 sqnotes.print_all_keywords()
             elif args.command == 'rescan':
                 sqnotes.rescan_for_database()
             elif args.set_gpg_key:
                 sqnotes.set_gpg_key_email(args.set_gpg_key)
-            elif args.new:
-                sqnotes.add_note()
-            elif args.git:
-                sqnotes.run_git_command(args.git)
-            elif args.find:
-                sqnotes.search_notes(args.find)
-            elif args.edit:
-                sqnotes.edit_note(args.edit)
             elif args.keywords:
                 sqnotes.search_keywords(args.keywords)
             else:

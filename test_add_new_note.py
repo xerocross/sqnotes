@@ -16,6 +16,7 @@ class TestSQNotesCreateNewNote(unittest.TestCase):
         self.test_dir = tempfile.TemporaryDirectory()
         self.sqnotes = SQNotes()
 
+    @patch.object(SQNotes, 'check_text_editor_is_configured', lambda _ : None)
     @patch.object(SQNotes, '_commit_transaction')
     @patch.object(SQNotes, '_get_new_note_name')
     @patch.object(SQNotes, '_extract_and_save_keywords')
@@ -46,6 +47,7 @@ class TestSQNotesCreateNewNote(unittest.TestCase):
         self.sqnotes.add_note()
         mock_get_input.assert_called_once()
         
+    @patch.object(SQNotes, 'check_text_editor_is_configured', lambda _ : None)
     @patch.object(SQNotes, '_commit_transaction')
     @patch.object(SQNotes, '_get_new_note_name')
     @patch.object(SQNotes, '_extract_and_save_keywords')
@@ -79,6 +81,7 @@ class TestSQNotesCreateNewNote(unittest.TestCase):
         mock_write_encrypted_note.assert_called_once()
         self.assertEqual(called_kwargs['note_content'], "test content")
         
+    @patch.object(SQNotes, 'check_text_editor_is_configured', lambda _ : None)
     @patch.object(SQNotes, '_commit_transaction')
     @patch.object(SQNotes, '_get_new_note_name')
     @patch.object(SQNotes, '_extract_and_save_keywords')
@@ -111,7 +114,7 @@ class TestSQNotesCreateNewNote(unittest.TestCase):
         mock_write_encrypted_note.assert_called_once()
         self.assertEqual(called_kwargs['note_file_path'], self.test_dir.name + os.sep + 'test.txt.gpg')
         
-
+    @patch.object(SQNotes, 'check_text_editor_is_configured', lambda _ : None)
     @patch.object(SQNotes, '_commit_transaction')
     @patch.object(SQNotes, '_get_new_note_name')
     @patch.object(SQNotes, '_extract_and_save_keywords')
