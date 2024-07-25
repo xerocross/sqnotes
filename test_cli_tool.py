@@ -48,7 +48,7 @@ class TestCLIInitializedCommandsReferredCorrectly(unittest.TestCase):
         mock_add_note.assert_called_once()
     
     @patch.object(SQNotes, 'check_initialized', lambda x : True)
-    @patch.object(SQNotes, 'print_all_notes')
+    @patch.object(SQNotes, 'notes_list')
     def test_notes_command_refers_to_print_notes_method(self, mock_print_all_notes):
         """
             The notes-list command refers to the print notes method.

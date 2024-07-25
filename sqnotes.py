@@ -355,7 +355,7 @@ class SQNotes:
         files = glob.glob(pattern)
         return files
         
-    def print_all_notes(self):
+    def notes_list(self):
         notes_dir = self.get_notes_dir_from_config()
         files = self._get_notes(notes_dir=notes_dir)
         filenames = [os.path.basename(file) for file in files]
@@ -680,7 +680,7 @@ def main():
             if args.command == 'new':
                 sqnotes.add_note()
             elif args.command == 'notes-list':
-                sqnotes.print_all_notes()
+                sqnotes.notes_list()
             elif args.command == 'set-gpg-key':
                 sqnotes.set_gpg_key_email(args.id)
             elif args.command == 'search':
