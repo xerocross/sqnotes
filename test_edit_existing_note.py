@@ -13,6 +13,12 @@ def set_test_environment():
 
 def delete_temp_file(*args, **kwargs):
     pass
+
+def extract_and_save_keywords(*args, **kwargs):
+    pass
+
+def write_encrypted_note(*args, **kwargs):
+    pass
         
 class TestSQNotesEditExistingNote(unittest.TestCase):
     open_database_patcher = None
@@ -22,6 +28,7 @@ class TestSQNotesEditExistingNote(unittest.TestCase):
     check_gpg_key_patcher = None
     delete_temp_file_patcher = None
     commit_patcher = None
+    mock_write_encrypted_patcher = None
     
     @classmethod
     def setUpClass(cls):
@@ -36,6 +43,12 @@ class TestSQNotesEditExistingNote(unittest.TestCase):
         
         cls.gpg_verified_patcher = patch.object(SQNotes,'_check_gpg_verified', lambda x : None)
         cls.gpg_verified_patcher.start()
+        
+        cls.mock_extract_and_save_keywords_patcher = patch.object(SQNotes, '_extract_and_save_keywords', extract_and_save_keywords)
+        cls.mock_extract_and_save_keywords_patcher.start()
+        
+        cls.mock_write_encrypted_patcher = patch.object(SQNotes, '_write_encrypted_note', write_encrypted_note)
+        cls.mock_write_encrypted_patcher.start()
         
         cls.gpg_email_key_patcher = patch.object(SQNotes, 'get_gpg_key_email', lambda x : 'test@test.com')
         cls.gpg_email_key_patcher.start()
@@ -55,6 +68,8 @@ class TestSQNotesEditExistingNote(unittest.TestCase):
         cls.check_gpg_key_patcher.stop()
         cls.delete_temp_file_patcher.stop()
         cls.commit_patcher.stop()
+        cls.mock_extract_and_save_keywords_patcher.stop()
+        cls.mock_write_encrypted_patcher.stop()
 
     def setUp(self):
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -78,9 +93,7 @@ class TestSQNotesEditExistingNote(unittest.TestCase):
     @patch.object(SQNotes, '_extract_and_save_keywords')
     @patch.object(SQNotes, '_delete_keywords_from_database_for_note')
     @patch.object(SQNotes, '_get_note_id_from_database_or_raise')
-    @patch.object(SQNotes, '_write_encrypted_note')
     def test_raises_if_note_file_not_found(self, 
-                                           mock_write_encrypted_note, 
                                            mock_get_note_id, 
                                            mock_delete_keywords, 
                                            mock_extract_and_save_keywords,
@@ -93,15 +106,11 @@ class TestSQNotesEditExistingNote(unittest.TestCase):
     @patch('os.path.exists', lambda x: True)
     @patch.object(SQNotes, '_get_edited_note_from_text_editor')
     @patch.object(SQNotes, '_decrypt_note_into_temp_file')
-    @patch.object(SQNotes, '_extract_and_save_keywords')
     @patch.object(SQNotes, '_delete_keywords_from_database_for_note')
     @patch.object(SQNotes, '_get_note_id_from_database_or_raise')
-    @patch.object(SQNotes, '_write_encrypted_note')
     def test_edit_calls_to_decrypt_note(self,
-                                        mock_write_encrypted_note, 
                                         mock_get_note_id, 
                                         mock_delete_keywords, 
-                                        mock_extract_and_save_keywords,
                                         mock_decrypt_note, 
                                         mock_get_edited_note):
         self.sqnotes.edit_note(filename=self.temp_filename)
@@ -112,15 +121,11 @@ class TestSQNotesEditExistingNote(unittest.TestCase):
     @patch('os.path.exists', lambda x: True)
     @patch.object(SQNotes, '_get_edited_note_from_text_editor')
     @patch.object(SQNotes, '_decrypt_note_into_temp_file')
-    @patch.object(SQNotes, '_extract_and_save_keywords')
     @patch.object(SQNotes, '_delete_keywords_from_database_for_note')
     @patch.object(SQNotes, '_get_note_id_from_database_or_raise')
-    @patch.object(SQNotes, '_write_encrypted_note')
     def test_exits_if_decryption_raises_gpg_subprocess_exception(self, 
-                                        mock_write_encrypted_note, 
                                         mock_get_note_id, 
-                                        mock_delete_keywords, 
-                                        mock_extract_and_save_keywords,
+                                        mock_delete_keywords,
                                         mock_decrypt_note, 
                                         mock_get_edited_note):
         mock_decrypt_note.side_effect = GPGSubprocessException()
@@ -134,15 +139,11 @@ class TestSQNotesEditExistingNote(unittest.TestCase):
     @patch('builtins.print')
     @patch.object(SQNotes, '_get_edited_note_from_text_editor')
     @patch.object(SQNotes, '_decrypt_note_into_temp_file')
-    @patch.object(SQNotes, '_extract_and_save_keywords')
     @patch.object(SQNotes, '_delete_keywords_from_database_for_note')
     @patch.object(SQNotes, '_get_note_id_from_database_or_raise')
-    @patch.object(SQNotes, '_write_encrypted_note')
     def test_prints_gpg_error_if_decryption_raises_gpg_subprocess_exception(self,
-                                        mock_write_encrypted_note, 
                                         mock_get_note_id, 
-                                        mock_delete_keywords, 
-                                        mock_extract_and_save_keywords,
+                                        mock_delete_keywords,
                                         mock_decrypt_note, 
                                         mock_get_edited_note,
                                         mock_print):
@@ -157,15 +158,11 @@ class TestSQNotesEditExistingNote(unittest.TestCase):
     @patch('os.path.exists')
     @patch.object(SQNotes, '_get_edited_note_from_text_editor')
     @patch.object(SQNotes, '_decrypt_note_into_temp_file')
-    @patch.object(SQNotes, '_extract_and_save_keywords')
     @patch.object(SQNotes, '_delete_keywords_from_database_for_note')
     @patch.object(SQNotes, '_get_note_id_from_database_or_raise')
-    @patch.object(SQNotes, '_write_encrypted_note')
     def test_edit_calls_get_edited_note_with_temp_filename(self, 
-                                                           mock_write_encrypted_note, 
                                                            mock_get_note_id, 
-                                                           mock_delete_keywords, 
-                                                           mock_extract_and_save_keywords,
+                                                           mock_delete_keywords,
                                                            mock_decrypt_note, 
                                                            mock_get_edited_note, 
                                                            mock_os_exists):
@@ -181,15 +178,13 @@ class TestSQNotesEditExistingNote(unittest.TestCase):
     @patch('os.path.exists')
     @patch.object(SQNotes, '_get_edited_note_from_text_editor')
     @patch.object(SQNotes, '_decrypt_note_into_temp_file')
-    @patch.object(SQNotes, '_extract_and_save_keywords')
     @patch.object(SQNotes, '_delete_keywords_from_database_for_note')
     @patch.object(SQNotes, '_get_note_id_from_database_or_raise')
     @patch.object(SQNotes, '_write_encrypted_note')
     def test_edit_calls_write_encrypted_note_with_path_and_content(self, 
                                                            mock_write_encrypted_note, 
                                                            mock_get_note_id, 
-                                                           mock_delete_keywords, 
-                                                           mock_extract_and_save_keywords,
+                                                           mock_delete_keywords,
                                                            mock_decrypt_note, 
                                                            mock_get_edited_note, 
                                                            mock_os_exists):
