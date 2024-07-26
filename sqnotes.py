@@ -768,7 +768,9 @@ class SQNotes:
         print(interface_copy.CALLING_GPG_VERSION())
         command = ['gpg', '--version', '--quiet']
         try:
-            subprocess.call(command)
+            subprocess.call(command,
+                            stdout=subprocess.DEVNULL,
+                            stderr=subprocess.DEVNULL)
         except Exception as e:
             logger.error(e)
             return False
