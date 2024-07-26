@@ -512,7 +512,7 @@ class SQNotes:
             logger.error(e)
             raise e
         
-        is_database_set_up = self.check_is_database_set_up()
+        is_database_set_up = self._check_is_database_set_up()
         if not is_database_set_up:
             logger.debug("found database not set up")
             self.setup_database()
@@ -673,11 +673,11 @@ class SQNotes:
         self.user_config['settings'][key]= value
         self.save_config()
 
-    def check_is_database_set_up(self):
+    def _check_is_database_set_up(self):
         is_set_up = (self.get_setting_from_user_config('database_is_setup') == 'yes')
         return is_set_up
     
-    def set_database_is_set_up(self):
+    def _set_database_is_set_up(self):
         self._set_setting_in_user_config('database_is_setup', 'yes')
         
         
@@ -709,7 +709,7 @@ class SQNotes:
         ''')
         self._commit_transaction()
 
-        self.set_database_is_set_up()
+        self._set_database_is_set_up()
         
     
 
@@ -776,8 +776,8 @@ class SQNotes:
             
             
     def check_gpg_installed(self):
-        is_can_run_version = self._verify_gpg()
-        message = interface_copy.GPG_VERIFIED() if is_can_run_version else interface_copy.GPG_NOT_RUN()
+        is_can_run_gpg_version = self._verify_gpg()
+        message = interface_copy.GPG_VERIFIED() if is_can_run_gpg_version else interface_copy.GPG_NOT_RUN()
         print(message)
     
     def startup(self):

@@ -44,10 +44,10 @@ class TestSQNotesListKeywordsCommand(unittest.TestCase):
             
 class TestSQNotesGetAllKeywords(unittest.TestCase):
     
-    @patch.object(SQNotes, 'check_is_database_set_up', lambda x : False)
+    @patch.object(SQNotes, '_check_is_database_set_up', lambda x : False)
     @patch.object(SQNotes, 'get_db_file_path', lambda x,y : ':memory:')
     @patch.object(SQNotes, 'get_notes_dir_from_config', lambda x : "")
-    @patch.object(SQNotes,'set_database_is_set_up', lambda x : None)
+    @patch.object(SQNotes,'_set_database_is_set_up', lambda x : None)
     def setUp(self):
         reload_dotenv()
         # Set up a connection and a cursor
