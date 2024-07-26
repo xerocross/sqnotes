@@ -12,6 +12,7 @@ from dotenv import load_dotenv
 import logging
 import interface_copy
 import sys
+from manual import Manual
 
 
 VERSION = '0.2'
@@ -809,14 +810,18 @@ def main():
                     action='store_true', 
                     help='Enable debugging mode with detailed log messages')
     
-    
-    
     subparsers = parser.add_subparsers(dest='command', help='Subcommands')
 
     
     subparsers.add_parser('new', help='Add a new note.')
-    
     subparsers.add_parser('init', help='Initialize app.')
+    
+    man_command = subparsers.add_parser('man', help='Show manual.')
+    manual_subcommands = man_command.add_subparsers(dest='man_subcommand', help='Manual subcommands.')
+    manual_subcommands.add_parser('encryption', help='Show manual page for encryption.')
+    manual_subcommands.add_parser('main', help='Show main manual page.')
+    
+    
     
     search_subparser = subparsers.add_parser('search', help='Find notes by full text search. (Slow because requires full decryption.)')
     search_subparser.add_argument('-t', '--text', nargs='+', help='Search strings.')
@@ -853,7 +858,6 @@ def main():
     edit_parser.add_argument('-n', '--note', help='Note base filename.', type=str)
     
     args = parser.parse_args()
-
     sqnotes = SQNotes()
     sqnotes.startup()
 
@@ -891,6 +895,15 @@ def main():
                 sqnotes.print_all_keywords()
             elif args.command == 'rescan':
                 sqnotes.rescan_for_database()
+            elif args.command == 'man':
+                manual = Manual()
+                if args.man_subcommand == 'encryption':
+                    manual.print_encryption_info()
+                else:
+                    manual.print_main_page()
+                
+                
+                
             else:
                 parser.print_help()
 
