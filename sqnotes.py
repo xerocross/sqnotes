@@ -265,7 +265,7 @@ class SQNotes:
         with tempfile.NamedTemporaryFile(delete=False) as temp_dec_file:
             temp_dec_filename = temp_dec_file.name
         try:
-            decrypt_process = subprocess.run(['gpg', '--yes','--quiet', '--batch', '--output', temp_dec_filename, '--decrypt', note_path], check=True)
+            decrypt_process = subprocess.call(['gpg', '--yes','--quiet', '--batch', '--output', temp_dec_filename, '--decrypt', note_path])
         except Exception as e:
             logger.error(e)
             
@@ -562,7 +562,12 @@ class SQNotes:
             self.user_config.write(configfile)
     
     
+    def _print_note(self, note_path, decrypted_content):
+        print(f"{note_path}:\n{decrypted_content}")
+    
+    
     def search_keywords(self, keywords):
+        NOTES_DIR = self.get_notes_dir_from_config()
         self.open_database()
         self.cursor.execute('''
                 SELECT n.filename
@@ -575,9 +580,13 @@ class SQNotes:
             '''.format(  ', '.join('?' for _ in keywords) , len(keywords)), keywords)
         results = self.cursor.fetchall()
         if results:
+            print('') # blank line
             for result in results:
-                note_filename = os.path.join(self.NOTES_DIR, result[0])
-                self.decrypt_and_print(note_filename)
+                note_path = os.path.join(NOTES_DIR, result[0])
+                decrypted_content = self._get_decrypted_content(note_path=note_path)
+                self._print_note(note_path=note_path, decrypted_content=decrypted_content)
+                print('') # blank line
+                
         else:
             print(f"No notes found with keywords: {keywords}")
 
