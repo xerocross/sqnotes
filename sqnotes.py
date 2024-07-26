@@ -764,18 +764,6 @@ class SQNotes:
         print(f"GPG Key set to: {self.GPG_KEY_EMAIL}")
 
     
-    def apply_armor(self):
-        notes_dir = self.get_notes_dir_from_config()
-        notes = self._get_notes(notes_dir=notes_dir)
-
-        notes_without_armor = filter(lambda filename : filename.endswith('.gpg'), notes)
-        
-        for note_path in notes_without_armor:
-            new_file_path = note_path[:-4]
-            temp_dec_filename = self._decrypt_note_into_temp_file(note_path=note_path)
-            
-    
-    
     def _verify_gpg(self):
         print(interface_copy.CALLING_GPG_VERSION())
         command = ['gpg', '--version', '--quiet']
