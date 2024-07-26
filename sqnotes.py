@@ -108,8 +108,7 @@ class SQNotes:
             keyword_id = result[0]
         return keyword_id
 
-    def _get_input_from_text_editor(self):
-        TEXT_EDITOR = self._get_configured_text_editor()
+    def _get_input_from_text_editor(self, TEXT_EDITOR):
         with tempfile.NamedTemporaryFile(delete=False) as temp_file:
             temp_filename = temp_file.name
         try:
@@ -167,7 +166,7 @@ class SQNotes:
         self.check_gpg_key_email()
         NOTES_DIR = self.get_notes_dir_from_config()
         self.check_text_editor_is_configured()
-        
+        TEXT_EDITOR = self._get_configured_text_editor()
         
         try:
             self.open_database()
@@ -177,7 +176,7 @@ class SQNotes:
             exit(1)
 
         try:        
-            note_content = self._get_input_from_text_editor()
+            note_content = self._get_input_from_text_editor(TEXT_EDITOR=TEXT_EDITOR)
         except TextEditorSubprocessException:
             message = interface_copy.TEXT_EDITOR_SUBPROCESS_ERROR().format(self._get_configured_text_editor())
             logger.error(message)
