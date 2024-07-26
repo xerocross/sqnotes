@@ -20,13 +20,38 @@ def set_test_environment():
     
         
 class TestSQNotesCreateNewNote(unittest.TestCase):
+    open_database_patcher = None
+    use_ascii_armor_patcher = None
+    get_configured_text_editor_patcher = None
+    gpg_verified_patcher = None
+
+    @classmethod
+    def setUpClass(cls):
+        cls.open_database_patcher = patch.object(SQNotes, "open_database", lambda x: None)
+        cls.open_database_patcher.start()
+        
+        cls.use_ascii_armor_patcher = patch.object(SQNotes, '_is_use_ascii_armor', lambda _ : False)
+        cls.use_ascii_armor_patcher.start()
+        
+        cls.get_configured_text_editor_patcher = patch.object(SQNotes,  '_get_configured_text_editor', lambda x: 'vim')
+        cls.get_configured_text_editor_patcher.start()
+        
+        cls.gpg_verified_patcher = patch.object(SQNotes,'_check_gpg_verified', lambda x : None)
+        cls.gpg_verified_patcher.start()
+        
+    @classmethod
+    def tearDownClass(cls):
+        cls.open_database_patcher.stop()
+        cls.use_ascii_armor_patcher.stop()
+        cls.get_configured_text_editor_patcher.stop()
+        cls.gpg_verified_patcher.stop()
 
     def setUp(self):
         self.test_dir = tempfile.TemporaryDirectory()
         self.sqnotes = SQNotes()
 
-    @patch.object(SQNotes,'_check_gpg_verified', lambda x : None)
-    @patch.object(SQNotes, '_is_use_ascii_armor', lambda _ : False)
+
+    
     @patch.object(SQNotes, 'check_text_editor_is_configured', lambda _ : None)
     @patch.object(SQNotes, '_commit_transaction')
     @patch.object(SQNotes, '_get_new_note_name')
@@ -35,13 +60,11 @@ class TestSQNotesCreateNewNote(unittest.TestCase):
     @patch.object(SQNotes, '_write_encrypted_note')
     @patch.object(SQNotes, 'get_gpg_key_email')
     @patch.object(SQNotes, '_get_input_from_text_editor')
-    @patch.object(SQNotes, 'open_database')
     @patch.object(SQNotes, 'get_notes_dir_from_config')
     @patch.object(SQNotes, 'check_gpg_key_email')
     def test_calls_to_get_input_from_text_editor(self, 
                                                  mock_check_gpg_key, 
                                                  mock_get_notes_dir, 
-                                                 mock_open_database, 
                                                  mock_get_input, 
                                                  mock_get_gpg_key_email, 
                                                  mock_write_encrypted_note, 
@@ -58,9 +81,7 @@ class TestSQNotesCreateNewNote(unittest.TestCase):
         self.sqnotes.new_note()
         mock_get_input.assert_called_once()
         
-    @patch.object(SQNotes,'_check_gpg_verified', lambda x : None)
-    @patch.object(SQNotes, '_get_configured_text_editor', lambda x: 'vim')
-    @patch.object(SQNotes, 'open_database', lambda x: None)
+    
     @patch.object(SQNotes, 'check_text_editor_is_configured', lambda _ : None)
     @patch.object(SQNotes, '_insert_new_note_into_database', lambda x : None)
     @patch.object(SQNotes, '_extract_and_save_keywords', lambda x : None)
@@ -91,9 +112,7 @@ class TestSQNotesCreateNewNote(unittest.TestCase):
                 printed_text = get_all_mocked_print_output(mocked_print)
                 self.assertIn("Encountered an error attempting to open the configured text editor", printed_text)
 
-    @patch.object(SQNotes,'_check_gpg_verified', lambda x : None)
-    @patch.object(SQNotes, '_get_configured_text_editor', lambda x: 'vim')
-    @patch.object(SQNotes, 'open_database', lambda x: None)
+    
     @patch.object(SQNotes, 'check_text_editor_is_configured', lambda _ : None)
     @patch.object(SQNotes, '_insert_new_note_into_database', lambda x : None)
     @patch.object(SQNotes, '_extract_and_save_keywords', lambda x : None)
@@ -122,7 +141,7 @@ class TestSQNotesCreateNewNote(unittest.TestCase):
             self.sqnotes.new_note()
             self.assertEqual(ex.exception.code, 1)
 
-    @patch.object(SQNotes,'_check_gpg_verified', lambda x : None)
+    
     @patch.object(SQNotes, 'check_text_editor_is_configured', lambda _ : None)
     @patch.object(SQNotes, '_commit_transaction')
     @patch.object(SQNotes, '_get_new_note_name')
@@ -131,13 +150,11 @@ class TestSQNotesCreateNewNote(unittest.TestCase):
     @patch.object(SQNotes, '_write_encrypted_note')
     @patch.object(SQNotes, 'get_gpg_key_email')
     @patch.object(SQNotes, '_get_input_from_text_editor')
-    @patch.object(SQNotes, 'open_database')
     @patch.object(SQNotes, 'get_notes_dir_from_config')
     @patch.object(SQNotes, 'check_gpg_key_email')
     def test_passes_content_from_editor_into_write_function(self, 
                                                             mock_check_gpg_key, 
                                                             mock_get_notes_dir, 
-                                                            mock_open_database, 
                                                             mock_get_input, 
                                                             mock_get_gpg_key_email, 
                                                             mock_write_encrypted_note, 
@@ -158,7 +175,7 @@ class TestSQNotesCreateNewNote(unittest.TestCase):
         self.assertEqual(called_kwargs['note_content'], "test content")
         
         
-    @patch.object(SQNotes,'_check_gpg_verified', lambda x : None)
+    
     @patch.object(SQNotes, 'check_text_editor_is_configured', lambda _ : None)
     @patch.object(SQNotes, '_commit_transaction')
     @patch.object(SQNotes, '_get_new_note_name')
@@ -167,13 +184,11 @@ class TestSQNotesCreateNewNote(unittest.TestCase):
     @patch.object(SQNotes, '_write_encrypted_note')
     @patch.object(SQNotes, 'get_gpg_key_email')
     @patch.object(SQNotes, '_get_input_from_text_editor')
-    @patch.object(SQNotes, 'open_database')
     @patch.object(SQNotes, 'get_notes_dir_from_config')
     @patch.object(SQNotes, 'check_gpg_key_email')
     def test_passes_new_note_name_into_write_function(self, 
                                                       mock_check_gpg_key, 
                                                       mock_get_notes_dir, 
-                                                      mock_open_database, 
                                                       mock_get_input, 
                                                       mock_get_gpg_key_email, 
                                                       mock_write_encrypted_note, 
@@ -192,7 +207,7 @@ class TestSQNotesCreateNewNote(unittest.TestCase):
         mock_write_encrypted_note.assert_called_once()
         self.assertEqual(called_kwargs['note_file_path'], self.test_dir.name + os.sep + 'test.txt.gpg')
         
-    @patch.object(SQNotes,'_check_gpg_verified', lambda x : None)
+    
     @patch.object(SQNotes, 'check_text_editor_is_configured', lambda _ : None)
     @patch.object(SQNotes, '_commit_transaction')
     @patch.object(SQNotes, '_get_new_note_name')
@@ -201,13 +216,11 @@ class TestSQNotesCreateNewNote(unittest.TestCase):
     @patch.object(SQNotes, '_write_encrypted_note')
     @patch.object(SQNotes, 'get_gpg_key_email')
     @patch.object(SQNotes, '_get_input_from_text_editor')
-    @patch.object(SQNotes, 'open_database')
     @patch.object(SQNotes, 'get_notes_dir_from_config')
     @patch.object(SQNotes, 'check_gpg_key_email')
     def test_prints_message_saying_note_was_created(self, 
                                                     mock_check_gpg_key, 
                                                     mock_get_notes_dir, 
-                                                    mock_open_database, 
                                                     mock_get_input, 
                                                     mock_get_gpg_key_email, 
                                                     mock_write_encrypted_note, 
@@ -227,168 +240,7 @@ class TestSQNotesCreateNewNote(unittest.TestCase):
             expected_text = f"Note added: test.txt.gpg"
             mocked_print.assert_called_once_with(expected_text)
         
-    @patch.object(SQNotes, '_is_use_ascii_armor', lambda _ : False)
-    @patch('os.remove')
-    @patch('os.path.exists')
-    @patch('tempfile.NamedTemporaryFile')
-    @patch('subprocess.call')
-    def test_write_function_calls_subprocess_with_gpg(self, mock_subprocess_call, mock_tempfile, mock_os_exists, mock_os_remove):
-        mock_subprocess_call.return_value = 0 #success
-        mock_temp_file = MagicMock(spec=tempfile.NamedTemporaryFile)
-        mock_temp_file.name = "mock_temp_file_name"
-        mock_temp_file.write = lambda *args, **kwargs: None 
-        mock_tempfile.return_value.__enter__.return_value = mock_temp_file
-        mock_os_exists.return_value = True
-        self.sqnotes.GPG_KEY_EMAIL = "test@test.com"
-        file_path = self.test_dir.name + os.sep + 'test.txt.gpg'
-        text_content = 'test content'
-        self.sqnotes._write_encrypted_note(file_path, text_content)
-        called_args, called_kwargs = mock_subprocess_call.call_args
-        first_call = called_args[0]
-        mock_subprocess_call.assert_called_once()
-        self.assertEqual(first_call[0], 'gpg')
     
-    @patch.object(SQNotes, '_is_use_ascii_armor', lambda _ : False)
-    @patch('os.remove')
-    @patch('os.path.exists')
-    @patch('tempfile.NamedTemporaryFile')
-    @patch('subprocess.call')
-    def test_write_function_calls_gpg_with_output_as_note_name(self, mock_subprocess_call, mock_tempfile, mock_os_exists, mock_os_remove):
-        mock_temp_file = MagicMock(spec=tempfile.NamedTemporaryFile)
-        mock_temp_file.name = "mock_temp_file_name"
-        mock_temp_file.write = lambda *args, **kwargs: None 
-        mock_tempfile.return_value.__enter__.return_value = mock_temp_file
-        mock_subprocess_call.return_value = 0
-        mock_os_exists.return_value = True
-        
-        self.sqnotes.GPG_KEY_EMAIL = "test@test.com"
-        file_path = self.test_dir.name + os.sep + 'test.txt.gpg'
-        text_content = 'test content'
-        self.sqnotes._write_encrypted_note(file_path, text_content)
-        called_args, _ = mock_subprocess_call.call_args
-        first_call = called_args[0]
-        mock_subprocess_call.assert_called_once()
-        self.assertEqual(first_call[4], '--output')
-        self.assertEqual(first_call[5], file_path)
-    
-    @patch.object(SQNotes, '_is_use_ascii_armor', lambda _ : False)
-    @patch('os.remove')
-    @patch('os.path.exists')
-    @patch('tempfile.NamedTemporaryFile')
-    @patch('subprocess.call')
-    def test_write_function_raises_exception_if_gpg_subprocess_raises_exception(self, mock_subprocess_call, mock_tempfile, mock_os_exists, mock_os_remove):
-        mock_temp_file = MagicMock(spec=tempfile.NamedTemporaryFile)
-        mock_temp_file.name = "mock_temp_file_name"
-        mock_temp_file.write = lambda *args, **kwargs: None 
-        mock_tempfile.return_value.__enter__.return_value = mock_temp_file
-        mock_os_exists.return_value = True
-        mock_subprocess_call.side_effect = Exception
-        
-        self.sqnotes.GPG_KEY_EMAIL = "test@test.com"
-        file_path = self.test_dir.name + os.sep + 'test.txt.gpg'
-        text_content = 'test content'
-        with self.assertRaises(GPGSubprocessException):
-            self.sqnotes._write_encrypted_note(file_path, text_content)
-        
-    @patch.object(SQNotes, '_is_use_ascii_armor', lambda _ : False)
-    @patch('os.remove')
-    @patch('os.path.exists')
-    @patch('tempfile.NamedTemporaryFile')
-    @patch('subprocess.call')
-    def test_write_function_raises_exception_if_gpg_subprocess_returns_error_code(self, mock_subprocess_call, mock_tempfile, mock_os_exists, mock_os_remove):
-        mock_temp_file = MagicMock(spec=tempfile.NamedTemporaryFile)
-        mock_temp_file.name = "mock_temp_file_name"
-        mock_temp_file.write = lambda *args, **kwargs: None 
-        mock_tempfile.return_value.__enter__.return_value = mock_temp_file
-        mock_os_exists.return_value = True
-        mock_subprocess_call.return_value = 1
-        
-        self.sqnotes.GPG_KEY_EMAIL = "test@test.com"
-        file_path = self.test_dir.name + os.sep + 'test.txt.gpg'
-        text_content = 'test content'
-        with self.assertRaises(GPGSubprocessException):
-            self.sqnotes._write_encrypted_note(file_path, text_content)
-        
-    
-    
-    @patch('os.remove')
-    @patch.object(SQNotes, '_get_configured_text_editor')
-    @patch('tempfile.NamedTemporaryFile')
-    @patch('subprocess.call')
-    def test_input_function_gets_text_editor_from_config(self, mock_subprocess_call, mock_tempfile, mock_get_text_editor, mock_os_remove):
-        
-        mock_get_text_editor.return_value = 'vim'
-        # Mock tempfile.NamedTemporaryFile context manager
-        mock_temp_file = MagicMock(spec=tempfile.NamedTemporaryFile)
-        mock_temp_file.name = "mock_temp_file_name"
-        mock_tempfile.return_value.__enter__.return_value = mock_temp_file
-
-        # Mock subprocess.call to simulate editing
-        mock_subprocess_call.return_value = 0  # Simulate successful call
-
-        # Mock open to return mock content
-        mock_open_function = mock_open(read_data='Mock note content')
-        with patch('builtins.open', mock_open_function):
-            self.sqnotes._get_input_from_text_editor()
-
-        mock_subprocess_call.assert_called_once()
-        called_args, _ = mock_subprocess_call.call_args
-        first_called_args = called_args[0]
-        self.assertEqual(first_called_args[0], 'vim')
-
-        
-    @patch('os.remove')
-    @patch.object(SQNotes, '_get_configured_text_editor')
-    @patch('tempfile.NamedTemporaryFile')
-    @patch('subprocess.call')
-    def test_input_function_calls_subprocess_with_correct_temp_filename(self, mock_subprocess_call, mock_tempfile, mock_get_text_editor, mock_os_remove):
-        
-        mock_get_text_editor.return_value = 'vim'
-        # Mock tempfile.NamedTemporaryFile context manager
-        mock_temp_file = MagicMock(spec=tempfile.NamedTemporaryFile)
-        mock_temp_filename = "mock_temp_file_name"
-        mock_temp_file.name = mock_temp_filename
-        mock_tempfile.return_value.__enter__.return_value = mock_temp_file
-
-        # Mock subprocess.call to simulate editing
-        mock_subprocess_call.return_value = 0  # Simulate successful call
-
-        # Mock open to return mock content
-        mock_open_function = mock_open(read_data='Mock note content')
-        with patch('builtins.open', mock_open_function):
-            note_content = self.sqnotes._get_input_from_text_editor()
-
-        mock_subprocess_call.assert_called_once()
-        called_args, _ = mock_subprocess_call.call_args
-        first_called_args = called_args[0]
-        self.assertEqual(first_called_args[1], mock_temp_filename)
-
-
-
-    
-    @patch('os.remove')
-    @patch.object(SQNotes, '_get_configured_text_editor')
-    @patch('tempfile.NamedTemporaryFile')
-    @patch('subprocess.call')
-    def test_input_function_returns_content_from_text_editor(self, mock_subprocess_call, mock_tempfile, mock_get_text_editor, mock_os_remove):
-        
-        # Mock tempfile.NamedTemporaryFile context manager
-        mock_temp_file = MagicMock(spec=tempfile.NamedTemporaryFile)
-        mock_temp_file.name = "mock_temp_file_name"
-        mock_tempfile.return_value.__enter__.return_value = mock_temp_file
-
-        # Mock subprocess.call to simulate editing
-        mock_subprocess_call.return_value = 0  # Simulate successful call
-
-        # Mock open to return mock content
-        mock_open_function = mock_open(read_data='Mock note content')
-        with patch('builtins.open', mock_open_function):
-            note_content = self.sqnotes._get_input_from_text_editor()
-
-        # Assert the returned note_content is as expected
-        self.assertEqual(note_content, 'Mock note content')
-
-    @patch.object(SQNotes,'_check_gpg_verified', lambda x : None)
     @patch.object(SQNotes, '_get_configured_text_editor', lambda x: 'vim')
     @patch.object(SQNotes, 'open_database', lambda x: None)
     @patch.object(SQNotes, 'check_text_editor_is_configured', lambda _ : None)
@@ -421,7 +273,6 @@ class TestSQNotesCreateNewNote(unittest.TestCase):
             self.assertEqual(ex.exception.code, 1)
         
         
-    @patch.object(SQNotes,'_check_gpg_verified', lambda x : None)
     @patch.object(SQNotes, '_get_configured_text_editor', lambda x: 'vim')
     @patch.object(SQNotes, 'open_database', lambda x: None)
     @patch.object(SQNotes, 'check_text_editor_is_configured', lambda _ : None)
@@ -524,6 +375,21 @@ class TestSQNotesNewNoteDatabaseInteractions(unittest.TestCase):
         
         
 class TestSQNotesCreateNewNoteDatabaseErrors(unittest.TestCase):
+    gpg_verified_patcher = None
+    get_configured_text_editor_patcher = None
+
+    @classmethod
+    def setUpClass(cls):
+        cls.gpg_verified_patcher = patch.object(SQNotes,'_check_gpg_verified', lambda x : None)
+        cls.gpg_verified_patcher.start()
+        
+        cls.get_configured_text_editor_patcher = patch.object(SQNotes,  '_get_configured_text_editor', lambda x: 'vim')
+        cls.get_configured_text_editor_patcher.start()
+    
+    @classmethod
+    def tearDownClass(cls):
+        cls.gpg_verified_patcher.stop()
+        cls.get_configured_text_editor_patcher.stop()
 
     def setUp(self):
         self.test_dir = tempfile.TemporaryDirectory()
@@ -757,40 +623,10 @@ class TestSQNotesCreateNewNoteDatabaseErrors(unittest.TestCase):
             self.assertIn('unknown error', all_outtext)
             
             
-    @patch('os.remove')
-    @patch.object(SQNotes, '_get_configured_text_editor')
-    @patch('tempfile.NamedTemporaryFile')
-    @patch('subprocess.call')
-    def test_get_input_raises_exception_on_failing_subprocess_with_exception(self, mock_subprocess_call, mock_tempfile, mock_get_text_editor, mock_os_remove):
-        
-        mock_get_text_editor.return_value = 'vim'
-        # Mock tempfile.NamedTemporaryFile context manager
-        mock_temp_file = MagicMock(spec=tempfile.NamedTemporaryFile)
-        mock_temp_filename = "mock_temp_file_name"
-        mock_temp_file.name = mock_temp_filename
-        mock_tempfile.return_value.__enter__.return_value = mock_temp_file
-        mock_subprocess_call.side_effect = Exception()
-
-        with self.assertRaises(TextEditorSubprocessException):
-            self.sqnotes._get_input_from_text_editor()
+    
         
 
-    @patch('os.remove')
-    @patch.object(SQNotes, '_get_configured_text_editor')
-    @patch('tempfile.NamedTemporaryFile')
-    @patch('subprocess.call')
-    def test_get_input_raises_exception_on_failing_subprocess_with_nonzero_response(self, mock_subprocess_call, mock_tempfile, mock_get_text_editor, mock_os_remove):
-        
-        mock_get_text_editor.return_value = 'vim'
-        # Mock tempfile.NamedTemporaryFile context manager
-        mock_temp_file = MagicMock(spec=tempfile.NamedTemporaryFile)
-        mock_temp_filename = "mock_temp_file_name"
-        mock_temp_file.name = mock_temp_filename
-        mock_tempfile.return_value.__enter__.return_value = mock_temp_file
-        mock_subprocess_call.return_value = 1
-
-        with self.assertRaises(TextEditorSubprocessException):
-            self.sqnotes._get_input_from_text_editor()
+    
         
 
 

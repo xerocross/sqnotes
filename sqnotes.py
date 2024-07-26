@@ -185,7 +185,7 @@ class SQNotes:
             self._write_encrypted_note(note_file_path=note_file_path, note_content=note_content)
         except GPGSubprocessException as e:
             logger.error(e)
-            message = interface_copy.GPG_SUBPROCESS_MESSAGE() + '\n' + interface_copy.EXITING()
+            message = interface_copy.GPG_SUBPROCESS_ERROR_MESSAGE() + '\n' + interface_copy.EXITING()
             logger.error(message)
             print(message)
             exit(1)
@@ -312,7 +312,7 @@ class SQNotes:
             self._write_encrypted_note(note_file_path=note_path, note_content=edited_content)
         except GPGSubprocessException as e:
             logger.error(e)
-            message = interface_copy.GPG_SUBPROCESS_MESSAGE() + '\n' + interface_copy.EXITING()
+            message = interface_copy.GPG_SUBPROCESS_ERROR_MESSAGE() + '\n' + interface_copy.EXITING()
             print(message)
             logger.error(message)
             exit(1)
@@ -376,27 +376,25 @@ class SQNotes:
         return list(unique_tags)
     
     
-    def _get_decrypted_content(self, file_path):
-        with tempfile.NamedTemporaryFile(delete=False) as temp_dec_file:
-            temp_dec_filename = temp_dec_file.name
-            
-            subprocess.call(['gpg', '--yes', '--batch', '--quiet', '--output', temp_dec_filename, '--decrypt', file_path])
-            
-            with open(temp_dec_filename, 'r') as file:
+    def _get_decrypted_content(self, note_path):
+        temp_file = self._decrypt_note_into_temp_file(note_path=note_path)
+        try:
+            with open(temp_file, 'r') as file:
                 content = file.read()
-            if os.path.exists(temp_dec_filename):
-                os.remove(temp_dec_filename)
+        finally:
+            self._delete_temp_file(temp_file=temp_file)
+
         return content
                 
     
     def rescan_for_database(self):
         NOTES_DIR = self.get_notes_dir_from_config()
         self.open_database()
-        files = self._get_notes(notes_dir = NOTES_DIR)
+        files = self._get_all_note_paths(notes_dir = NOTES_DIR)
         files_info = [FileInfo(path = file, base_name = os.path.basename(file)) for file in files]
         
         for file_info in files_info:
-            content = self._get_decrypted_content(file_path=file_info.path)
+            content = self._get_decrypted_content(note_path=file_info.path)
             try:
                 note_id = self._get_note_id_from_database_or_none(filename = file_info.base_name)
                 
@@ -462,7 +460,7 @@ class SQNotes:
         
 
     # not top-level
-    def _get_notes(self, notes_dir):
+    def _get_all_note_paths(self, notes_dir):
         extensions = ['txt.gpg', 'txt']
         all_notes = []
         for ex in extensions:
@@ -474,7 +472,7 @@ class SQNotes:
     def notes_list(self):
         logger.debug("printing notes list")
         notes_dir = self.get_notes_dir_from_config()
-        files = self._get_notes(notes_dir=notes_dir)
+        files = self._get_all_note_paths(notes_dir=notes_dir)
         filenames = [os.path.basename(file) for file in files]
         for file in filenames:
             logger.debug(f"note found: {file}")
@@ -585,17 +583,26 @@ class SQNotes:
 
     def search_notes(self, search_queries):
         print(interface_copy.SOME_DELAY_FOR_DECRYPTION())
-        
-        # Search for the queries in all notes
-        any_matches = False
+        is_found_any_matches = False
         notes_dir = self.get_notes_dir_from_config()
-        notes = self._get_notes(notes_dir=notes_dir)
-        
-        for filename in notes:
-            was_match = self.decrypt_and_print(filename, search_queries)
-            if was_match:
-                any_matches = True
-        if not any_matches:
+        note_paths = self._get_all_note_paths(notes_dir=notes_dir)
+        queries_in_lower_case = [query.lower() for query in search_queries]
+        for note_path in note_paths:
+            try:
+                decrypted_content = self._get_decrypted_content(note_path=note_path)
+            except GPGSubprocessException as e:
+                logger.error(e)
+                message = interface_copy.GPG_SUBPROCESS_ERROR_MESSAGE() + '\n' + interface_copy.EXITING()
+                logger.error(message)
+                print(message)
+                exit(1)
+            
+            content_in_lower_case = decrypted_content.lower()
+            if all(lowercase_query in content_in_lower_case for lowercase_query in queries_in_lower_case):
+                print(f"\n{note_path}:\n{decrypted_content}")
+                is_found_any_matches = True
+
+        if not is_found_any_matches:
             print("no notes match search query")    
         
 
@@ -705,11 +712,6 @@ class SQNotes:
         self._commit_transaction()
 
         self._set_database_is_set_up()
-        
-    
-
-    
-        
         
     def decrypt_and_print(self, filename, search_queries = None):
         with tempfile.NamedTemporaryFile(delete=False) as temp_dec_file:

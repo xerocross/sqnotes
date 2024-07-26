@@ -27,7 +27,7 @@ class TestListFiles(unittest.TestCase):
         self.test_dir.cleanup()
 
     @patch.object(SQNotes, 'get_notes_dir_from_config')
-    @patch.object(SQNotes, '_get_notes')
+    @patch.object(SQNotes, '_get_all_note_paths')
     def test_print_all_files(self, 
                              mock_get_notes,
                              mock_get_notes_dir):
@@ -45,7 +45,7 @@ class TestListFiles(unittest.TestCase):
     def test_get_notes_returns_list_of_notes_in_notes_dir(self):
         test_dir_name = self.test_dir.name
         expected_value = [test_dir_name + '/' + base for base in ['test1.txt.gpg', 'test2.txt.gpg']]
-        self.assertEqual(self.sqnotes._get_notes(notes_dir=test_dir_name), expected_value)
+        self.assertEqual(self.sqnotes._get_all_note_paths(notes_dir=test_dir_name), expected_value)
 
 
 

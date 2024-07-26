@@ -23,9 +23,9 @@ class TestSQNotesRescanNotes(unittest.TestCase):
     @patch.object(SQNotes, '_delete_keywords_from_database_for_note')
     @patch.object(SQNotes, '_get_note_id_from_database_or_none')
     @patch.object(SQNotes, '_get_decrypted_content')
-    @patch.object(SQNotes, '_get_notes')
+    @patch.object(SQNotes, '_get_all_note_paths')
     def test_rescan_calls_to_remove_existing_note_keywords_if_all_notes_found_in_database(self,
-                                    mock_get_notes,
+                                    mock_get_all_note_paths,
                                     mock_get_decrypted_content,
                                     mock_get_note_id,
                                     mock_delete_keywords_from_database_for_note,
@@ -34,7 +34,7 @@ class TestSQNotesRescanNotes(unittest.TestCase):
                                     mock_get_notes_dir,
                                     mock_open_database):
         mock_get_notes_dir.return_value = "sqnotes"
-        mock_get_notes.return_value = ['file1', 'file2']
+        mock_get_all_note_paths.return_value = ['file1', 'file2']
         mock_get_decrypted_content.side_effect = ['content1', 'content2']
         mock_get_note_id.side_effect = [1, 2]
         self.sqnotes.rescan_for_database()
@@ -52,9 +52,9 @@ class TestSQNotesRescanNotes(unittest.TestCase):
     @patch.object(SQNotes, '_delete_keywords_from_database_for_note')
     @patch.object(SQNotes, '_get_note_id_from_database_or_none')
     @patch.object(SQNotes, '_get_decrypted_content')
-    @patch.object(SQNotes, '_get_notes')
+    @patch.object(SQNotes, '_get_all_note_paths')
     def test_rescan_calls_to_remove_existing_note_keywords_if_some_notes_not_found_in_database(self,
-                                    mock_get_notes,
+                                    mock_get_all_note_paths,
                                     mock_get_decrypted_content,
                                     mock_get_note_id,
                                     mock_delete_keywords_from_database_for_note,
@@ -65,7 +65,7 @@ class TestSQNotesRescanNotes(unittest.TestCase):
                                     mock_insert_note):
         mock_get_notes_dir.return_value = "sqnotes"
         mock_insert_note.return_value = 3
-        mock_get_notes.return_value = ['file1', 'file2']
+        mock_get_all_note_paths.return_value = ['file1', 'file2']
         mock_get_decrypted_content.side_effect = ['content1', 'content2']
         mock_get_note_id.side_effect = [None, 2]
         self.sqnotes.rescan_for_database()
@@ -85,9 +85,9 @@ class TestSQNotesRescanNotes(unittest.TestCase):
     @patch.object(SQNotes, '_delete_keywords_from_database_for_note')
     @patch.object(SQNotes, '_get_note_id_from_database_or_none')
     @patch.object(SQNotes, '_get_decrypted_content')
-    @patch.object(SQNotes, '_get_notes')
+    @patch.object(SQNotes, '_get_all_note_paths')
     def test_rescan_inserts_note_in_database_if_not_found(self,
-                                    mock_get_notes,
+                                    mock_get_all_note_paths,
                                     mock_get_decrypted_content,
                                     mock_get_note_id,
                                     mock_delete_keywords_from_database_for_note,
@@ -97,7 +97,7 @@ class TestSQNotesRescanNotes(unittest.TestCase):
                                     mock_open_database,
                                     mock_insert_note_into_database):
         mock_get_notes_dir.return_value = "sqnotes"
-        mock_get_notes.return_value = ['file1', 'file2']
+        mock_get_all_note_paths.return_value = ['file1', 'file2']
         mock_get_decrypted_content.side_effect = ['content1', 'content2']
         mock_get_note_id.side_effect = [1, None]
         self.sqnotes.rescan_for_database()
@@ -112,9 +112,9 @@ class TestSQNotesRescanNotes(unittest.TestCase):
     @patch.object(SQNotes, '_delete_keywords_from_database_for_note')
     @patch.object(SQNotes, '_get_note_id_from_database_or_none')
     @patch.object(SQNotes, '_get_decrypted_content')
-    @patch.object(SQNotes, '_get_notes')
+    @patch.object(SQNotes, '_get_all_note_paths')
     def test_rescan_calls_to_extract_and_save_keywords(self,
-                                    mock_get_notes,
+                                    mock_get_all_note_paths,
                                     mock_get_decrypted_content,
                                     mock_get_note_id,
                                     mock_delete_keywords_from_database_for_note,
@@ -125,7 +125,7 @@ class TestSQNotesRescanNotes(unittest.TestCase):
                                     mock_insert_note):
         mock_get_notes_dir.return_value = "sqnotes"
         mock_insert_note.return_value = 3
-        mock_get_notes.return_value = ['file1', 'file2']
+        mock_get_all_note_paths.return_value = ['file1', 'file2']
         mock_get_decrypted_content.side_effect = ['content1', 'content2']
         mock_get_note_id.side_effect = [None, 2]
         self.sqnotes.rescan_for_database()
@@ -145,9 +145,9 @@ class TestSQNotesRescanNotes(unittest.TestCase):
     @patch.object(SQNotes, '_delete_keywords_from_database_for_note')
     @patch.object(SQNotes, '_get_note_id_from_database_or_none')
     @patch.object(SQNotes, '_get_decrypted_content')
-    @patch.object(SQNotes, '_get_notes')
+    @patch.object(SQNotes, '_get_all_note_paths')
     def test_rescan_commits_database_changes(self,
-                                    mock_get_notes,
+                                    mock_get_all_note_paths,
                                     mock_get_decrypted_content,
                                     mock_get_note_id,
                                     mock_delete_keywords_from_database_for_note,
@@ -158,7 +158,7 @@ class TestSQNotesRescanNotes(unittest.TestCase):
                                     mock_insert_note):
         mock_get_notes_dir.return_value = "sqnotes"
         mock_insert_note.return_value = 3
-        mock_get_notes.return_value = ['file1', 'file2']
+        mock_get_all_note_paths.return_value = ['file1', 'file2']
         mock_get_decrypted_content.side_effect = ['content1', 'content2']
         mock_get_note_id.side_effect = [None, 2]
         self.sqnotes.rescan_for_database()
