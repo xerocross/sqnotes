@@ -3,7 +3,7 @@ from unittest.mock import patch, mock_open, MagicMock, call
 import os
 import pytest
 from sqnotes import SQNotes, GPGSubprocessException
-from test_helper import get_all_mocked_print_output
+from test.test_helper import get_all_mocked_print_output
 
 
 @pytest.fixture(scope='session', autouse=True)

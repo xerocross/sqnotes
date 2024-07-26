@@ -7,7 +7,7 @@ from sqnotes import SQNotes, NoteNotFoundException,\
     NoteNotFoundInDatabaseException, GPGSubprocessException,\
     TextEditorSubprocessException
 import tempfile
-from test_add_new_note import get_all_mocked_print_output
+from test.test_add_new_note import get_all_mocked_print_output
 
 @pytest.fixture(scope='session', autouse=True)
 def set_test_environment():
