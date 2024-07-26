@@ -38,17 +38,25 @@ class TestDecryptNoteIntoTempFile(unittest.TestCase):
     def setUp(self):
         # self.test_dir = tempfile.TemporaryDirectory()
         self.sqnotes = SQNotes()
-    
-    @patch('subprocess.call')
-    @patch('tempfile.NamedTemporaryFile')
-    def test_decrypt_calls_gpg_subprocess_with_decrypt_note_path(self, mock_tempfile, mock_subprocess):
-
-        mock_subprocess.return_value = 0
         
         mock_temp_file = MagicMock(spec=tempfile.NamedTemporaryFile)
         mock_temp_file.name = "mock_temp_file_name"
         mock_temp_file.write = lambda *args, **kwargs: None 
-        mock_tempfile.return_value.__enter__.return_value = mock_temp_file
+        self.mock_temp_file = mock_temp_file
+        mock_NamedTemporaryFile = MagicMock(spec=tempfile.NamedTemporaryFile)
+        
+        mock_NamedTemporaryFile.return_value.__enter__.return_value = mock_temp_file
+        
+        self.mock_tempfile_patcher = patch('tempfile.NamedTemporaryFile', mock_NamedTemporaryFile)
+        self.mock_tempfile_patcher.start()
+        
+    def tearDown(self):
+        self.mock_tempfile_patcher.stop()
+    
+    @patch('subprocess.call')
+    def test_calls_gpg_subprocess_with_decrypt_note_path(self, mock_subprocess):
+
+        mock_subprocess.return_value = 0
         note_path = "test path"
         self.sqnotes._decrypt_note_into_temp_file(note_path = note_path)
         mock_subprocess.assert_called_once()
@@ -59,52 +67,33 @@ class TestDecryptNoteIntoTempFile(unittest.TestCase):
         
         
     @patch('subprocess.call')
-    @patch('tempfile.NamedTemporaryFile')
-    def test_decrypt_calls_gpg_subprocess_with_tempfile_name(self, mock_tempfile, mock_subprocess):
+    def test_calls_gpg_subprocess_with_tempfile_name(self, mock_subprocess):
 
         mock_subprocess.return_value = 0
-        
-        mock_temp_file = MagicMock(spec=tempfile.NamedTemporaryFile)
-        mock_temp_file.name = "mock_temp_file_name"
-        mock_temp_file.write = lambda *args, **kwargs: None 
-        mock_tempfile.return_value.__enter__.return_value = mock_temp_file
         note_path = "test path"
         self.sqnotes._decrypt_note_into_temp_file(note_path = note_path)
         mock_subprocess.assert_called_once()
         called_args, _ = mock_subprocess.call_args
         first_call = called_args[0]
         self.assertEqual(first_call[0], 'gpg')
-        self.assertEqual(first_call[5], mock_temp_file.name)
+        self.assertEqual(first_call[5], self.mock_temp_file.name)
         
         
     @patch('subprocess.run')
-    @patch('tempfile.NamedTemporaryFile')
     def test_decrypt_calls_raises_gpg_subprocess_exception_if_subprocess_raises_exception(self, 
-                                                                                           mock_tempfile, 
                                                                                            mock_subprocess):
 
         mock_subprocess.side_effect = Exception()
-        
-        mock_temp_file = MagicMock(spec=tempfile.NamedTemporaryFile)
-        mock_temp_file.name = "mock_temp_file_name"
-        mock_temp_file.write = lambda *args, **kwargs: None 
-        mock_tempfile.return_value.__enter__.return_value = mock_temp_file
         note_path = "test path"
         with self.assertRaises(GPGSubprocessException):
             self.sqnotes._decrypt_note_into_temp_file(note_path = note_path)
         
         
     @patch('subprocess.run')
-    @patch('tempfile.NamedTemporaryFile')
-    def test_decrypt_calls_raises_gpg_subprocess_exception_if_subprocess_returns_error_code(self, 
-                                                                                           mock_tempfile, 
+    def test_raises_gpg_subprocess_exception_if_subprocess_returns_error_code(self, 
                                                                                            mock_subprocess):
 
         mock_subprocess.return_value = 1
-        mock_temp_file = MagicMock(spec=tempfile.NamedTemporaryFile)
-        mock_temp_file.name = "mock_temp_file_name"
-        mock_temp_file.write = lambda *args, **kwargs: None 
-        mock_tempfile.return_value.__enter__.return_value = mock_temp_file
         note_path = "test path"
         with self.assertRaises(GPGSubprocessException):
             self.sqnotes._decrypt_note_into_temp_file(note_path = note_path)

@@ -315,12 +315,10 @@ class SQNotes:
             message = interface_copy.GPG_SUBPROCESS_ERROR_MESSAGE() + '\n' + interface_copy.EXITING()
             print(message)
             logger.error(message)
+            self._delete_temp_file(temp_file=temp_dec_filename)
             exit(1)
         finally:
-            if os.path.exists(temp_dec_filename):
-                os.remove(temp_dec_filename)
-    
-    
+            self._delete_temp_file(temp_file=temp_dec_filename)
     
         try:
             note_id = self._get_note_id_from_database_or_raise(filename = filename)
