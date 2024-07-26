@@ -1,5 +1,5 @@
 import unittest
-from unittest.mock import patch, mock_open, MagicMock, call
+from unittest.mock import patch, mock_open, MagicMock, call, Mock
 import os
 import pytest
 from sqnotes import SQNotes
@@ -11,10 +11,26 @@ def set_test_environment():
     
         
 class TestSQNotesRescanNotes(unittest.TestCase):
+    get_decrypted_content_in_memory_patcher = None
+
+    @classmethod
+    def setUpClass(cls):
+        pass
+        
+    @classmethod
+    def tearDownClass(cls):
+        pass
+
 
     def setUp(self):
         self.sqnotes = SQNotes()
+        get_decrypted_content = Mock()
+        get_decrypted_content.side_effect = ['content1', 'content2']
+        self.get_decrypted_content_in_memory_patcher = patch.object(SQNotes, '_get_decrypted_content_in_memory', get_decrypted_content)
+        self.get_decrypted_content_in_memory_patcher.start()
         
+    def tearDown(self):
+        self.get_decrypted_content_in_memory_patcher.stop()
 
     @patch.object(SQNotes, 'open_database')
     @patch.object(SQNotes, 'get_notes_dir_from_config')
@@ -22,11 +38,9 @@ class TestSQNotesRescanNotes(unittest.TestCase):
     @patch.object(SQNotes, '_extract_and_save_keywords')
     @patch.object(SQNotes, '_delete_keywords_from_database_for_note')
     @patch.object(SQNotes, '_get_note_id_from_database_or_none')
-    @patch.object(SQNotes, '_get_decrypted_content')
     @patch.object(SQNotes, '_get_all_note_paths')
     def test_rescan_calls_to_remove_existing_note_keywords_if_all_notes_found_in_database(self,
                                     mock_get_all_note_paths,
-                                    mock_get_decrypted_content,
                                     mock_get_note_id,
                                     mock_delete_keywords_from_database_for_note,
                                     mock_extract_and_save_keywords,
@@ -35,7 +49,6 @@ class TestSQNotesRescanNotes(unittest.TestCase):
                                     mock_open_database):
         mock_get_notes_dir.return_value = "sqnotes"
         mock_get_all_note_paths.return_value = ['file1', 'file2']
-        mock_get_decrypted_content.side_effect = ['content1', 'content2']
         mock_get_note_id.side_effect = [1, 2]
         self.sqnotes.rescan_for_database()
         
@@ -51,7 +64,7 @@ class TestSQNotesRescanNotes(unittest.TestCase):
     @patch.object(SQNotes, '_extract_and_save_keywords')
     @patch.object(SQNotes, '_delete_keywords_from_database_for_note')
     @patch.object(SQNotes, '_get_note_id_from_database_or_none')
-    @patch.object(SQNotes, '_get_decrypted_content')
+    @patch.object(SQNotes, '_get_decrypted_content_in_memory')
     @patch.object(SQNotes, '_get_all_note_paths')
     def test_rescan_calls_to_remove_existing_note_keywords_if_some_notes_not_found_in_database(self,
                                     mock_get_all_note_paths,
@@ -84,7 +97,7 @@ class TestSQNotesRescanNotes(unittest.TestCase):
     @patch.object(SQNotes, '_extract_and_save_keywords')
     @patch.object(SQNotes, '_delete_keywords_from_database_for_note')
     @patch.object(SQNotes, '_get_note_id_from_database_or_none')
-    @patch.object(SQNotes, '_get_decrypted_content')
+    @patch.object(SQNotes, '_get_decrypted_content_in_memory')
     @patch.object(SQNotes, '_get_all_note_paths')
     def test_rescan_inserts_note_in_database_if_not_found(self,
                                     mock_get_all_note_paths,
@@ -111,7 +124,7 @@ class TestSQNotesRescanNotes(unittest.TestCase):
     @patch.object(SQNotes, '_extract_and_save_keywords')
     @patch.object(SQNotes, '_delete_keywords_from_database_for_note')
     @patch.object(SQNotes, '_get_note_id_from_database_or_none')
-    @patch.object(SQNotes, '_get_decrypted_content')
+    @patch.object(SQNotes, '_get_decrypted_content_in_memory')
     @patch.object(SQNotes, '_get_all_note_paths')
     def test_rescan_calls_to_extract_and_save_keywords(self,
                                     mock_get_all_note_paths,
@@ -144,7 +157,7 @@ class TestSQNotesRescanNotes(unittest.TestCase):
     @patch.object(SQNotes, '_extract_and_save_keywords')
     @patch.object(SQNotes, '_delete_keywords_from_database_for_note')
     @patch.object(SQNotes, '_get_note_id_from_database_or_none')
-    @patch.object(SQNotes, '_get_decrypted_content')
+    @patch.object(SQNotes, '_get_decrypted_content_in_memory')
     @patch.object(SQNotes, '_get_all_note_paths')
     def test_rescan_commits_database_changes(self,
                                     mock_get_all_note_paths,

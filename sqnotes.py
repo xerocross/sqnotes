@@ -375,16 +375,26 @@ class SQNotes:
         return list(unique_tags)
     
     
-    def _get_decrypted_content(self, note_path):
-        temp_file = self._decrypt_note_into_temp_file(note_path=note_path)
+    def _get_decrypted_content_in_memory(self, note_path):
+        logger.debug("attempting to use in-memory decryption")
         try:
-            with open(temp_file, 'r') as file:
-                content = file.read()
-        finally:
-            self._delete_temp_file(temp_file=temp_file)
-
-        return content
-                
+            gpg_command = ['gpg', '--decrypt']
+            with open(note_path, 'rb') as f:
+                encrypted_data = f.read()
+            process = subprocess.run(
+                gpg_command,
+                input=encrypted_data,
+                text=False,  # binary mode
+                capture_output=True,
+                check=True
+            )
+            decrypted_data = process.stdout
+            decrypted_text = decrypted_data.decode('utf-8')
+        
+        except Exception as e:
+            logger.error(e)
+        return decrypted_text
+    
     
     def rescan_for_database(self):
         NOTES_DIR = self.get_notes_dir_from_config()
@@ -393,7 +403,7 @@ class SQNotes:
         files_info = [FileInfo(path = file, base_name = os.path.basename(file)) for file in files]
         
         for file_info in files_info:
-            content = self._get_decrypted_content(note_path=file_info.path)
+            content = self._get_decrypted_content_in_memory(note_path=file_info.path)
             try:
                 note_id = self._get_note_id_from_database_or_none(filename = file_info.base_name)
                 
@@ -582,7 +592,7 @@ class SQNotes:
             print('') # blank line
             for result in results:
                 note_path = os.path.join(NOTES_DIR, result[0])
-                decrypted_content = self._get_decrypted_content(note_path=note_path)
+                decrypted_content = self._get_decrypted_content_in_memory(note_path=note_path)
                 self._print_note(note_path=note_path, decrypted_content=decrypted_content)
                 print('') # blank line
                 
@@ -593,11 +603,12 @@ class SQNotes:
         print(interface_copy.SOME_DELAY_FOR_DECRYPTION())
         is_found_any_matches = False
         notes_dir = self.get_notes_dir_from_config()
+        
         note_paths = self._get_all_note_paths(notes_dir=notes_dir)
         queries_in_lower_case = [query.lower() for query in search_queries]
         for note_path in note_paths:
             try:
-                decrypted_content = self._get_decrypted_content(note_path=note_path)
+                decrypted_content = self._get_decrypted_content_in_memory(note_path=note_path)
             except GPGSubprocessException as e:
                 logger.error(e)
                 message = interface_copy.GPG_SUBPROCESS_ERROR_MESSAGE() + '\n' + interface_copy.EXITING()
