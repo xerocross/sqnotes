@@ -119,10 +119,11 @@ class SQNotes:
             logger.error("an exception occurred while attempting the text editor subprocess")
             logger.error(e)
             raise TextEditorSubprocessException()
-        
-        with open(temp_filename, 'r') as file:
-            note_content = file.read().strip()
-        os.remove(temp_filename)
+        try:
+            with open(temp_filename, 'r') as file:
+                note_content = file.read().strip()
+        finally:
+            self._delete_temp_file(temp_file=temp_filename)
         return note_content
         
 
@@ -139,17 +140,12 @@ class SQNotes:
             
         try:
             response = subprocess.call(subprocess_command)
-            if os.path.exists(temp_enc_filename):
-                os.remove(temp_enc_filename)
+            self._delete_temp_file(temp_file=temp_enc_filename)
             if response != 0:
                 raise GPGSubprocessException()
         except Exception as e:
-            logger.error("encountered an error while calling gpg as a subprocess")
             logger.error(e)
-            # make sure we remove the temp file
-            if os.path.exists(temp_enc_filename):
-                os.remove(temp_enc_filename)
-            
+            self._delete_temp_file(temp_file=temp_enc_filename)
             raise GPGSubprocessException()
 
         
