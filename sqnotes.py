@@ -13,12 +13,22 @@ import logging
 import interface_copy
 import sys
 from manual import Manual
+from command_validator import CommandValidator
 
 
 VERSION = '0.2'
 DEBUGGING = '--debug' in sys.argv
 ASCII_ARMOR_CONFIG_KEY = "armor"
 GPG_VERIFIED_KEY = "gpg_verified"
+SET_TEXT_EDITOR_INTERACTIVE_FLAG = False
+VIM = 'vim'
+NANO = 'nano'
+GPG = 'gpg'
+
+SUPPORTED_TEXT_EDITORS = [
+    VIM, 
+    NANO
+    ]
 
 class EnvironmentConfigurationNotFound(Exception):
     """Raise if the environment configuration file is not found."""
@@ -261,6 +271,9 @@ class SQNotes:
     def _delete_temp_file(self, temp_file):
         if os.path.exists(temp_file):
                 os.remove(temp_file)
+                
+                
+    
     
     def _decrypt_note_into_temp_file(self, note_path):
         with tempfile.NamedTemporaryFile(delete=False) as temp_dec_file:
@@ -291,6 +304,31 @@ class SQNotes:
         with open(temp_filename, 'r') as file:
             edited_content = file.read().strip()
         return edited_content
+    
+    
+    
+    
+    
+    def _get_available_text_editors(self):
+        available_editors = []
+        for editor in SUPPORTED_TEXT_EDITORS:
+            validator_function = CommandValidator.get_validator_by_command(command_string=editor)
+            if validator_function is None:
+                continue
+            editor_is_supported = validator_function()
+            if editor_is_supported:
+                available_editors.append(editor)
+        return available_editors
+    
+    def check_available_text_editors(self):
+        available_editors = self._get_available_text_editors()
+        if len(available_editors) > 0:
+            print("supported text editors installed:")
+            print(available_editors)
+        else:
+            print("No supported text editors installed.")
+            print(f"Supported text editors include these: {', '.join(SUPPORTED_TEXT_EDITORS)}.")
+    
     
     def edit_note(self, filename):
         self.GPG_KEY_EMAIL = self.get_gpg_key_email()
@@ -659,7 +697,7 @@ class SQNotes:
     def _check_gpg_verified(self):
         is_gpg_verified = self._get_gpg_verified()
         if not is_gpg_verified:
-            is_gpg_available = self._verify_gpg()
+            is_gpg_available = CommandValidator.verify_command(command_string = GPG)
             if is_gpg_available:
                 self._set_gpg_verified()
             else:
@@ -687,7 +725,7 @@ class SQNotes:
         self.save_config()
         
         
-        gpg_verified = self._verify_gpg()
+        gpg_verified = CommandValidator.verify_command(command_string=GPG)
         if not gpg_verified:
             print(interface_copy.NEED_TO_INSTALL_GPG)
         else:
@@ -788,28 +826,74 @@ class SQNotes:
         self._set_setting_in_user_config(key=key, value=new_gpg_key_email)
         print(f"GPG Key set to: {self.GPG_KEY_EMAIL}")
 
-    
-    def _verify_gpg(self):
-        print(interface_copy.CALLING_GPG_VERSION())
-        command = ['gpg', '--version', '--quiet']
-        try:
-            subprocess.call(command,
-                            stdout=subprocess.DEVNULL,
-                            stderr=subprocess.DEVNULL)
-        except Exception as e:
-            logger.error(e)
-            return False
-        return True
+
             
             
     def check_gpg_installed(self):
-        is_can_run_gpg_version = self._verify_gpg()
+        is_can_run_gpg_version = CommandValidator.verify_command(command_string=GPG)
         message = interface_copy.GPG_VERIFIED() if is_can_run_gpg_version else interface_copy.GPG_NOT_RUN()
         print(message)
     
     def startup(self):
         self.load_setup_configuration()
         self.open_or_create_and_open_user_config_file()
+
+
+    def _configure_text_editor(self, editor):
+        raise Exception('add some validation')
+        self._set_setting_in_user_config('text_editor', editor)
+        
+        
+    def _get_input_until_condition_satisfied(self, prompt, condition):
+        response = None
+        while response == None:
+            user_input = input(prompt)
+            if condition(user_input):
+                return user_input
+            else:
+                continue
+        
+
+
+    def choose_text_editor_interactive(self):
+        available_editors = self._get_available_text_editors()
+        if len(available_editors) == 0:
+            print("No supported text editors were installed.")
+            supported_editors_message = interface_copy.SUPPORTED_TEXT_EDITORS.format(", ".join(SUPPORTED_TEXT_EDITORS))
+            print(supported_editors_message)
+            print("Please install a supported text editor and try again.")
+        elif len(available_editors) > 1:
+            print("Please choose a text editor:")
+            for index, editor in enumerate(available_editors):
+                print(f"{index} : {editor}")
+            text_editor_index_choice = None
+            while text_editor_index_choice == None:
+                text_editor_choice = input("Enter the number of your choice here.> ")
+                try:
+                    input_as_number = int(text_editor_choice)
+                except ValueError as e:
+                    logger.error(e)
+                    print("input wasn't an integer")
+                    continue
+                except TypeError as e:
+                    logger.error(e)
+                    print("input wasn't an integer")
+                    continue
+                if input_as_number >= 0 and input_as_number < len(available_editors):
+                    text_editor_index_choice = input_as_number
+                    selected_editor = available_editors[text_editor_index_choice]
+                    logger.debug(f"user selected editor {text_editor_choice}->{input_as_number} : {selected_editor}")
+                    print(f"selected {selected_editor}")
+                    self._configure_text_editor(editor=available_editors[text_editor_index_choice])
+                else:
+                    print("input wasn't an index")
+                    logger.debug("input wasn't an index")
+                    continue
+        else:
+            #set only available editor
+            pass
+                    
+                    
 
     def check_text_editor_is_configured(self):
         # Check if a text editor is configured, prompt to select one if not
@@ -835,6 +919,11 @@ def main():
     
     subparsers.add_parser('new', help='Add a new note.')
     subparsers.add_parser('init', help='Initialize app.')
+    
+    subparsers.add_parser('text-editors', help='Show supported text editors available on your system.')
+    
+    if SET_TEXT_EDITOR_INTERACTIVE_FLAG:
+        subparsers.add_parser('config-text-editor', help='Choose your text editor (interactive).')
     
     man_command = subparsers.add_parser('man', help='Show manual.')
     manual_subcommands = man_command.add_subparsers(dest='man_subcommand', help='Manual subcommands.')
@@ -896,6 +985,10 @@ def main():
                 sqnotes.notes_list()
             elif args.command == 'verify-gpg':
                 sqnotes.check_gpg_installed()
+            elif args.command == 'config-text-editor':
+                sqnotes.choose_text_editor_interactive()
+            elif args.command == 'text-editors':
+                sqnotes.check_available_text_editors()
             elif args.command == 'set-gpg-key':
                 sqnotes.set_gpg_key_email(args.id)
             elif args.command == 'use-ascii-armor':
