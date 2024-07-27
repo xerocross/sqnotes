@@ -377,10 +377,12 @@ class SQNotes:
     
     def _get_decrypted_content_in_memory(self, note_path):
         logger.debug("attempting to use in-memory decryption")
+        
+        with open(note_path, 'rb') as f:
+            encrypted_data = f.read()
+        
         try:
             gpg_command = ['gpg', '--decrypt']
-            with open(note_path, 'rb') as f:
-                encrypted_data = f.read()
             process = subprocess.run(
                 gpg_command,
                 input=encrypted_data,
@@ -388,14 +390,18 @@ class SQNotes:
                 capture_output=True,
                 check=True
             )
+            if process.returncode != 0:
+                logger.error(f"GPG exited with code {process.returncode}")
+                raise GPGSubprocessException()
+            
             decrypted_data = process.stdout
             decrypted_text = decrypted_data.decode('utf-8')
+            return decrypted_text
         
         except Exception as e:
             logger.error(e)
-        return decrypted_text
-    
-    
+            raise GPGSubprocessException()
+        
     def rescan_for_database(self):
         NOTES_DIR = self.get_notes_dir_from_config()
         self.open_database()
@@ -749,6 +755,9 @@ class SQNotes:
                 else:
                     print(f"\n{filename}:\n{content}")
                     return True
+
+
+
 
 
     def _is_use_ascii_armor(self):
