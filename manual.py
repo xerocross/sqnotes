@@ -6,6 +6,18 @@ basic_usage = """\
 SQNotes Basic Usage\
 
 
+To create a new note interactively:
+
+`sqnotes new`
+
+To do a full text search within your notes:
+
+`sqnotes search [query1] ([query2] ...)`
+
+To search your notes by keyword:
+
+`sqnotes -k [keyword1] ([keyword2] ...)`
+
 SQNotes is a note-keeping utility for helping you keep useful \
 text-based data at your fingertips at the command line. Your notes \
 will be stored as files on your computer, not within the app. \
@@ -42,7 +54,8 @@ of your notes.
 When you write a note, the plaintext information is \
 originally stored in a temporary file on your system. SQNotes then \
 calls GPG to encrypt the contents into a new file, which is then \
-registered with the SQNotes database. At this point the temporary file \
+registered with the SQNotes database (locally on your machine). \
+At this point the temporary file \
 is deleted.
 
 When reading a note (as in when you search your notes by text or \
@@ -52,6 +65,11 @@ When editing a note, the encrypted note file is decrypted into a \
 temporary file which is then opened in your text editor. After editing, \
 the contents are encrypted and saved back to the original note file \
 and the temporary file is deleted.
+
+To use SQNotes, you will need to have GPG installed on your machine \
+and you will need a GPG key to use for encryption and decryption. \
+SQNotes will ask you to select your choice of key by configuring \
+a GPG key email as the identifier. 
 """
 
 class Manual:
@@ -72,7 +90,7 @@ class Manual:
         print(wrapped_text)
         
         
-    def print_encryption_info(self, ):
+    def print_encryption_page(self, ):
         wrapped_text = self._get_wrapped_text(input_text=encryption_info, width=self.width)
         print(wrapped_text)
         
