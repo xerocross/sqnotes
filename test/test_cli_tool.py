@@ -114,5 +114,13 @@ class TestCLIInitializedCommandsReferredCorrectly(unittest.TestCase):
         mock_set_gpg_key_email.assert_called_once_with('test@domain')
 
 
+    @patch.object(SQNotes, 'check_initialized', lambda x : True)
+    @patch.object(SQNotes, 'search_keywords')
+    def test_main_command_with_k_option_calls_keyword_search(self, mock_search_keywords):
+        self.run_cli(['sqnotes', '-k', 'apple', 'pear'])
+        mock_search_keywords.assert_called_once_with(keywords=['apple', 'pear'])
+
+
+
 if __name__ == '__main__':
     unittest.main()

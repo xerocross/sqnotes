@@ -914,6 +914,8 @@ def main():
                     action='store_true', 
                     help='Enable debugging mode with detailed log messages')
     
+    parser.add_argument('-k', '--keywords', nargs='+', help='Search notes by keyword.')
+    
     subparsers = parser.add_subparsers(dest='command', help='Subcommands')
 
     
@@ -981,6 +983,8 @@ def main():
         else:
             if args.command == 'new':
                 sqnotes.new_note()
+            elif args.keywords:
+                sqnotes.search_keywords(keywords=args.keywords)
             elif args.command == 'notes-list':
                 sqnotes.notes_list()
             elif args.command == 'verify-gpg':
