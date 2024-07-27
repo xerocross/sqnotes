@@ -18,6 +18,8 @@ To search your notes by keyword:
 
 `sqnotes -k [keyword1] ([keyword2] ...)`
 
+
+
 SQNotes is a note-keeping utility for helping you keep useful \
 text-based data at your fingertips at the command line. Your notes \
 will be stored as files on your computer, not within the app. \
