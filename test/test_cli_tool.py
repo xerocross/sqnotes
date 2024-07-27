@@ -4,6 +4,7 @@ import io
 import sys
 import sqnotes
 from sqnotes import SQNotes
+from manual import Manual
 
 
 class TestCLI(unittest.TestCase):
@@ -119,6 +120,18 @@ class TestCLIInitializedCommandsReferredCorrectly(unittest.TestCase):
     def test_main_command_with_k_option_calls_keyword_search(self, mock_search_keywords):
         self.run_cli(['sqnotes', '-k', 'apple', 'pear'])
         mock_search_keywords.assert_called_once_with(keywords=['apple', 'pear'])
+        
+    @patch.object(SQNotes, 'check_initialized', lambda x : True)
+    @patch.object(Manual, 'print_main_page')
+    def test_shows_manual_main_page_if_man_command_even_not_initialized(self, mock_print_main_man_page):
+        self.run_cli(['sqnotes', 'man'])
+        mock_print_main_man_page.assert_called_once()
+
+    @patch.object(SQNotes, 'check_initialized', lambda x : True)
+    @patch.object(Manual, 'print_encryption_page')
+    def test_shows_manual_encryption_page_if_man_encryption_command(self, mock_print_man_encryption_page):
+        self.run_cli(['sqnotes', 'man', 'encryption'])
+        mock_print_man_encryption_page.assert_called_once()
 
 
 

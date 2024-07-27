@@ -975,6 +975,12 @@ def main():
 
     if args.command == 'init':
         sqnotes.initialize()
+    elif args.command == 'man':
+        manual = Manual()
+        if args.man_subcommand == 'encryption':
+            manual.print_encryption_page()
+        else:
+            manual.print_main_page()
     else:
         initialized = sqnotes.check_initialized()
         if not initialized:
@@ -1012,14 +1018,6 @@ def main():
                 sqnotes.print_all_keywords()
             elif args.command == 'rescan':
                 sqnotes.rescan_for_database()
-            elif args.command == 'man':
-                manual = Manual()
-                if args.man_subcommand == 'encryption':
-                    manual.print_encryption_info()
-                else:
-                    manual.print_main_page()
-                
-                
                 
             else:
                 parser.print_help()
