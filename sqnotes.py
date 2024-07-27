@@ -428,7 +428,7 @@ class SQNotes:
             logger.error(e)
             raise CouldNotReadNoteException()
         try:
-            gpg_command = ['gpg', '--decrypt']
+            gpg_command = ['gpg','--batch', '--decrypt']
             process = subprocess.run(
                 gpg_command,
                 input=encrypted_data,
