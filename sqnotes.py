@@ -97,6 +97,10 @@ class GPGSubprocessException(Exception):
 class CouldNotRunGPG(Exception):
     """Raise when a command is called that requires GPG and GPG is not available."""
 
+class CouldNotReadNoteException(Exception):
+    """Raise when encounter an error attempting to read note file."""
+
+
 class FileInfo:
         
     def __init__(self, path, base_name):
@@ -416,9 +420,13 @@ class SQNotes:
     def _get_decrypted_content_in_memory(self, note_path):
         logger.debug("attempting to use in-memory decryption")
         
-        with open(note_path, 'rb') as f:
-            encrypted_data = f.read()
-        
+        try:
+            with open(note_path, 'rb') as f:
+                encrypted_data = f.read()
+        except Exception as e:
+            logger.error("encountered an error attempting to read encrypted note")
+            logger.error(e)
+            raise CouldNotReadNoteException()
         try:
             gpg_command = ['gpg', '--decrypt']
             process = subprocess.run(
@@ -437,6 +445,7 @@ class SQNotes:
             return decrypted_text
         
         except Exception as e:
+            logger.error("encountered an error while decrypting")
             logger.error(e)
             raise GPGSubprocessException()
         
@@ -619,9 +628,7 @@ class SQNotes:
         print(f"{note_path}:\n{decrypted_content}")
     
     
-    def search_keywords(self, keywords):
-        NOTES_DIR = self.get_notes_dir_from_config()
-        self.open_database()
+    def _query_notes_by_keywords(self, notes_dir, keywords):
         self.cursor.execute('''
                 SELECT n.filename
                 FROM notes n
@@ -632,11 +639,24 @@ class SQNotes:
                 HAVING COUNT(*) = {}
             '''.format(  ', '.join('?' for _ in keywords) , len(keywords)), keywords)
         results = self.cursor.fetchall()
+        return results
+    
+    def search_keywords(self, keywords):
+        NOTES_DIR = self.get_notes_dir_from_config()
+        self.open_database()
+        results = self._query_notes_by_keywords(notes_dir=NOTES_DIR, keywords=keywords)
         if results:
             print('') # blank line
             for result in results:
                 note_path = os.path.join(NOTES_DIR, result[0])
-                decrypted_content = self._get_decrypted_content_in_memory(note_path=note_path)
+                try:
+                    decrypted_content = self._get_decrypted_content_in_memory(note_path=note_path)
+                except GPGSubprocessException:
+                    message = interface_copy.GPG_SUBPROCESS_ERROR_MESSAGE() + '\n' + interface_copy.EXITING()
+                    print(message)
+                    logger.error(message)
+                    exit(1)
+                    
                 self._print_note(note_path=note_path, decrypted_content=decrypted_content)
                 print('') # blank line
                 
