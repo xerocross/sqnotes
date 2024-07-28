@@ -6,6 +6,7 @@ from sqnotes import SQNotes, NoteNotFoundException,\
     NoteNotFoundInDatabaseException, GPGSubprocessException
 import tempfile
 from test.test_sqnotes.test_add_new_note import get_all_mocked_print_output
+from encrypted_note_helper import EncryptedNoteHelper
 
 from injector import Injector
 
@@ -49,7 +50,7 @@ class TestSQNotesEditExistingNote(unittest.TestCase):
         cls.mock_extract_and_save_keywords_patcher = patch.object(SQNotes, '_extract_and_save_keywords', extract_and_save_keywords)
         cls.mock_extract_and_save_keywords_patcher.start()
         
-        cls.mock_write_encrypted_patcher = patch.object(SQNotes, '_write_encrypted_note', write_encrypted_note)
+        cls.mock_write_encrypted_patcher = patch.object(EncryptedNoteHelper, 'write_encrypted_note', write_encrypted_note)
         cls.mock_write_encrypted_patcher.start()
         
         cls.gpg_email_key_patcher = patch.object(SQNotes, 'get_gpg_key_email', lambda x : 'test@test.com')
@@ -183,7 +184,7 @@ class TestSQNotesEditExistingNote(unittest.TestCase):
     @patch.object(SQNotes, '_decrypt_note_into_temp_file')
     @patch.object(SQNotes, '_delete_keywords_from_database_for_note')
     @patch.object(SQNotes, '_get_note_id_from_database_or_raise')
-    @patch.object(SQNotes, '_write_encrypted_note')
+    @patch.object(EncryptedNoteHelper, 'write_encrypted_note')
     def test_edit_calls_write_encrypted_note_with_path_and_content(self, 
                                                            mock_write_encrypted_note, 
                                                            mock_get_note_id, 

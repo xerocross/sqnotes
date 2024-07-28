@@ -132,10 +132,6 @@ class SQNotes:
             self._delete_temp_file(temp_file=temp_filename)
         return note_content
         
-
-    def _write_encrypted_note(self, note_file_path, note_content):
-        raise Exception("deprecated method")
-
         
     def _get_new_note_name(self):
         is_use_armor = self._is_use_ascii_armor()
@@ -349,9 +345,10 @@ class SQNotes:
         try:
             temp_dec_filename = self._decrypt_note_into_temp_file(note_path=note_path)
             edited_content = self._get_edited_note_from_text_editor(temp_filename=temp_dec_filename)
+            
             print("edited_content:")
             print(edited_content)
-            self._write_encrypted_note(note_file_path=note_path, note_content=edited_content)
+            self.encrypted_note_helper.write_encrypted_note(note_file_path=note_path, note_content=edited_content)
         except GPGSubprocessException as e:
             self.logger.error(e)
             message = interface_copy.GPG_SUBPROCESS_ERROR_MESSAGE() + '\n' + interface_copy.EXITING()

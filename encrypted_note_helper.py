@@ -1,8 +1,6 @@
 
 import tempfile
 import subprocess
-import logging
-import sys
 import os
 from injector import inject
 
