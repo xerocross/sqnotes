@@ -1,12 +1,11 @@
 
 import unittest
-from unittest.mock import patch, mock_open, MagicMock, call
+from unittest.mock import patch, MagicMock
 import os
 import pytest
-from sqnotes import SQNotes, TextEditorSubprocessException,\
-    GPGSubprocessException
+from sqnotes import SQNotes
 import tempfile
-import sqlite3
+from encrypted_note_helper import EncryptedNoteHelper, GPGSubprocessException
 from injector import Injector
 
 
@@ -19,6 +18,9 @@ def get_all_mocked_print_output(mocked_print):
 @pytest.fixture(scope='session', autouse=True)
 def set_test_environment():
     os.environ['TESTING'] = 'true'
+    
+def mock_write_nothing(*args, **kwargs):
+    pass
     
     
 class TestDecryptNoteIntoTempFile(unittest.TestCase):
@@ -39,11 +41,11 @@ class TestDecryptNoteIntoTempFile(unittest.TestCase):
     def setUp(self):
         # self.test_dir = tempfile.TemporaryDirectory()
         injector = Injector()
-        self.sqnotes = self.sqnotes = injector.get(SQNotes)
-        
+
+        self.encrypted_note_helper = injector.get(EncryptedNoteHelper)
         mock_temp_file = MagicMock(spec=tempfile.NamedTemporaryFile)
         mock_temp_file.name = "mock_temp_file_name"
-        mock_temp_file.write = lambda *args, **kwargs: None 
+        mock_temp_file.write = mock_write_nothing
         self.mock_temp_file = mock_temp_file
         mock_NamedTemporaryFile = MagicMock(spec=tempfile.NamedTemporaryFile)
         
@@ -60,7 +62,8 @@ class TestDecryptNoteIntoTempFile(unittest.TestCase):
 
         mock_subprocess.return_value = 0
         note_path = "test path"
-        self.sqnotes._decrypt_note_into_temp_file(note_path = note_path)
+        self.encrypted_note_helper.decrypt_note_into_temp_file(note_path = note_path)
+        
         mock_subprocess.assert_called_once()
         called_args, _ = mock_subprocess.call_args
         first_call = called_args[0]
@@ -73,7 +76,7 @@ class TestDecryptNoteIntoTempFile(unittest.TestCase):
 
         mock_subprocess.return_value = 0
         note_path = "test path"
-        self.sqnotes._decrypt_note_into_temp_file(note_path = note_path)
+        self.encrypted_note_helper.decrypt_note_into_temp_file(note_path = note_path)
         mock_subprocess.assert_called_once()
         called_args, _ = mock_subprocess.call_args
         first_call = called_args[0]
@@ -88,7 +91,7 @@ class TestDecryptNoteIntoTempFile(unittest.TestCase):
         mock_subprocess.side_effect = Exception()
         note_path = "test path"
         with self.assertRaises(GPGSubprocessException):
-            self.sqnotes._decrypt_note_into_temp_file(note_path = note_path)
+            self.encrypted_note_helper.decrypt_note_into_temp_file(note_path = note_path)
         
         
     @patch('subprocess.run')
@@ -98,5 +101,5 @@ class TestDecryptNoteIntoTempFile(unittest.TestCase):
         mock_subprocess.return_value = 1
         note_path = "test path"
         with self.assertRaises(GPGSubprocessException):
-            self.sqnotes._decrypt_note_into_temp_file(note_path = note_path)
+            self.encrypted_note_helper.decrypt_note_into_temp_file(note_path = note_path)
         

@@ -271,27 +271,6 @@ class SQNotes:
         if os.path.exists(temp_file):
                 os.remove(temp_file)
                 
-                
-    
-    
-    def _decrypt_note_into_temp_file(self, note_path):
-        with tempfile.NamedTemporaryFile(delete=False) as temp_dec_file:
-            temp_dec_filename = temp_dec_file.name
-        try:
-            decrypt_process = subprocess.call(['gpg', '--yes','--quiet', '--batch', '--output', temp_dec_filename, '--decrypt', note_path])
-        except Exception as e:
-            self.logger.error(e)
-            
-            self._delete_temp_file(temp_file=temp_dec_filename)
-            
-            raise GPGSubprocessException()
-        
-        if decrypt_process != 0:
-            self.logger.error(f"decrypt process returned code {decrypt_process}")
-            self._delete_temp_file(temp_file=temp_dec_filename)
-            raise GPGSubprocessException()
-        
-        return temp_dec_filename
     
     def _get_edited_note_from_text_editor(self, temp_filename):
         TEXT_EDITOR = self._get_configured_text_editor()
@@ -343,7 +322,7 @@ class SQNotes:
     
         temp_dec_filename = ''
         try:
-            temp_dec_filename = self._decrypt_note_into_temp_file(note_path=note_path)
+            temp_dec_filename = self.encrypted_note_helper.decrypt_note_into_temp_file(note_path=note_path)
             edited_content = self._get_edited_note_from_text_editor(temp_filename=temp_dec_filename)
             
             print("edited_content:")

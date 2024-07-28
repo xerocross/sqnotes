@@ -78,6 +78,23 @@ class EncryptedNoteHelper:
             raise GPGSubprocessException()
         
         
+    def decrypt_note_into_temp_file(self, note_path):
+        with tempfile.NamedTemporaryFile(delete=False) as temp_dec_file:
+            temp_dec_filename = temp_dec_file.name
+        try:
+            decrypt_process = subprocess.call(['gpg', '--yes','--quiet', '--batch', '--output', temp_dec_filename, '--decrypt', note_path])
+        except Exception as e:
+            self.logger.error(e)
+            self._delete_temp_file(temp_file=temp_dec_filename)
+            raise GPGSubprocessException()
+        
+        if decrypt_process != 0:
+            self.logger.error(f"decrypt process returned code {decrypt_process}")
+            self._delete_temp_file(temp_file=temp_dec_filename)
+            raise GPGSubprocessException()
+        
+        return temp_dec_filename
+        
     def _delete_temp_file(self, temp_file):
         if os.path.exists(temp_file):
                 os.remove(temp_file)
