@@ -1,6 +1,7 @@
 
 import textwrap
 import shutil
+import pydoc
 
 basic_usage = """\
 SQNotes Basic Usage\
@@ -71,7 +72,7 @@ and the temporary file is deleted.
 To use SQNotes, you will need to have GPG installed on your machine \
 and you will need a GPG key to use for encryption and decryption. \
 SQNotes will ask you to select your choice of key by configuring \
-a GPG key email as the identifier. 
+a GPG key email as the identifier.
 """
 
 class Manual:
@@ -89,12 +90,13 @@ class Manual:
     
     def print_main_page(self):
         wrapped_text = self._get_wrapped_text(input_text=basic_usage, width=self.width)
-        print(wrapped_text)
+        pydoc.pager(wrapped_text)
+        # print(wrapped_text)
         
         
     def print_encryption_page(self, ):
         wrapped_text = self._get_wrapped_text(input_text=encryption_info, width=self.width)
-        print(wrapped_text)
+        pydoc.pager(wrapped_text)
         
     def __init__(self):
         self.MAX_WIDTH = 70
