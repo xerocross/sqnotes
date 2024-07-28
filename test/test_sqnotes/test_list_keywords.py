@@ -1,9 +1,7 @@
 import unittest
-from unittest.mock import patch, mock_open, MagicMock, call
+from unittest.mock import patch
 import os
 import pytest
-import tempfile
-import sqlite3
 from sqnotes import SQNotes
 from dotenv import load_dotenv
 from injector import Injector
@@ -12,7 +10,6 @@ from injector import Injector
 @pytest.fixture(scope='session', autouse=True)
 def set_test_environment():
     os.environ['TESTING'] = 'true'
-
 
 
 def reload_dotenv():
@@ -24,11 +21,8 @@ def reload_dotenv():
     # Reload the .env file
     load_dotenv(override=True)  # `override=True` ensures existing variables are overridden
     
-            
-
 class TestSQNotesListKeywordsCommand(unittest.TestCase):
 
-    
     def setUp(self):
         injector = Injector()
         self.sqnotes = injector.get(SQNotes)
@@ -103,11 +97,5 @@ class TestSQNotesGetAllKeywords(unittest.TestCase):
         self.connection.execute('ROLLBACK;')
     
     
-    
-    
-    
-    
-    
-    
-    
+
     
