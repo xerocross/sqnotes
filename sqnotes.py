@@ -445,7 +445,8 @@ class SQNotes:
             return decrypted_text
         except subprocess.CalledProcessError as e:
             logger.error(f"GPG failed with return code {e.returncode}")
-            logger.error("Error message:", e.stderr.decode())
+            error_message = "Error message: " + e.stderr.decode()
+            logger.error(error_message)
             raise GPGSubprocessException()
         except Exception as e:
             logger.error("encountered an error while decrypting")
