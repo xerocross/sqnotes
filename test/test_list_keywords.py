@@ -6,6 +6,7 @@ import tempfile
 import sqlite3
 from sqnotes import SQNotes
 from dotenv import load_dotenv
+from injector import Injector
 
 
 @pytest.fixture(scope='session', autouse=True)
@@ -29,7 +30,8 @@ class TestSQNotesListKeywordsCommand(unittest.TestCase):
 
     
     def setUp(self):
-        self.sqnotes = SQNotes()
+        injector = Injector()
+        self.sqnotes = injector.get(SQNotes)
         
     @patch.object(SQNotes, 'open_database', lambda x: None)
     @patch.object(SQNotes, '_get_all_keywords_from_database')
@@ -51,8 +53,8 @@ class TestSQNotesGetAllKeywords(unittest.TestCase):
     def setUp(self):
         reload_dotenv()
         # Set up a connection and a cursor
-        
-        self.sqnotes = SQNotes()
+        injector = Injector()
+        self.sqnotes = injector.get(SQNotes)
         self.sqnotes.open_database()
         self.connection = self.sqnotes._get_database_connection()
         self.cursor = self.sqnotes._get_database_cursor()

@@ -4,6 +4,7 @@ import os
 import pytest
 import tempfile
 from sqnotes import SQNotes
+from injector import Injector
 
 
 @pytest.fixture(scope='session', autouse=True)
@@ -20,8 +21,8 @@ class TestListFiles(unittest.TestCase):
         self.test_files = ['test1.txt.gpg', 'test2.txt.gpg']
         for file in self.test_files:
             open(os.path.join(self.test_dir.name, file), 'a').close()
-            
-        self.sqnotes = SQNotes()
+        injector = Injector()
+        self.sqnotes = injector.get(SQNotes)
 
     def tearDown(self):
         self.test_dir.cleanup()
@@ -52,7 +53,8 @@ class TestListFiles(unittest.TestCase):
 class TestTryToMakePath(unittest.TestCase):
     
     def setUp(self):
-        self.sqnotes = SQNotes()
+        injector = Injector()
+        self.sqnotes = injector.get(SQNotes)
     
     def test_returns_true_on_path_exists(self):
         selected_path = 'test_path'

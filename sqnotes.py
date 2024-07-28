@@ -14,6 +14,8 @@ import interface_copy
 import sys
 from manual import Manual
 from command_validator import CommandValidator
+from encrypted_note_helper import EncryptedNoteHelper, GPGSubprocessException
+from injector import inject, Injector
 
 
 VERSION = '0.2'
@@ -66,6 +68,8 @@ def setup_logger():
 logger = setup_logger()
 
 
+USE_DIRECT_NOTE_INSERTION = os.getenv('DIRECT_NOTE_INSERTION') == "yes"
+
 class NotesDirNotConfiguredException(Exception):
     """Exception raised if the user notes directory is not configured."""
     pass
@@ -91,9 +95,7 @@ class NoteNotFoundInDatabaseException(Exception):
 class TextEditorSubprocessException(Exception):
     """Raise when an exception occurs in calling the text editor in a subprocess."""
     
-class GPGSubprocessException(Exception):
-    """Raise when an exception or error occurs in calling gpg in a subprocess."""
-    
+  
 class CouldNotRunGPG(Exception):
     """Raise when a command is called that requires GPG and GPG is not available."""
 
@@ -108,6 +110,10 @@ class FileInfo:
         self.base_name = base_name
 
 class SQNotes:
+    
+    @inject
+    def __init__(self, encrypted_note_helper: EncryptedNoteHelper):
+        self.encrypted_note_helper = encrypted_note_helper
     
     def _insert_keyword_into_database(self, keyword):
         self.cursor.execute('SELECT id FROM keywords WHERE keyword = ?', (keyword,))
@@ -143,25 +149,7 @@ class SQNotes:
         
 
     def _write_encrypted_note(self, note_file_path, note_content):
-        
-        
-        with tempfile.NamedTemporaryFile(delete=False) as temp_enc_file:
-            temp_enc_filename = temp_enc_file.name
-            temp_enc_file.write(note_content.encode('utf-8'))
-            
-        subprocess_command = ['gpg', '--yes','--quiet', '--batch', '--output', note_file_path, '--encrypt', '--recipient', self.GPG_KEY_EMAIL, temp_enc_filename]
-        if self._is_use_ascii_armor():
-            subprocess_command.insert(1, '--armor')
-            
-        try:
-            response = subprocess.call(subprocess_command)
-            self._delete_temp_file(temp_file=temp_enc_filename)
-            if response != 0:
-                raise GPGSubprocessException()
-        except Exception as e:
-            logger.error(e)
-            self._delete_temp_file(temp_file=temp_enc_filename)
-            raise GPGSubprocessException()
+        raise Exception("deprecated method")
 
         
     def _get_new_note_name(self):
@@ -170,34 +158,20 @@ class SQNotes:
         datetime_string = datetime.now().strftime('%Y%m%d%H%M%S')
         return f"{datetime_string}.{extension}"
          
-
-    def new_note(self):
-        self._check_gpg_verified()
-        self.GPG_KEY_EMAIL = self.get_gpg_key_email()
-        self.check_gpg_key_email()
-        NOTES_DIR = self.get_notes_dir_from_config()
-        self.check_text_editor_is_configured()
-        TEXT_EDITOR = self._get_configured_text_editor()
-        
-        try:
-            self.open_database()
-        except Exception as e:
-            message = interface_copy.COULD_NOT_OPEN_DATABASE() + ' ' + interface_copy.EXITING()
-            print(message)
-            exit(1)
-
-        try:        
-            note_content = self._get_input_from_text_editor(TEXT_EDITOR=TEXT_EDITOR)
-        except TextEditorSubprocessException:
-            message = interface_copy.TEXT_EDITOR_SUBPROCESS_ERROR().format(self._get_configured_text_editor())
-            logger.error(message)
-            print(message)
-            exit(1)
+         
+         
+    def _insert_new_note(self, note_content, notes_dir):
         
         base_filename = self._get_new_note_name()
-        note_file_path = os.path.join(NOTES_DIR, base_filename)
+        note_file_path = os.path.join(notes_dir, base_filename)
         try:
-            self._write_encrypted_note(note_file_path=note_file_path, note_content=note_content)
+            enh_config = {
+                'GPG_KEY_EMAIL' : self.GPG_KEY_EMAIL,
+                'USE_ASCII_ARMOR' : self._is_use_ascii_armor()
+            }
+            
+            self.encrypted_note_helper.write_encrypted_note(note_file_path=note_file_path, note_content=note_content, config=enh_config)
+        
         except GPGSubprocessException as e:
             logger.error(e)
             message = interface_copy.GPG_SUBPROCESS_ERROR_MESSAGE() + '\n' + interface_copy.EXITING()
@@ -225,8 +199,48 @@ class SQNotes:
                 logger.error(message)
                 logger.error(e)
                 print(interface_copy.UNKNOWN_ERROR() + '\n' + interface_copy.DATA_NOT_SAVED())
+                
 
+    def directly_insert_note(self, text):
+        self._check_gpg_verified()
+        self.GPG_KEY_EMAIL = self.get_gpg_key_email()
+        self.check_gpg_key_email()
+        NOTES_DIR = self.get_notes_dir_from_config()
+        try:
+            self.open_database()
+        except Exception as e:
+            message = interface_copy.COULD_NOT_OPEN_DATABASE() + ' ' + interface_copy.EXITING()
+            print(message)
+            exit(1)
             
+        self._insert_new_note(note_content=text, notes_dir=NOTES_DIR)
+
+    def new_note(self):
+        self._check_gpg_verified()
+        self.GPG_KEY_EMAIL = self.get_gpg_key_email()
+        self.check_gpg_key_email()
+        NOTES_DIR = self.get_notes_dir_from_config()
+        self.check_text_editor_is_configured()
+        TEXT_EDITOR = self._get_configured_text_editor()
+        
+        try:
+            self.open_database()
+        except Exception as e:
+            message = interface_copy.COULD_NOT_OPEN_DATABASE() + ' ' + interface_copy.EXITING()
+            print(message)
+            exit(1)
+
+        try:        
+            note_content = self._get_input_from_text_editor(TEXT_EDITOR=TEXT_EDITOR)
+        except TextEditorSubprocessException:
+            message = interface_copy.TEXT_EDITOR_SUBPROCESS_ERROR().format(self._get_configured_text_editor())
+            logger.error(message)
+            print(message)
+            exit(1)
+        
+        self._insert_new_note(note_content=note_content, notes_dir=NOTES_DIR)
+        
+        
 
     def _extract_and_save_keywords(self, note_id, note_content):
         keywords = self._extract_keywords(note_content)
@@ -931,6 +945,8 @@ class SQNotes:
             TEXT_EDITOR = input("No text editor configured. Please enter the path to your preferred terminal text editor (e.g. 'vim', 'nano')> ")
             self._set_setting_in_user_config('text_editor', TEXT_EDITOR)
             self.save_config()
+            
+
 
 
 def main():
@@ -943,7 +959,10 @@ def main():
                     action='store_true', 
                     help='Enable debugging mode with detailed log messages')
     
-    parser.add_argument('-k', '--keywords', nargs='+', help='Search notes by keyword.')
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument('-k', '--keywords', nargs='+', help='Search notes by keyword.')
+    if USE_DIRECT_NOTE_INSERTION:
+        group.add_argument('-n', '--new', help='Text to insert.', type=str)
     
     subparsers = parser.add_subparsers(dest='command', help='Subcommands')
 
@@ -998,7 +1017,9 @@ def main():
     edit_parser.add_argument('-n', '--note', help='Note base filename.', type=str)
     
     args = parser.parse_args()
-    sqnotes = SQNotes()
+    
+    injector = Injector()
+    sqnotes = injector.get(SQNotes)
     sqnotes.startup()
 
 
@@ -1018,6 +1039,8 @@ def main():
         else:
             if args.command == 'new':
                 sqnotes.new_note()
+            elif args.new:
+                sqnotes.directly_insert_note(text=args.new)
             elif args.keywords:
                 sqnotes.search_keywords(keywords=args.keywords)
             elif args.command == 'notes-list':

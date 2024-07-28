@@ -3,6 +3,7 @@ from unittest.mock import patch
 import os
 import pytest
 from sqnotes import SQNotes
+from injector import Injector
 
 
 @pytest.fixture(scope='session', autouse=True)
@@ -12,7 +13,8 @@ def set_test_environment():
 class TestSQNotesSetGPGKey(unittest.TestCase):
     
     def setUp(self):
-        self.sqnotes = SQNotes()
+        injector = Injector()
+        self.sqnotes = injector.get(SQNotes)
         
         
     @patch.object(SQNotes, '_set_setting_in_user_config')

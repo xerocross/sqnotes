@@ -3,10 +3,11 @@ import unittest
 from unittest.mock import patch, mock_open, MagicMock, call
 import os
 import pytest
-from sqnotes import SQNotes, TextEditorSubprocessException,\
-    GPGSubprocessException
+
 import tempfile
 import sqlite3
+from injector import Injector
+from encrypted_note_helper import EncryptedNoteHelper, GPGSubprocessException
 
 
 def get_all_mocked_print_output(mocked_print):
@@ -21,22 +22,22 @@ def set_test_environment():
     
     
 class TestWriteEncryptedNote(unittest.TestCase):
-    use_ascii_armor_patcher = None
+
     
     @classmethod
     def setUpClass(cls):
-        cls.use_ascii_armor_patcher = patch.object(SQNotes, '_is_use_ascii_armor', lambda _ : False)
-        cls.use_ascii_armor_patcher.start()
-        
+        pass
         
     @classmethod
     def tearDownClass(cls):
-        cls.use_ascii_armor_patcher.stop()
+        pass
 
     
     def setUp(self):
         self.test_dir = tempfile.TemporaryDirectory()
-        self.sqnotes = SQNotes()
+        injector = Injector()
+        self.encrypted_note_holder = injector.get(EncryptedNoteHelper)
+    
     
     @patch('tempfile.NamedTemporaryFile')
     @patch('subprocess.call')
@@ -49,10 +50,15 @@ class TestWriteEncryptedNote(unittest.TestCase):
         mock_tempfile.return_value.__enter__.return_value = mock_temp_file
         mock_subprocess_call.return_value = 0
         
-        self.sqnotes.GPG_KEY_EMAIL = "test@test.com"
+
+        config = {
+            'GPG_KEY_EMAIL' : "test@test.com"
+        }
+        
         file_path = self.test_dir.name + os.sep + 'test.txt.gpg'
         text_content = 'test content'
-        self.sqnotes._write_encrypted_note(file_path, text_content)
+        self.encrypted_note_holder.write_encrypted_note(file_path, text_content, config)
+        
         called_args, _ = mock_subprocess_call.call_args
         first_call = called_args[0]
         mock_subprocess_call.assert_called_once()
@@ -70,10 +76,12 @@ class TestWriteEncryptedNote(unittest.TestCase):
         mock_temp_file.name = "mock_temp_file_name"
         mock_temp_file.write = lambda *args, **kwargs: None 
         mock_tempfile.return_value.__enter__.return_value = mock_temp_file
-        self.sqnotes.GPG_KEY_EMAIL = "test@test.com"
+        config = {
+            'GPG_KEY_EMAIL' : "test@test.com"
+        }
         file_path = self.test_dir.name + os.sep + 'test.txt.gpg'
         text_content = 'test content'
-        self.sqnotes._write_encrypted_note(file_path, text_content)
+        self.encrypted_note_holder.write_encrypted_note(file_path, text_content, config)
         called_args, called_kwargs = mock_subprocess_call.call_args
         first_call = called_args[0]
         mock_subprocess_call.assert_called_once()
@@ -90,13 +98,13 @@ class TestWriteEncryptedNote(unittest.TestCase):
         mock_temp_file.write = lambda *args, **kwargs: None 
         mock_tempfile.return_value.__enter__.return_value = mock_temp_file
         mock_subprocess_call.side_effect = Exception
-        
-        self.sqnotes.GPG_KEY_EMAIL = "test@test.com"
+        config = {
+            'GPG_KEY_EMAIL' : "test@test.com"
+        }
         file_path = self.test_dir.name + os.sep + 'test.txt.gpg'
         text_content = 'test content'
         with self.assertRaises(GPGSubprocessException):
-            self.sqnotes._write_encrypted_note(file_path, text_content)
-            
+            self.encrypted_note_holder.write_encrypted_note(file_path, text_content, config)
             
 
     @patch('tempfile.NamedTemporaryFile')
@@ -109,10 +117,11 @@ class TestWriteEncryptedNote(unittest.TestCase):
         mock_temp_file.write = lambda *args, **kwargs: None 
         mock_tempfile.return_value.__enter__.return_value = mock_temp_file
         mock_subprocess_call.return_value = 1
-        
-        self.sqnotes.GPG_KEY_EMAIL = "test@test.com"
+        config = {
+            'GPG_KEY_EMAIL' : "test@test.com"
+        }
         file_path = self.test_dir.name + os.sep + 'test.txt.gpg'
         text_content = 'test content'
         with self.assertRaises(GPGSubprocessException):
-            self.sqnotes._write_encrypted_note(file_path, text_content)
+            self.encrypted_note_holder.write_encrypted_note(file_path, text_content, config)
         

@@ -8,6 +8,7 @@ from sqnotes import SQNotes, TextEditorSubprocessException,\
 import tempfile
 import sqlite3
 from test.test_helper import get_all_mocked_print_output
+from injector import Injector
 
 def side_effect_callable():
     side_effect_callable.called = getattr(side_effect_callable, "called", 0) + 1
@@ -38,7 +39,8 @@ class TestChooseTextEditorInteractive(unittest.TestCase):
 
     
     def setUp(self):
-        self.sqnotes = SQNotes()
+        injector = Injector()
+        self.sqnotes = injector.get(SQNotes)
 
         
     def tearDown(self):

@@ -4,6 +4,7 @@ import pytest
 import unittest
 from unittest.mock import patch, Mock
 from sqnotes import SQNotes, GPGSubprocessException, CouldNotReadNoteException
+from injector import Injector
 
 
 @pytest.fixture(scope='session', autouse=True)
@@ -13,7 +14,8 @@ def set_test_environment():
 
 @pytest.fixture
 def sqnotes_object():
-    sqnotes = SQNotes()
+    injector = Injector()
+    sqnotes = injector.get(SQNotes)
     yield sqnotes
 
 @pytest.fixture

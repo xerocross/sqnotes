@@ -3,6 +3,7 @@ from unittest.mock import patch, mock_open, MagicMock, call, Mock
 import os
 import pytest
 from sqnotes import SQNotes
+from test.test_sqnotes_initializer import get_test_sqnotes
 
 
 @pytest.fixture(scope='session', autouse=True)
@@ -23,7 +24,7 @@ class TestSQNotesRescanNotes(unittest.TestCase):
 
 
     def setUp(self):
-        self.sqnotes = SQNotes()
+        self.sqnotes = get_test_sqnotes()
         get_decrypted_content = Mock()
         get_decrypted_content.side_effect = ['content1', 'content2']
         self.get_decrypted_content_in_memory_patcher = patch.object(SQNotes, '_get_decrypted_content_in_memory', get_decrypted_content)

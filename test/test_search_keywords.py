@@ -6,6 +6,7 @@ import pytest
 from sqnotes import SQNotes, GPGSubprocessException
 from test.test_helper import get_all_mocked_print_output
 import logging
+from test.test_sqnotes_initializer import get_test_sqnotes
 
 
 logger = logging.getLogger(__name__)
@@ -20,7 +21,7 @@ def set_test_environment():
     
 @pytest.fixture
 def sqnotes_obj():
-    sqnotes_obj = SQNotes()
+    sqnotes_obj = get_test_sqnotes()
     yield sqnotes_obj
     
     

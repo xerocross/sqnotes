@@ -4,6 +4,7 @@ import os
 import pytest
 from sqnotes import SQNotes, GPGSubprocessException
 from test.test_helper import get_all_mocked_print_output
+from injector import Injector
 
 
 @pytest.fixture(scope='session', autouse=True)
@@ -17,7 +18,8 @@ def get_all_notes(*args, **kwargs):
 class TestSQNotesSearchNotes(unittest.TestCase):
 
     def setUp(self):
-        self.sqnotes = SQNotes()
+        injector = Injector()
+        self.sqnotes = injector.get(SQNotes)
 
     @patch.object(SQNotes, 'get_notes_dir_from_config', lambda self: '')
     @patch.object(SQNotes, '_get_all_note_paths', lambda self, notes_dir: ['note1.txt', 'note2.txt', 'note3.txt'])

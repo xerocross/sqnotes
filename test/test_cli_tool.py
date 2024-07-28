@@ -132,6 +132,13 @@ class TestCLIInitializedCommandsReferredCorrectly(unittest.TestCase):
     def test_shows_manual_encryption_page_if_man_encryption_command(self, mock_print_man_encryption_page):
         self.run_cli(['sqnotes', 'man', 'encryption'])
         mock_print_man_encryption_page.assert_called_once()
+        
+    @patch.object(SQNotes, 'check_initialized', lambda x : True)
+    @patch.object(SQNotes, 'directly_insert_note')
+    def test_new_argument_with_text_refers_to_direct_insert(self, 
+                                                            mock_directly_insert):
+        self.run_cli(['sqnotes', '-n', 'this is a test note'])
+        mock_directly_insert.assert_called_once_with(text='this is a test note')
 
 
 

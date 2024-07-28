@@ -7,6 +7,8 @@ from sqnotes import SQNotes, NoteNotFoundException,\
 import tempfile
 from test.test_add_new_note import get_all_mocked_print_output
 
+from injector import Injector
+
 @pytest.fixture(scope='session', autouse=True)
 def set_test_environment():
     os.environ['TESTING'] = 'true'
@@ -80,7 +82,8 @@ class TestSQNotesEditExistingNote(unittest.TestCase):
                 self.temp_file = temp_file
                 self.temp_filename = os.path.basename(temp_file.name)
         self.temp_filepath = self.test_dir + os.sep + self.temp_filename
-        self.sqnotes = SQNotes()
+        injector = Injector()
+        self.sqnotes = injector.get(SQNotes)
         
         self.get_notes_dir_patcher = patch.object(SQNotes, 'get_notes_dir_from_config', lambda x : self.test_dir)
         self.get_notes_dir_patcher.start()
@@ -208,7 +211,8 @@ class TestSQNotesEditNoteDatabaseInteractions(unittest.TestCase):
     @patch.object(SQNotes, 'get_notes_dir_from_config', lambda x : "")
     @patch.object(SQNotes,'_set_database_is_set_up', lambda x : None)
     def setUp(self):
-        self.sqnotes = SQNotes()
+        injector = Injector()
+        self.sqnotes = injector.get(SQNotes)
         self.sqnotes.open_database()
         self.connection = self.sqnotes._get_database_connection()
         self.cursor = self.sqnotes._get_database_cursor()
@@ -267,7 +271,8 @@ class TestSQNotesEditNoteDatabaseInteractions(unittest.TestCase):
 class TestGetEditedNoteFromEditor(unittest.TestCase):
     
     def setUp(self):
-        self.sqnotes = SQNotes()
+        injector = Injector()
+        self.sqnotes = injector.get(SQNotes)
 
 
     @patch('subprocess.run')

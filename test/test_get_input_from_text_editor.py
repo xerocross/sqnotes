@@ -8,6 +8,7 @@ from sqnotes import SQNotes, NoteNotFoundException,\
     TextEditorSubprocessException
 import tempfile
 from test.test_add_new_note import get_all_mocked_print_output
+from injector import Injector
 
 @pytest.fixture(scope='session', autouse=True)
 def set_test_environment():
@@ -33,15 +34,8 @@ class TestGetInputFromTextEditor(unittest.TestCase):
 
 
     def setUp(self):
-        # with tempfile.TemporaryDirectory() as temp_dir:
-        #     self.test_dir = temp_dir
-        #     with tempfile.NamedTemporaryFile(mode='w', dir=temp_dir, delete=False) as temp_file:
-        #         # print(f'Temporary file created at: {temp_file.name}')
-        #         # temp_file.write('This is some test data.')
-        #         self.temp_file = temp_file
-        #         self.temp_filename = os.path.basename(temp_file.name)
-        # self.temp_filepath = self.test_dir + os.sep + self.temp_filename
-        self.sqnotes = SQNotes()
+        injector = Injector()
+        self.sqnotes = injector.get(SQNotes)
         self.TEXT_EDITOR = 'vim'
         mock_temp_file = MagicMock(spec=tempfile.NamedTemporaryFile)
         mock_temp_file.name = "mock_temp_file_name"

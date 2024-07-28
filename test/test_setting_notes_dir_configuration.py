@@ -5,6 +5,7 @@ import pytest
 from sqnotes import SQNotes, GPGSubprocessException
 from test.test_helper import get_all_mocked_print_output, get_all_single_arg_inputs
 import logging
+from injector import Injector
 
 
 logger = logging.getLogger(__name__)
@@ -19,7 +20,8 @@ def set_test_environment():
     
 @pytest.fixture
 def sqnotes_obj():
-    sqnotes_obj = SQNotes()
+    injector = Injector()
+    sqnotes_obj = injector.get(SQNotes)
     sqnotes_obj.DEFAULT_NOTE_DIR = "test_dir"
     yield sqnotes_obj
     

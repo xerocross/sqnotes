@@ -6,6 +6,8 @@ from sqnotes import SQNotes, TextEditorSubprocessException,\
     GPGSubprocessException
 import tempfile
 import sqlite3
+from encrypted_note_helper import EncryptedNoteHelper
+from test.test_sqnotes_initializer import get_test_sqnotes
 
 
 def get_all_mocked_print_output(mocked_print):
@@ -39,6 +41,8 @@ class TestSQNotesCreateNewNote(unittest.TestCase):
         cls.gpg_verified_patcher = patch.object(SQNotes,'_check_gpg_verified', lambda x : None)
         cls.gpg_verified_patcher.start()
         
+        
+        
     @classmethod
     def tearDownClass(cls):
         cls.open_database_patcher.stop()
@@ -48,7 +52,7 @@ class TestSQNotesCreateNewNote(unittest.TestCase):
 
     def setUp(self):
         self.test_dir = tempfile.TemporaryDirectory()
-        self.sqnotes = SQNotes()
+        self.sqnotes = get_test_sqnotes()
 
 
     
@@ -57,27 +61,27 @@ class TestSQNotesCreateNewNote(unittest.TestCase):
     @patch.object(SQNotes, '_get_new_note_name')
     @patch.object(SQNotes, '_extract_and_save_keywords')
     @patch.object(SQNotes, '_insert_new_note_into_database')
-    @patch.object(SQNotes, '_write_encrypted_note')
     @patch.object(SQNotes, 'get_gpg_key_email')
     @patch.object(SQNotes, '_get_input_from_text_editor')
     @patch.object(SQNotes, 'get_notes_dir_from_config')
     @patch.object(SQNotes, 'check_gpg_key_email')
-    def test_calls_to_get_input_from_text_editor(self, 
+    @patch.object(EncryptedNoteHelper, 'write_encrypted_note')
+    def test_calls_to_get_input_from_text_editor(self,
+                                                 mock_write_encrypted_note,
                                                  mock_check_gpg_key, 
                                                  mock_get_notes_dir, 
                                                  mock_get_input, 
                                                  mock_get_gpg_key_email, 
-                                                 mock_write_encrypted_note, 
                                                  mock_insert_new_note_in_database, 
                                                  mock_extract_keywords, 
                                                  mock_get_new_note_name,
                                                  mock_commit_transaction):
         mock_get_new_note_name.return_value = "test.txt.gpg"
+        mock_write_encrypted_note.return_value = True
         mock_check_gpg_key.return_value = True
         mock_get_notes_dir.return_value = self.test_dir.name
         mock_get_input.return_value = "test content"
         mock_get_gpg_key_email.return_value = "test@test.com"
-        mock_write_encrypted_note.return_value = True
         self.sqnotes.new_note()
         mock_get_input.assert_called_once()
         
@@ -87,7 +91,7 @@ class TestSQNotesCreateNewNote(unittest.TestCase):
     @patch.object(SQNotes, '_extract_and_save_keywords', lambda x : None)
     @patch.object(SQNotes, '_commit_transaction', lambda x : None)
     @patch.object(SQNotes, '_get_new_note_name')
-    @patch.object(SQNotes, '_write_encrypted_note')
+    @patch.object(EncryptedNoteHelper, 'write_encrypted_note')
     @patch.object(SQNotes, 'get_gpg_key_email')
     @patch.object(SQNotes, '_get_input_from_text_editor')
     @patch.object(SQNotes, 'get_notes_dir_from_config')
@@ -118,7 +122,7 @@ class TestSQNotesCreateNewNote(unittest.TestCase):
     @patch.object(SQNotes, '_extract_and_save_keywords', lambda x : None)
     @patch.object(SQNotes, '_commit_transaction', lambda x : None)
     @patch.object(SQNotes, '_get_new_note_name')
-    @patch.object(SQNotes, '_write_encrypted_note')
+    @patch.object(EncryptedNoteHelper, 'write_encrypted_note')
     @patch.object(SQNotes, 'get_gpg_key_email')
     @patch.object(SQNotes, '_get_input_from_text_editor')
     @patch.object(SQNotes, 'get_notes_dir_from_config')
@@ -147,7 +151,7 @@ class TestSQNotesCreateNewNote(unittest.TestCase):
     @patch.object(SQNotes, '_get_new_note_name')
     @patch.object(SQNotes, '_extract_and_save_keywords')
     @patch.object(SQNotes, '_insert_new_note_into_database')
-    @patch.object(SQNotes, '_write_encrypted_note')
+    @patch.object(EncryptedNoteHelper, 'write_encrypted_note')
     @patch.object(SQNotes, 'get_gpg_key_email')
     @patch.object(SQNotes, '_get_input_from_text_editor')
     @patch.object(SQNotes, 'get_notes_dir_from_config')
@@ -181,7 +185,7 @@ class TestSQNotesCreateNewNote(unittest.TestCase):
     @patch.object(SQNotes, '_get_new_note_name')
     @patch.object(SQNotes, '_extract_and_save_keywords')
     @patch.object(SQNotes, '_insert_new_note_into_database')
-    @patch.object(SQNotes, '_write_encrypted_note')
+    @patch.object(EncryptedNoteHelper, 'write_encrypted_note')
     @patch.object(SQNotes, 'get_gpg_key_email')
     @patch.object(SQNotes, '_get_input_from_text_editor')
     @patch.object(SQNotes, 'get_notes_dir_from_config')
@@ -213,7 +217,7 @@ class TestSQNotesCreateNewNote(unittest.TestCase):
     @patch.object(SQNotes, '_get_new_note_name')
     @patch.object(SQNotes, '_extract_and_save_keywords')
     @patch.object(SQNotes, '_insert_new_note_into_database')
-    @patch.object(SQNotes, '_write_encrypted_note')
+    @patch.object(EncryptedNoteHelper, 'write_encrypted_note')
     @patch.object(SQNotes, 'get_gpg_key_email')
     @patch.object(SQNotes, '_get_input_from_text_editor')
     @patch.object(SQNotes, 'get_notes_dir_from_config')
@@ -248,7 +252,7 @@ class TestSQNotesCreateNewNote(unittest.TestCase):
     @patch.object(SQNotes, '_extract_and_save_keywords', lambda x : None)
     @patch.object(SQNotes, '_commit_transaction', lambda x : None)
     @patch.object(SQNotes, '_get_new_note_name')
-    @patch.object(SQNotes, '_write_encrypted_note')
+    @patch.object(EncryptedNoteHelper, 'write_encrypted_note')
     @patch.object(SQNotes, 'get_gpg_key_email')
     @patch.object(SQNotes, '_get_input_from_text_editor')
     @patch.object(SQNotes, 'get_notes_dir_from_config')
@@ -280,7 +284,7 @@ class TestSQNotesCreateNewNote(unittest.TestCase):
     @patch.object(SQNotes, '_extract_and_save_keywords', lambda x : None)
     @patch.object(SQNotes, '_commit_transaction', lambda x : None)
     @patch.object(SQNotes, '_get_new_note_name')
-    @patch.object(SQNotes, '_write_encrypted_note')
+    @patch.object(EncryptedNoteHelper, 'write_encrypted_note')
     @patch.object(SQNotes, 'get_gpg_key_email')
     @patch.object(SQNotes, '_get_input_from_text_editor')
     @patch.object(SQNotes, 'get_notes_dir_from_config')
@@ -315,7 +319,7 @@ class TestSQNotesNewNoteDatabaseInteractions(unittest.TestCase):
     @patch.object(SQNotes, 'get_notes_dir_from_config', lambda x : "")
     @patch.object(SQNotes,'_set_database_is_set_up', lambda x : None)
     def setUp(self):
-        self.sqnotes = SQNotes()
+        self.sqnotes = self.sqnotes = get_test_sqnotes()
         self.sqnotes.open_database()
         self.connection = self.sqnotes._get_database_connection()
         self.cursor = self.sqnotes._get_database_cursor()
@@ -377,6 +381,7 @@ class TestSQNotesNewNoteDatabaseInteractions(unittest.TestCase):
 class TestSQNotesCreateNewNoteDatabaseErrors(unittest.TestCase):
     gpg_verified_patcher = None
     get_configured_text_editor_patcher = None
+    use_ascii_armor_patcher = None
 
     @classmethod
     def setUpClass(cls):
@@ -385,15 +390,19 @@ class TestSQNotesCreateNewNoteDatabaseErrors(unittest.TestCase):
         
         cls.get_configured_text_editor_patcher = patch.object(SQNotes,  '_get_configured_text_editor', lambda x: 'vim')
         cls.get_configured_text_editor_patcher.start()
+        
+        cls.use_ascii_armor_patcher = patch.object(SQNotes, '_is_use_ascii_armor', lambda _ : False)
+        cls.use_ascii_armor_patcher.start()
     
     @classmethod
     def tearDownClass(cls):
         cls.gpg_verified_patcher.stop()
         cls.get_configured_text_editor_patcher.stop()
+        cls.use_ascii_armor_patcher.stop()
 
     def setUp(self):
         self.test_dir = tempfile.TemporaryDirectory()
-        self.sqnotes = SQNotes()
+        self.sqnotes = self.sqnotes = get_test_sqnotes()
 
     @patch.object(SQNotes,'_check_gpg_verified', lambda x : None)
     @patch.object(SQNotes, 'check_text_editor_is_configured', lambda _ : None)
@@ -401,7 +410,7 @@ class TestSQNotesCreateNewNoteDatabaseErrors(unittest.TestCase):
     @patch.object(SQNotes, '_get_new_note_name')
     @patch.object(SQNotes, '_extract_and_save_keywords')
     @patch.object(SQNotes, '_insert_new_note_into_database')
-    @patch.object(SQNotes, '_write_encrypted_note')
+    @patch.object(EncryptedNoteHelper, 'write_encrypted_note')
     @patch.object(SQNotes, 'get_gpg_key_email')
     @patch.object(SQNotes, '_get_input_from_text_editor')
     @patch.object(SQNotes, 'open_database')
@@ -439,7 +448,7 @@ class TestSQNotesCreateNewNoteDatabaseErrors(unittest.TestCase):
     @patch.object(SQNotes, '_get_new_note_name')
     @patch.object(SQNotes, '_extract_and_save_keywords')
     @patch.object(SQNotes, '_insert_new_note_into_database')
-    @patch.object(SQNotes, '_write_encrypted_note')
+    @patch.object(EncryptedNoteHelper, 'write_encrypted_note')
     @patch.object(SQNotes, 'get_gpg_key_email')
     @patch.object(SQNotes, '_get_input_from_text_editor')
     @patch.object(SQNotes, 'open_database')
@@ -476,7 +485,7 @@ class TestSQNotesCreateNewNoteDatabaseErrors(unittest.TestCase):
     @patch.object(SQNotes, '_get_new_note_name')
     @patch.object(SQNotes, '_extract_and_save_keywords')
     @patch.object(SQNotes, '_insert_new_note_into_database')
-    @patch.object(SQNotes, '_write_encrypted_note')
+    @patch.object(EncryptedNoteHelper, 'write_encrypted_note')
     @patch.object(SQNotes, 'get_gpg_key_email')
     @patch.object(SQNotes, '_get_input_from_text_editor')
     @patch.object(SQNotes, 'open_database')
@@ -516,7 +525,7 @@ class TestSQNotesCreateNewNoteDatabaseErrors(unittest.TestCase):
     @patch.object(SQNotes, '_get_new_note_name')
     @patch.object(SQNotes, '_extract_and_save_keywords')
     @patch.object(SQNotes, '_insert_new_note_into_database')
-    @patch.object(SQNotes, '_write_encrypted_note')
+    @patch.object(EncryptedNoteHelper, 'write_encrypted_note')
     @patch.object(SQNotes, 'get_gpg_key_email')
     @patch.object(SQNotes, '_get_input_from_text_editor')
     @patch.object(SQNotes, 'open_database')
@@ -551,7 +560,7 @@ class TestSQNotesCreateNewNoteDatabaseErrors(unittest.TestCase):
     @patch.object(SQNotes, '_get_new_note_name')
     @patch.object(SQNotes, '_extract_and_save_keywords')
     @patch.object(SQNotes, '_insert_new_note_into_database')
-    @patch.object(SQNotes, '_write_encrypted_note')
+    @patch.object(EncryptedNoteHelper, 'write_encrypted_note')
     @patch.object(SQNotes, 'get_gpg_key_email')
     @patch.object(SQNotes, '_get_input_from_text_editor')
     @patch.object(SQNotes, 'open_database')
@@ -590,7 +599,7 @@ class TestSQNotesCreateNewNoteDatabaseErrors(unittest.TestCase):
     @patch.object(SQNotes, '_get_new_note_name')
     @patch.object(SQNotes, '_extract_and_save_keywords')
     @patch.object(SQNotes, '_insert_new_note_into_database')
-    @patch.object(SQNotes, '_write_encrypted_note')
+    @patch.object(EncryptedNoteHelper, 'write_encrypted_note')
     @patch.object(SQNotes, 'get_gpg_key_email')
     @patch.object(SQNotes, '_get_input_from_text_editor')
     @patch.object(SQNotes, 'open_database')
