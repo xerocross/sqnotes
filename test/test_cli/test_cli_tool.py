@@ -1,7 +1,6 @@
 import unittest
 from unittest.mock import patch
 import io
-import sys
 import sqnotes
 from sqnotes import SQNotes
 from manual import Manual
