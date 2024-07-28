@@ -57,9 +57,10 @@ class TestTryToMakePath(unittest.TestCase):
     def test_returns_true_on_path_exists(self):
         selected_path = 'test_path'
         with patch('os.path.exists', return_value=True): 
-            response = self.sqnotes.try_to_make_path(selected_path)
+            response = self.sqnotes._try_to_make_path(selected_path)
             self.assertTrue(response, "received false, which indicates failure")
 
+    @patch('os.path.expanduser', lambda x: x)
     @patch('os.path.dirname')
     @patch('os.path.exists')
     def test_returns_true_if_makes_directory(self, mock_path_exists, mock_dirname):
@@ -67,9 +68,10 @@ class TestTryToMakePath(unittest.TestCase):
         mock_dirname.return_value = 'parentDir'
         selected_path = 'test_path'
         with patch('os.mkdir', return_value=True): 
-            response = self.sqnotes.try_to_make_path(selected_path)
+            response = self.sqnotes._try_to_make_path(selected_path)
             self.assertTrue(response, "received false, which indicates failure")
-        
+    
+    @patch('os.path.expanduser', lambda x: x)
     @patch('os.mkdir')
     @patch('os.path.dirname')
     @patch('os.path.exists')
@@ -78,7 +80,7 @@ class TestTryToMakePath(unittest.TestCase):
         mock_dirname.return_value = 'parentDir'
         mock_mkdir.side_effect = Exception('unknown error')
         selected_path = 'test_path'
-        response = self.sqnotes.try_to_make_path(selected_path)
+        response = self.sqnotes._try_to_make_path(selected_path)
         self.assertFalse(response, "received true, which indicates success, but should have failed")
         
 

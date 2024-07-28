@@ -592,28 +592,30 @@ class SQNotes:
     
     
     def prompt_for_user_notes_path(self):
-        user_notes_path = None
+        user_input_notes_path = None
         attempt_num = 0
         max_attempts = 2
-        while user_notes_path is None:
+        while user_input_notes_path is None:
             prompt = "Please enter a path for saving your notes \nin the format '[full_path_to_parent]/[note_directory]'. \nPress enter to use default '{}'.".format(self.DEFAULT_NOTE_DIR)
-            user_notes_path = input(prompt + '>')
+            user_input_notes_path = input(prompt + '>')
         
-            if user_notes_path == '':
+            if user_input_notes_path == '':
                 selected_path = self.DEFAULT_NOTE_DIR
-            else:
-                selected_path = user_notes_path
-                
-            success = self.try_to_make_path(selected_path)
-            if success is False:
-                if attempt_num < max_attempts:
-                    attempt_num+=1
-                    print("Please try again.")
-                else:
-                    print("Failed multiple times; you can try running this command again.")
-                    return None
-            else:
                 return selected_path
+            else:
+                selected_path = user_input_notes_path
+                success = self._try_to_make_path(selected_path)
+                
+                if success is False:
+                    if attempt_num < max_attempts:
+                        attempt_num+=1
+                        print("Please try again.")
+                        user_input_notes_path = None
+                    else:
+                        print("Failed multiple times; you can try running this command again.")
+                        exit(1)
+                else:
+                    return selected_path
         
     
     def prompt_to_initialize(self):
@@ -694,14 +696,16 @@ class SQNotes:
         
 
 
-    def try_to_make_path(self, selected_path):
+    def _try_to_make_path(self, selected_path):
         
         if os.path.exists(selected_path):
             # path exists
             return True
         else:
             directory = os.path.dirname(selected_path)
-            directory_exists = os.path.exists(directory)
+            user_expanded_directory = os.path.expanduser(directory)
+            
+            directory_exists = os.path.exists(user_expanded_directory)
             if directory_exists:
                 try:
                     os.mkdir(selected_path)
@@ -711,7 +715,8 @@ class SQNotes:
                     print(f"directory '{selected_path}' already exists")
                     return False
                 except Exception as e:
-                    print(f"an error occurred: {e}")
+                    logger.error(e)
+                    print("encountered an error attempting to make this directory")
                     return False
             else:
                 print(f"parent directory {directory} does not exist")
