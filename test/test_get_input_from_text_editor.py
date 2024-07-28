@@ -7,7 +7,7 @@ from sqnotes import SQNotes, NoteNotFoundException,\
     NoteNotFoundInDatabaseException, GPGSubprocessException,\
     TextEditorSubprocessException
 import tempfile
-from test.test_add_new_note import get_all_mocked_print_output
+from test.test_sqnotes.test_add_new_note import get_all_mocked_print_output
 from injector import Injector
 
 @pytest.fixture(scope='session', autouse=True)

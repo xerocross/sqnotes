@@ -5,6 +5,7 @@ import os
 import pytest
 from sqnotes import SQNotes, GPGSubprocessException
 from test.test_helper import get_all_mocked_print_output
+from encrypted_note_helper import EncryptedNoteHelper
 import logging
 from test.test_sqnotes_initializer import get_test_sqnotes
 
@@ -29,7 +30,7 @@ def sqnotes_obj():
 @patch.object(SQNotes, '_query_notes_by_keywords', get_notes_by_keyword)
 @patch.object(SQNotes, 'open_database', lambda x : None)
 @patch('builtins.print')
-@patch.object(SQNotes, '_get_decrypted_content_in_memory')
+@patch.object(EncryptedNoteHelper, 'get_decrypted_content_in_memory')
 def test_exits_if_get_decrypted_content_raises_gpg_exception(
                                                                         mock_get_decrypted_content,
                                                                         mock_print,
@@ -45,7 +46,7 @@ def test_exits_if_get_decrypted_content_raises_gpg_exception(
 @patch.object(SQNotes, '_query_notes_by_keywords', get_notes_by_keyword)
 @patch.object(SQNotes, 'open_database', lambda x : None)
 @patch('builtins.print')
-@patch.object(SQNotes, '_get_decrypted_content_in_memory')
+@patch.object(EncryptedNoteHelper, 'get_decrypted_content_in_memory')
 def test_prints_error_message_if_get_decrypted_content_raises_gpg_exception(
                                                                         mock_get_decrypted_content,
                                                                         mock_print,

@@ -6,8 +6,9 @@ from sqnotes import SQNotes, TextEditorSubprocessException,\
     GPGSubprocessException
 import tempfile
 import sqlite3
+from injector import Injector
 from encrypted_note_helper import EncryptedNoteHelper
-from test.test_sqnotes_initializer import get_test_sqnotes
+import injector
 
 
 def get_all_mocked_print_output(mocked_print):
@@ -52,7 +53,8 @@ class TestSQNotesCreateNewNote(unittest.TestCase):
 
     def setUp(self):
         self.test_dir = tempfile.TemporaryDirectory()
-        self.sqnotes = get_test_sqnotes()
+        injector = Injector()
+        self.sqnotes = injector.get(SQNotes)
 
 
     
@@ -319,7 +321,8 @@ class TestSQNotesNewNoteDatabaseInteractions(unittest.TestCase):
     @patch.object(SQNotes, 'get_notes_dir_from_config', lambda x : "")
     @patch.object(SQNotes,'_set_database_is_set_up', lambda x : None)
     def setUp(self):
-        self.sqnotes = self.sqnotes = get_test_sqnotes()
+        injector = Injector()
+        self.sqnotes = self.sqnotes = injector.get(SQNotes)
         self.sqnotes.open_database()
         self.connection = self.sqnotes._get_database_connection()
         self.cursor = self.sqnotes._get_database_cursor()
@@ -402,7 +405,8 @@ class TestSQNotesCreateNewNoteDatabaseErrors(unittest.TestCase):
 
     def setUp(self):
         self.test_dir = tempfile.TemporaryDirectory()
-        self.sqnotes = self.sqnotes = get_test_sqnotes()
+        injector = Injector()
+        self.sqnotes = self.sqnotes = injector.get(SQNotes)
 
     @patch.object(SQNotes,'_check_gpg_verified', lambda x : None)
     @patch.object(SQNotes, 'check_text_editor_is_configured', lambda _ : None)

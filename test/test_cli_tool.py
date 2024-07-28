@@ -140,6 +140,12 @@ class TestCLIInitializedCommandsReferredCorrectly(unittest.TestCase):
         self.run_cli(['sqnotes', '-n', 'this is a test note'])
         mock_directly_insert.assert_called_once_with(text='this is a test note')
 
+    @patch.object(SQNotes, 'check_initialized', lambda x : True)
+    @patch.object(SQNotes, 'search_notes')
+    def test_s_argument_refers_to_search_notes(self, 
+                                                            mock_search_notes):
+        self.run_cli(['sqnotes', '-s', 'apple', 'pear'])
+        mock_search_notes.assert_called_once_with(search_queries=['apple', 'pear'])
 
 
 if __name__ == '__main__':

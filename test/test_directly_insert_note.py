@@ -3,9 +3,9 @@ from unittest.mock import patch, mock_open, MagicMock, call
 import os
 import pytest
 import tempfile
-from test.test_sqnotes_initializer import get_test_sqnotes
 from encrypted_note_helper import EncryptedNoteHelper, GPGSubprocessException
 from test.test_helper import get_all_mocked_print_output
+from injector import Injector
 from sqnotes import SQNotes
 
 
@@ -64,7 +64,8 @@ class TestSQNotesCreateNewNote(unittest.TestCase):
 
     def setUp(self):
         self.test_dir = tempfile.TemporaryDirectory()
-        self.sqnotes = get_test_sqnotes()
+        injector = Injector()
+        self.sqnotes = self.sqnotes = injector.get(SQNotes)
 
     @patch.object(SQNotes, '_insert_new_note_into_database', lambda x : None)
     @patch.object(SQNotes, '_extract_and_save_keywords', lambda x : None)

@@ -6,34 +6,19 @@ import sys
 import os
 from injector import inject
 
-DEBUGGING = False
-
-def setup_logger():
-    logger = logging.getLogger(__name__)
-    logger.setLevel(logging.DEBUG)
-    for handler in logger.handlers[:]:
-        logger.removeHandler(handler)
-    
-    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-    
-    if DEBUGGING:
-        console_handler = logging.StreamHandler(sys.stdout)
-        console_handler.setLevel(logging.DEBUG)  # Log all levels to console
-        console_handler.setFormatter(formatter)
-        logger.addHandler(console_handler)
-    
-    return logger
-
-logger = setup_logger()
+from sqnotes_logger import SQNotesLogger
 
 class GPGSubprocessException(Exception):
     """Raise when an exception or error occurs in calling gpg in a subprocess."""
     
+class CouldNotReadNoteException(Exception):
+    """Raise when encounter an error attempting to read note file."""
+    
 class EncryptedNoteHelper:
     
     @inject
-    def __init__(self):
-        pass
+    def __init__(self, sqnotes_logger : SQNotesLogger):
+        self.logger = sqnotes_logger.get_logger(__name__)
     
     def write_encrypted_note(self, note_file_path, note_content, config):
         with tempfile.NamedTemporaryFile(delete=False) as temp_enc_file:
@@ -53,8 +38,45 @@ class EncryptedNoteHelper:
             if response != 0:
                 raise GPGSubprocessException()
         except Exception as e:
-            logger.error(e)
+            self.logger.error(e)
             self._delete_temp_file(temp_file=temp_enc_filename)
+            raise GPGSubprocessException()
+        
+        
+    def get_decrypted_content_in_memory(self, note_path):
+        self.logger.debug("attempting to use in-memory decryption")
+        
+        try:
+            with open(note_path, 'rb') as f:
+                encrypted_data = f.read()
+        except Exception as e:
+            self.logger.error("encountered an error attempting to read encrypted note")
+            self.logger.error(e)
+            raise CouldNotReadNoteException()
+        try:
+            gpg_command = ['gpg','--batch', '--decrypt']
+            process = subprocess.run(
+                gpg_command,
+                input=encrypted_data,
+                text=False,  # binary mode
+                capture_output=True,
+                check=True
+            )
+            if process.returncode != 0:
+                self.logger.error(f"GPG exited with code {process.returncode}")
+                raise GPGSubprocessException()
+            
+            decrypted_data = process.stdout
+            decrypted_text = decrypted_data.decode('utf-8')
+            return decrypted_text
+        except subprocess.CalledProcessError as e:
+            self.logger.error(f"GPG failed with return code {e.returncode}")
+            error_message = "Error message: " + e.stderr.decode()
+            self.logger.error(error_message)
+            raise GPGSubprocessException()
+        except Exception as e:
+            self.logger.error("encountered an error while decrypting")
+            self.logger.error(e)
             raise GPGSubprocessException()
         
         

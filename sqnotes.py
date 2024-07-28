@@ -14,8 +14,10 @@ import interface_copy
 import sys
 from manual import Manual
 from command_validator import CommandValidator
-from encrypted_note_helper import EncryptedNoteHelper, GPGSubprocessException
+from encrypted_note_helper import EncryptedNoteHelper, GPGSubprocessException, CouldNotReadNoteException
 from injector import inject, Injector
+from logging_module import LoggingModule
+from sqnotes_logger import SQNotesLogger
 
 
 VERSION = '0.2'
@@ -45,27 +47,6 @@ if not os.path.exists(env_file_path):
     raise EnvironmentConfigurationNotFound()
 else:
     load_dotenv(env_file_path)
-
-
-
-def setup_logger():
-    logger = logging.getLogger('SQNotes')
-    logger.setLevel(logging.DEBUG)
-    for handler in logger.handlers[:]:
-        logger.removeHandler(handler)
-    
-    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-    
-    if DEBUGGING:
-        console_handler = logging.StreamHandler(sys.stdout)
-        console_handler.setLevel(logging.DEBUG)  # Log all levels to console
-        console_handler.setFormatter(formatter)
-        logger.addHandler(console_handler)
-    
-    return logger
-
-
-logger = setup_logger()
 
 
 USE_DIRECT_NOTE_INSERTION = os.getenv('DIRECT_NOTE_INSERTION') == "yes"
@@ -99,8 +80,7 @@ class TextEditorSubprocessException(Exception):
 class CouldNotRunGPG(Exception):
     """Raise when a command is called that requires GPG and GPG is not available."""
 
-class CouldNotReadNoteException(Exception):
-    """Raise when encounter an error attempting to read note file."""
+
 
 
 class FileInfo:
@@ -112,8 +92,13 @@ class FileInfo:
 class SQNotes:
     
     @inject
-    def __init__(self, encrypted_note_helper: EncryptedNoteHelper):
+    def __init__(self, 
+                 encrypted_note_helper: EncryptedNoteHelper,
+                 sqnotes_logger : SQNotesLogger):
         self.encrypted_note_helper = encrypted_note_helper
+        self.sqnotes_logger = sqnotes_logger
+        sqnotes_logger.configure(debug=DEBUGGING)
+        self.logger = sqnotes_logger.get_logger('SQNotes')
     
     def _insert_keyword_into_database(self, keyword):
         self.cursor.execute('SELECT id FROM keywords WHERE keyword = ?', (keyword,))
@@ -137,8 +122,8 @@ class SQNotes:
             if response != 0:
                 raise TextEditorSubprocessException()
         except Exception as e:
-            logger.error("an exception occurred while attempting the text editor subprocess")
-            logger.error(e)
+            self.logger.error("an exception occurred while attempting the text editor subprocess")
+            self.logger.error(e)
             raise TextEditorSubprocessException()
         try:
             with open(temp_filename, 'r') as file:
@@ -173,9 +158,9 @@ class SQNotes:
             self.encrypted_note_helper.write_encrypted_note(note_file_path=note_file_path, note_content=note_content, config=enh_config)
         
         except GPGSubprocessException as e:
-            logger.error(e)
+            self.logger.error(e)
             message = interface_copy.GPG_SUBPROCESS_ERROR_MESSAGE() + '\n' + interface_copy.EXITING()
-            logger.error(message)
+            self.logger.error(message)
             print(message)
             exit(1)
             
@@ -191,13 +176,13 @@ class SQNotes:
             is_database_exception = self._check_for_database_exception(e)
             if is_database_exception:
                 message = interface_copy.DATABASE_EXCEPTION_MESSAGE() + '\n' + interface_copy.DATA_NOT_SAVED()
-                logger.error(message)
-                logger.error(e)
+                self.logger.error(message)
+                self.logger.error(e)
                 print(message)
             else:
                 message = interface_copy.UNKNOWN_ERROR() + '\n' + interface_copy.DATA_NOT_SAVED()
-                logger.error(message)
-                logger.error(e)
+                self.logger.error(message)
+                self.logger.error(e)
                 print(interface_copy.UNKNOWN_ERROR() + '\n' + interface_copy.DATA_NOT_SAVED())
                 
 
@@ -234,7 +219,7 @@ class SQNotes:
             note_content = self._get_input_from_text_editor(TEXT_EDITOR=TEXT_EDITOR)
         except TextEditorSubprocessException:
             message = interface_copy.TEXT_EDITOR_SUBPROCESS_ERROR().format(self._get_configured_text_editor())
-            logger.error(message)
+            self.logger.error(message)
             print(message)
             exit(1)
         
@@ -299,14 +284,14 @@ class SQNotes:
         try:
             decrypt_process = subprocess.call(['gpg', '--yes','--quiet', '--batch', '--output', temp_dec_filename, '--decrypt', note_path])
         except Exception as e:
-            logger.error(e)
+            self.logger.error(e)
             
             self._delete_temp_file(temp_file=temp_dec_filename)
             
             raise GPGSubprocessException()
         
         if decrypt_process != 0:
-            logger.error(f"decrypt process returned code {decrypt_process}")
+            self.logger.error(f"decrypt process returned code {decrypt_process}")
             self._delete_temp_file(temp_file=temp_dec_filename)
             raise GPGSubprocessException()
         
@@ -368,10 +353,10 @@ class SQNotes:
             print(edited_content)
             self._write_encrypted_note(note_file_path=note_path, note_content=edited_content)
         except GPGSubprocessException as e:
-            logger.error(e)
+            self.logger.error(e)
             message = interface_copy.GPG_SUBPROCESS_ERROR_MESSAGE() + '\n' + interface_copy.EXITING()
             print(message)
-            logger.error(message)
+            self.logger.error(message)
             self._delete_temp_file(temp_file=temp_dec_filename)
             exit(1)
         finally:
@@ -419,8 +404,8 @@ class SQNotes:
             )
         
     def _handle_database_exception(self, e):
-        logger.error("encountered a database exception")
-        logger.error(e)
+        self.logger.error("encountered a database exception")
+        self.logger.error(e)
         print(interface_copy.DATABASE_EXCEPTION_MESSAGE())
 
     
@@ -430,43 +415,6 @@ class SQNotes:
         unique_tags = set(tags)
         return list(unique_tags)
     
-    
-    def _get_decrypted_content_in_memory(self, note_path):
-        logger.debug("attempting to use in-memory decryption")
-        
-        try:
-            with open(note_path, 'rb') as f:
-                encrypted_data = f.read()
-        except Exception as e:
-            logger.error("encountered an error attempting to read encrypted note")
-            logger.error(e)
-            raise CouldNotReadNoteException()
-        try:
-            gpg_command = ['gpg','--batch', '--decrypt']
-            process = subprocess.run(
-                gpg_command,
-                input=encrypted_data,
-                text=False,  # binary mode
-                capture_output=True,
-                check=True
-            )
-            if process.returncode != 0:
-                logger.error(f"GPG exited with code {process.returncode}")
-                raise GPGSubprocessException()
-            
-            decrypted_data = process.stdout
-            decrypted_text = decrypted_data.decode('utf-8')
-            return decrypted_text
-        except subprocess.CalledProcessError as e:
-            logger.error(f"GPG failed with return code {e.returncode}")
-            error_message = "Error message: " + e.stderr.decode()
-            logger.error(error_message)
-            raise GPGSubprocessException()
-        except Exception as e:
-            logger.error("encountered an error while decrypting")
-            logger.error(e)
-            raise GPGSubprocessException()
-        
     def rescan_for_database(self):
         NOTES_DIR = self.get_notes_dir_from_config()
         self.open_database()
@@ -474,7 +422,7 @@ class SQNotes:
         files_info = [FileInfo(path = file, base_name = os.path.basename(file)) for file in files]
         
         for file_info in files_info:
-            content = self._get_decrypted_content_in_memory(note_path=file_info.path)
+            content = self.encrypted_note_helper.get_decrypted_content_in_memory(note_path=file_info.path)
             try:
                 note_id = self._get_note_id_from_database_or_none(filename = file_info.base_name)
                 
@@ -529,7 +477,7 @@ class SQNotes:
                 VALUES (?)
             ''', (note_filename_base,))
         note_id = self.cursor.lastrowid
-        logger.debug(f"insert new note filename : {note_filename_base}, id : {note_id}")
+        self.logger.debug(f"insert new note filename : {note_filename_base}, id : {note_id}")
         return note_id
         
     def insert_note_keyword_into_database(self, note_id, keyword_id):
@@ -550,12 +498,12 @@ class SQNotes:
         return all_notes
         
     def notes_list(self):
-        logger.debug("printing notes list")
+        self.logger.debug("printing notes list")
         notes_dir = self.get_notes_dir_from_config()
         files = self._get_all_note_paths(notes_dir=notes_dir)
         filenames = [os.path.basename(file) for file in files]
         for file in filenames:
-            logger.debug(f"note found: {file}")
+            self.logger.debug(f"note found: {file}")
             print(file)
         
     
@@ -576,18 +524,18 @@ class SQNotes:
         if notes_dir is None:
             raise NotesDirNotSelectedException()
         self.DB_PATH = self.get_db_file_path(notes_dir)
-        logger.debug(f"opening database at {self.DB_PATH}")
+        self.logger.debug(f"opening database at {self.DB_PATH}")
         try:
             self.conn = sqlite3.connect(self.DB_PATH)
             self.cursor = self.conn.cursor()
         except Exception as e:
-            logger.error(f"could not open database at {self.DB_PATH}")
-            logger.error(e)
+            self.logger.error(f"could not open database at {self.DB_PATH}")
+            self.logger.error(e)
             raise e
         
         is_database_set_up = self._check_is_database_set_up()
         if not is_database_set_up:
-            logger.debug("found database not set up")
+            self.logger.debug("found database not set up")
             self.setup_database()
     
     def open_or_create_and_open_user_config_file(self):
@@ -670,11 +618,11 @@ class SQNotes:
             for result in results:
                 note_path = os.path.join(NOTES_DIR, result[0])
                 try:
-                    decrypted_content = self._get_decrypted_content_in_memory(note_path=note_path)
+                    decrypted_content = self.encrypted_note_helper.get_decrypted_content_in_memory(note_path=note_path)
                 except GPGSubprocessException:
                     message = interface_copy.GPG_SUBPROCESS_ERROR_MESSAGE() + '\n' + interface_copy.EXITING()
                     print(message)
-                    logger.error(message)
+                    self.logger.error(message)
                     exit(1)
                     
                 self._print_note(note_path=note_path, decrypted_content=decrypted_content)
@@ -692,11 +640,11 @@ class SQNotes:
         queries_in_lower_case = [query.lower() for query in search_queries]
         for note_path in note_paths:
             try:
-                decrypted_content = self._get_decrypted_content_in_memory(note_path=note_path)
+                decrypted_content = self.encrypted_note_helper.get_decrypted_content_in_memory(note_path=note_path)
             except GPGSubprocessException as e:
-                logger.error(e)
+                self.logger.error(e)
                 message = interface_copy.GPG_SUBPROCESS_ERROR_MESSAGE() + '\n' + interface_copy.EXITING()
-                logger.error(message)
+                self.logger.error(message)
                 print(message)
                 exit(1)
             
@@ -729,7 +677,7 @@ class SQNotes:
                     print(f"directory '{selected_path}' already exists")
                     return False
                 except Exception as e:
-                    logger.error(e)
+                    self.logger.error(e)
                     print("encountered an error attempting to make this directory")
                     return False
             else:
@@ -791,7 +739,7 @@ class SQNotes:
         
     def setup_database(self):
         print(interface_copy.SETTING_UP_DATABASE_MESSAGE())
-        logger.debug("setting up the database tables")
+        self.logger.debug("setting up the database tables")
         self.cursor.execute('''
             CREATE TABLE IF NOT EXISTS notes (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -847,7 +795,7 @@ class SQNotes:
     def _set_use_ascii_armor(self, isUseArmor):
         value = 'yes' if isUseArmor else 'no'
         self._set_setting_in_user_config(key=ASCII_ARMOR_CONFIG_KEY, value=value)
-        logger.debug(f"set {ASCII_ARMOR_CONFIG_KEY}=yes")
+        self.logger.debug(f"set {ASCII_ARMOR_CONFIG_KEY}=yes")
 
 
     def check_gpg_key_email(self):
@@ -915,22 +863,22 @@ class SQNotes:
                 try:
                     input_as_number = int(text_editor_choice)
                 except ValueError as e:
-                    logger.error(e)
+                    self.logger.error(e)
                     print("input wasn't an integer")
                     continue
                 except TypeError as e:
-                    logger.error(e)
+                    self.logger.error(e)
                     print("input wasn't an integer")
                     continue
                 if input_as_number >= 0 and input_as_number < len(available_editors):
                     text_editor_index_choice = input_as_number
                     selected_editor = available_editors[text_editor_index_choice]
-                    logger.debug(f"user selected editor {text_editor_choice}->{input_as_number} : {selected_editor}")
+                    self.logger.debug(f"user selected editor {text_editor_choice}->{input_as_number} : {selected_editor}")
                     print(f"selected {selected_editor}")
                     self._configure_text_editor(editor=available_editors[text_editor_index_choice])
                 else:
                     print("input wasn't an index")
-                    logger.debug("input wasn't an index")
+                    self.logger.debug("input wasn't an index")
                     continue
         else:
             #set only available editor
@@ -948,6 +896,11 @@ class SQNotes:
             
 
 
+def __get_sqnotes():
+    injector = Injector([LoggingModule()])
+    
+    sqnotes = injector.get(SQNotes)
+    return sqnotes
 
 def main():
     parser = argparse.ArgumentParser(
@@ -960,9 +913,10 @@ def main():
                     help='Enable debugging mode with detailed log messages')
     
     group = parser.add_mutually_exclusive_group()
-    group.add_argument('-k', '--keywords', nargs='+', help='Search notes by keyword.')
+    group.add_argument('-k', '--keywords', nargs='+', help='Keywords for keyword search')
+    group.add_argument('-s', '--search', nargs='+', help='Search term for full text search.')
     if USE_DIRECT_NOTE_INSERTION:
-        group.add_argument('-n', '--new', help='Text to insert.', type=str)
+        group.add_argument('-n', '--new', help='Text for new note.', type=str)
     
     subparsers = parser.add_subparsers(dest='command', help='Subcommands')
 
@@ -1018,8 +972,7 @@ def main():
     
     args = parser.parse_args()
     
-    injector = Injector()
-    sqnotes = injector.get(SQNotes)
+    sqnotes = __get_sqnotes()
     sqnotes.startup()
 
 
@@ -1041,6 +994,8 @@ def main():
                 sqnotes.new_note()
             elif args.new:
                 sqnotes.directly_insert_note(text=args.new)
+            elif args.search:
+                sqnotes.search_notes(search_queries = args.search)
             elif args.keywords:
                 sqnotes.search_keywords(keywords=args.keywords)
             elif args.command == 'notes-list':

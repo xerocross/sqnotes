@@ -3,6 +3,7 @@ from unittest.mock import patch, mock_open, MagicMock, call, Mock
 import os
 import pytest
 from sqnotes import SQNotes, GPGSubprocessException
+from encrypted_note_helper import EncryptedNoteHelper
 from test.test_helper import get_all_mocked_print_output
 from injector import Injector
 
@@ -23,7 +24,7 @@ class TestSQNotesSearchNotes(unittest.TestCase):
 
     @patch.object(SQNotes, 'get_notes_dir_from_config', lambda self: '')
     @patch.object(SQNotes, '_get_all_note_paths', lambda self, notes_dir: ['note1.txt', 'note2.txt', 'note3.txt'])
-    @patch.object(SQNotes,'_get_decrypted_content_in_memory')
+    @patch.object(EncryptedNoteHelper,'get_decrypted_content_in_memory')
     @patch('builtins.print')
     def test_prints_notes_that_match_one_query(self, 
                                            mock_print, 
@@ -42,7 +43,7 @@ class TestSQNotesSearchNotes(unittest.TestCase):
         
     @patch.object(SQNotes, 'get_notes_dir_from_config', lambda self: '')
     @patch.object(SQNotes, '_get_all_note_paths', lambda self, notes_dir: ['note1.txt', 'note2.txt', 'note3.txt'])
-    @patch.object(SQNotes,'_get_decrypted_content_in_memory')
+    @patch.object(EncryptedNoteHelper,'get_decrypted_content_in_memory')
     @patch('builtins.print')
     def test_prints_notes_that_match_two_queries(self, 
                                            mock_print, 
@@ -61,7 +62,7 @@ class TestSQNotesSearchNotes(unittest.TestCase):
         
     @patch.object(SQNotes, 'get_notes_dir_from_config', lambda self: '')
     @patch.object(SQNotes, '_get_all_note_paths', lambda self, notes_dir: ['note1.txt', 'note2.txt', 'note3.txt'])
-    @patch.object(SQNotes,'_get_decrypted_content_in_memory')
+    @patch.object(EncryptedNoteHelper,'get_decrypted_content_in_memory')
     @patch('builtins.print', lambda x: None)
     def test_exits_if_decrypt_function_raises_GPG_subprocess_exception(self,
                                                                        mock_get_decrypted_content):
@@ -73,7 +74,7 @@ class TestSQNotesSearchNotes(unittest.TestCase):
 
     @patch.object(SQNotes, 'get_notes_dir_from_config', lambda self: '')
     @patch.object(SQNotes, '_get_all_note_paths', lambda self, notes_dir: ['note1.txt', 'note2.txt', 'note3.txt'])
-    @patch.object(SQNotes,'_get_decrypted_content_in_memory')
+    @patch.object(EncryptedNoteHelper,'get_decrypted_content_in_memory')
     @patch('builtins.print')
     def test_prints_error_message_if_decrypt_function_raises_GPG_subprocess_exception(self,
                                                                                       mock_print,

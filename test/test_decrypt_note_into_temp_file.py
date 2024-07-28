@@ -7,7 +7,7 @@ from sqnotes import SQNotes, TextEditorSubprocessException,\
     GPGSubprocessException
 import tempfile
 import sqlite3
-from test.test_sqnotes_initializer import get_test_sqnotes
+from injector import Injector
 
 
 def get_all_mocked_print_output(mocked_print):
@@ -38,7 +38,8 @@ class TestDecryptNoteIntoTempFile(unittest.TestCase):
     
     def setUp(self):
         # self.test_dir = tempfile.TemporaryDirectory()
-        self.sqnotes = get_test_sqnotes()
+        injector = Injector()
+        self.sqnotes = self.sqnotes = injector.get(SQNotes)
         
         mock_temp_file = MagicMock(spec=tempfile.NamedTemporaryFile)
         mock_temp_file.name = "mock_temp_file_name"
