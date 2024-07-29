@@ -124,10 +124,6 @@ class SQNotes:
         self._INITIAL_SETTINGS = INIT_SETTINGS
         self.database_service = database_service
         
-    
-    def _insert_keyword_into_database(self, keyword):
-        return self.database_service.insert_keyword_into_database(keyword=keyword)
-
     def _get_input_from_text_editor(self, TEXT_EDITOR):
         with tempfile.NamedTemporaryFile(delete=False) as temp_file:
             temp_filename = temp_file.name
@@ -401,14 +397,14 @@ class SQNotes:
         for file_info in files_info:
             content = self.encrypted_note_helper.get_decrypted_content_in_memory(note_path=file_info.path)
             try:
-                note_id = self._get_note_id_from_database_or_none(filename = file_info.base_name)
+                note_id = self.database_service.get_note_id_from_database_or_none(filename=file_info)
                 
                 if note_id is None:
-                    note_id = self._insert_new_note_into_database(note_filename_base=file_info.base_name)
+                    note_id = self.database_service.insert_new_note_into_database(note_filename_base=file_info.base_name)
                 
-                self._delete_keywords_from_database_for_note(note_id=note_id)
+                self.database_service.delete_keywords_from_database_for_note(note_id=note_id)
                 self._extract_and_save_keywords(note_id=note_id, note_content=content)
-                self._commit_transaction()
+                self.database_service.commit_transaction()
                     
             except Exception:
                 raise DatabaseException()
@@ -446,12 +442,6 @@ class SQNotes:
             return self.user_config['settings'][key]
         else:
             return None
-        
-    def _commit_transaction(self):
-        self.conn.commit()
-        
-    def _insert_new_note_into_database(self, note_filename_base):
-        return self.database_service.insert_new_note_into_database(note_filename_base=note_filename_base)
         
     def insert_note_keyword_into_database(self, note_id, keyword_id):
         self.database_service.insert_note_keyword_into_database(note_id=note_id, keyword_id=keyword_id)
