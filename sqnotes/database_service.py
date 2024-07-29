@@ -3,6 +3,9 @@
 import sqlite3
 from injector import inject
 
+class NoteNotFoundInDatabaseException(Exception):
+    """Raise when could not find a note reference in the database."""
+    
 class DatabaseService:
     @inject
     def __init__(self):
@@ -49,7 +52,7 @@ class DatabaseService:
                 PRIMARY KEY (note_id, keyword_id)
             )
         ''')
-        self._commit_transaction()
+        self.commit_transaction()
         
         
     def insert_new_note_into_database(self, note_filename_base):
@@ -83,8 +86,29 @@ class DatabaseService:
             keyword_id = result[0]
         return keyword_id
         
+    def get_note_id_from_database_or_none(self, filename):
+        self.cursor.execute('SELECT id FROM notes WHERE filename = ?', (filename,))
+        result = self.cursor.fetchone()
+        if result:
+            note_id = result[0]
+            return note_id
+        else:
+            return None
         
-    def _commit_transaction(self):
+        
+    def get_note_id_from_database_or_raise(self, filename):
+        self.cursor.execute('SELECT id FROM notes WHERE filename = ?', (filename,))
+        result = self.cursor.fetchone()
+        if result:
+            note_id = result[0]
+            return note_id
+        else:
+            raise NoteNotFoundInDatabaseException()
+        
+    def delete_keywords_from_database_for_note(self, note_id):
+        self.cursor.execute('DELETE FROM note_keywords WHERE note_id = ?', (note_id,))
+        
+    def commit_transaction(self):
         self.conn.commit()
         
         
