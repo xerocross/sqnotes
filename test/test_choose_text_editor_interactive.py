@@ -3,7 +3,7 @@ import unittest
 from unittest.mock import patch, mock_open, MagicMock, call
 import os
 import pytest
-from sqnotes import SQNotes, TextEditorSubprocessException,\
+from sqnotes.sqnotes_module import SQNotes, TextEditorSubprocessException,\
     GPGSubprocessException
 import tempfile
 import sqlite3
@@ -97,24 +97,7 @@ class TestChooseTextEditorInteractive(unittest.TestCase):
         output = get_all_mocked_print_output(mocked_print=mock_print)
         mock_input.side_effect = ['1']
         mock_configure_text_editor.assert_called_once_with(editor = 'nano')
-    #
-    # @patch.object(SQNotes, '_get_available_text_editors', lambda x : ['vim', 'nano'])
-    # @patch('builtins.int')
-    # @patch.object(SQNotes, '_configure_text_editor')
-    # @patch('builtins.input')
-    # @patch('builtins.print')
-    # def test_repeats_prompt_if_input_not_a_number(self, 
-    #                                    mock_print,
-    #                                    mock_input,
-    #                                    mock_configure_text_editor,
-    #                                    mock_int):
-    #     self.sqnotes.choose_text_editor_interactive()
-    #     mock_input.side_effect = ['apple', '1']
-    #     mock_int.side_effect = side_effect_callable
-    #     mock_input_calls = mock_input.call_args_list
-    #     self.assertEqual(len(mock_input_calls), 2)
-        
-        
+
         
         
         

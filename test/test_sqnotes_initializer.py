@@ -1,5 +1,5 @@
 
-from sqnotes import SQNotes
+from sqnotes.sqnotes_module import SQNotes
 from injector import Injector
 
 

@@ -9,15 +9,16 @@ import sqlite3
 import re
 import configparser
 from dotenv import load_dotenv
-import logging
-import interface_copy
+from sqnotes import interface_copy
 import sys
-from manual import Manual
-from command_validator import CommandValidator
-from encrypted_note_helper import EncryptedNoteHelper, GPGSubprocessException, CouldNotReadNoteException
+from sqnotes.manual import Manual
+from sqnotes.command_validator import CommandValidator
+from sqnotes.encrypted_note_helper import EncryptedNoteHelper, GPGSubprocessException, CouldNotReadNoteException
 from injector import inject, Injector
-from logging_module import LoggingModule
-from sqnotes_logger import SQNotesLogger
+from sqnotes.injection_configuration_module import InjectionConfigurationModule
+from sqnotes.sqnotes_logger import SQNotesLogger
+from sqnotes.configuration_module import ConfigurationModule
+from sqnotes.database_service import DatabaseService
 
 
 VERSION = '0.2'
@@ -28,16 +29,31 @@ SET_TEXT_EDITOR_INTERACTIVE_FLAG = False
 VIM = 'vim'
 NANO = 'nano'
 GPG = 'gpg'
+INITIALIZED = 'initialized'
+DATABASE_IS_SET_UP_KEY = 'database_is_set_up'
+NO = 'no'
+NOTES_PATH_KEY = 'notes_path'
+
 
 SUPPORTED_TEXT_EDITORS = [
     VIM, 
     NANO
-    ]
+]
+
+INIT_GLOBALS = {
+    INITIALIZED : NO,
+    DATABASE_IS_SET_UP_KEY : NO
+}
+
+INIT_SETTINGS = {
+    
+}
 
 class EnvironmentConfigurationNotFound(Exception):
     """Raise if the environment configuration file is not found."""
 
-project_root = os.path.dirname(os.path.abspath(__file__))
+current_dir = os.path.dirname(os.path.abspath(__file__))
+project_root = os.path.abspath(os.path.join(current_dir, '../'))
 env_file_path = os.path.join(project_root, '.production.env')
 if os.getenv('TESTING') == 'true':
     env_file_path = os.path.join(project_root, '.test.env')
@@ -94,25 +110,23 @@ class SQNotes:
     @inject
     def __init__(self, 
                  encrypted_note_helper: EncryptedNoteHelper,
-                 sqnotes_logger : SQNotesLogger):
+                 sqnotes_logger : SQNotesLogger,
+                 config_module : ConfigurationModule,
+                 database_service : DatabaseService):
+        
         self.encrypted_note_helper = encrypted_note_helper
         self.sqnotes_logger = sqnotes_logger
         sqnotes_logger.configure(debug=DEBUGGING)
         self.logger = sqnotes_logger.get_logger('SQNotes')
+        self.config_module = config_module
+        self.CONFIG_DIR_OVERRIDE = None
+        self._INITIAL_GLOBALS = INIT_GLOBALS
+        self._INITIAL_SETTINGS = INIT_SETTINGS
+        self.database_service = database_service
+        
     
     def _insert_keyword_into_database(self, keyword):
-        self.cursor.execute('SELECT id FROM keywords WHERE keyword = ?', (keyword,))
-        result = self.cursor.fetchone()
-        if result is None:
-            # this keyword does not exist in the database
-            self.cursor.execute('''
-                INSERT OR IGNORE INTO keywords (keyword)
-                VALUES (?)
-            ''', (keyword,))
-            keyword_id = self.cursor.lastrowid
-        else:
-            keyword_id = result[0]
-        return keyword_id
+        return self.database_service.insert_keyword_into_database(keyword=keyword)
 
     def _get_input_from_text_editor(self, TEXT_EDITOR):
         with tempfile.NamedTemporaryFile(delete=False) as temp_file:
@@ -234,12 +248,10 @@ class SQNotes:
             self.insert_note_keyword_into_database(note_id, keyword_id)
         
     
-    def check_initialized(self):
-        if 'global' in self.user_config and 'initialized' in self.user_config['global']:
-            return (self.user_config['global']['initialized'] == 'yes')
-        else:
-            return False
-    
+    def _check_initialized(self):
+        value = self.config_module.get_global_from_user_config(INITIALIZED)
+        self.logger.debug(f"checking initialized: {value}")
+        return (self.config_module.get_global_from_user_config(INITIALIZED) == 'yes')
     
     def _get_all_keywords_from_database(self):
         self.cursor.execute('SELECT keyword FROM keywords')
@@ -254,15 +266,7 @@ class SQNotes:
         for kw in keywords:
             print(kw)
     
-    def create_initial_user_config(self, user_config):
-        if 'global' not in self.user_config:
-            self.user_config['global'] = {}
-        user_config['global']['initialized'] = 'no'
-        user_config['global']['VERSION'] = VERSION
-        
-        with open(self.CONFIG_FILE, 'w') as configfile:
-            user_config.write(configfile)
-        self.user_config = user_config
+
     
     def _delete_keywords_from_database_for_note(self, note_id):
         self.cursor.execute('DELETE FROM note_keywords WHERE note_id = ?', (note_id,))
@@ -282,9 +286,6 @@ class SQNotes:
         with open(temp_filename, 'r') as file:
             edited_content = file.read().strip()
         return edited_content
-    
-    
-    
     
     
     def _get_available_text_editors(self):
@@ -422,20 +423,22 @@ class SQNotes:
         
     
     def get_notes_dir_from_config(self):
-        if 'settings' in self.user_config and 'notes_path' in self.user_config['settings']:
-            self.NOTES_DIR = self.user_config['settings']['notes_path']
-            return self.NOTES_DIR
-        else:
+        self.logger.debug(f"about to call to get notes dir from config")
+        notes_dir_path = self.config_module.get_setting_from_user_config(key=NOTES_PATH_KEY)
+        if notes_dir_path is None:
             raise NotesDirNotConfiguredException()
+        else:
+            return notes_dir_path
         
     def _get_configured_text_editor(self):
-        text_editor = self.get_setting_from_user_config('text_editor')
+        text_editor = self.config_module.get_setting_from_user_config('text_editor')
+        
         if text_editor is None:
             raise TextEditorNotConfiguredException()
         return text_editor
     
     def _is_text_editor_configured(self):
-        text_editor = self.get_setting_from_user_config('text_editor')
+        text_editor = self.config_module.get_setting_from_user_config('text_editor')
         return text_editor is not None and text_editor != ''
     
     def get_setting_from_user_config(self, key):
@@ -448,22 +451,11 @@ class SQNotes:
         self.conn.commit()
         
     def _insert_new_note_into_database(self, note_filename_base):
-        self.cursor.execute('''
-                INSERT INTO notes (filename)
-                VALUES (?)
-            ''', (note_filename_base,))
-        note_id = self.cursor.lastrowid
-        self.logger.debug(f"insert new note filename : {note_filename_base}, id : {note_id}")
-        return note_id
+        return self.database_service.insert_new_note_into_database(note_filename_base=note_filename_base)
         
     def insert_note_keyword_into_database(self, note_id, keyword_id):
-        self.cursor.execute('''
-                    INSERT INTO note_keywords (note_id, keyword_id)
-                    VALUES (?, ?)
-                ''', (note_id, keyword_id))
-        
+        self.database_service.insert_note_keyword_into_database(note_id=note_id, keyword_id=keyword_id)
 
-    # not top-level
     def _get_all_note_paths(self, notes_dir):
         extensions = ['txt.gpg', 'txt']
         all_notes = []
@@ -482,12 +474,34 @@ class SQNotes:
             self.logger.debug(f"note found: {file}")
             print(file)
         
+    def set_config_dir_override(self, config_dir_override):
+        self.CONFIG_DIR_OVERRIDE = config_dir_override
     
-    def load_setup_configuration(self):
+    def _load_setup_configuration(self):
         # Configurable directory for storing notes and database location
         self.DEFAULT_NOTE_DIR = os.path.expanduser(os.getenv('DEFAULT_NOTES_PATH'))
-        self.CONFIG_DIR = os.path.expanduser(os.getenv('DEFAULT_CONFIG_DIR_PATH'))
+        
+        if self.CONFIG_DIR_OVERRIDE is not None:
+            self.CONFIG_DIR = self.CONFIG_DIR_OVERRIDE
+            self.logger.debug(f"config dir override set;setting sqnotes CONFIG_DIR = {self.CONFIG_DIR}")
+        else:
+            self.CONFIG_DIR = os.path.expanduser(os.getenv('DEFAULT_CONFIG_DIR_PATH'))
+            self.logger.debug(f" setting sqnotes CONFIG_DIR = {self.CONFIG_DIR}")
         self.CONFIG_FILE = os.path.join(self.CONFIG_DIR, "config.ini")
+        
+        
+    def _setup_user_configuration(self):
+        self.logger.debug(f"setting config module config dir value to {self.CONFIG_DIR}")
+        self.config_module._set_config_dir(config_dir=self.CONFIG_DIR)
+        self.config_module.open_or_create_and_open_user_config_file(
+                                                        initial_globals = self._INITIAL_GLOBALS,
+                                                        initial_settings = self._INITIAL_SETTINGS
+                                                )
+        
+    def _generate_initial_user_config_information(self):
+        self.config_module.set_global_to_user_config(key=INITIALIZED, value='no')
+        self.config_module.set_global_to_user_config(key='database_is_setup', value='no')
+        
         
     def _get_database_cursor(self):
         return self.cursor
@@ -500,6 +514,9 @@ class SQNotes:
         if notes_dir is None:
             raise NotesDirNotSelectedException()
         self.DB_PATH = self.get_db_file_path(notes_dir)
+        self.database_service.connect(db_file_path = self.get_db_file_path(notes_dir))
+        
+        
         self.logger.debug(f"opening database at {self.DB_PATH}")
         try:
             self.conn = sqlite3.connect(self.DB_PATH)
@@ -513,20 +530,6 @@ class SQNotes:
         if not is_database_set_up:
             self.logger.debug("found database not set up")
             self.setup_database()
-    
-    def open_or_create_and_open_user_config_file(self):
-        # Ensure the configuration directory exists
-        
-        if not os.path.exists(self.CONFIG_DIR):
-            print(f"creating new user_config directory {self.CONFIG_DIR}")
-            os.makedirs(self.CONFIG_DIR)
-            
-        user_config = configparser.ConfigParser()
-        self.user_config = user_config
-        if os.path.exists(self.CONFIG_FILE):
-            user_config.read(self.CONFIG_FILE)
-        else:
-            self.create_initial_user_config(user_config=user_config)
     
     
     def prompt_for_user_notes_path(self):
@@ -563,7 +566,7 @@ class SQNotes:
     def run_git_command(self, args):
         subprocess.call(['git'] + args, cwd=self.NOTES_DIR)
     
-    def save_config(self):
+    def _save_config(self):
         with open(self.CONFIG_FILE, 'w') as configfile:
             self.user_config.write(configfile)
     
@@ -672,25 +675,18 @@ class SQNotes:
         
     
     def _set_gpg_verified(self):
-        self._set_setting_in_user_config(key=GPG_VERIFIED_KEY, value='yes')
+        self.config_module.set_setting_to_user_config(key=GPG_VERIFIED_KEY, value='yes')
     
     def _get_gpg_verified(self):
-        return (self.get_setting_from_user_config(key=GPG_VERIFIED_KEY) =='yes')
+        return (self.config_module.get_setting_from_user_config(key=GPG_VERIFIED_KEY) =='yes')
     
     def initialize(self):
         selected_path = self.prompt_for_user_notes_path()
-        
-        
-        if 'global' not in self.user_config:
-            self.user_config['global'] = {}
-        self.user_config['global']['initialized'] = 'yes'
-        
-        if 'settings' not in self.user_config:
-            self.user_config['settings'] = {}
-        self.user_config['settings']['notes_path'] = selected_path
-        self.user_config['settings'][ASCII_ARMOR_CONFIG_KEY] = "yes"
-        self.save_config()
-        
+
+        self.config_module.set_global_to_user_config(key=INITIALIZED, value='yes')
+        self.config_module.set_setting_to_user_config(key=NOTES_PATH_KEY, value=selected_path)
+        self.config_module.set_setting_to_user_config(key=ASCII_ARMOR_CONFIG_KEY, value='yes')
+
         
         gpg_verified = CommandValidator.verify_command(command_string=GPG)
         if not gpg_verified:
@@ -698,79 +694,34 @@ class SQNotes:
         else:
             self._set_gpg_verified()
             
-
-    def _set_setting_in_user_config(self, key, value):
-        if 'settings' not in self.user_config:
-            self.user_config['settings'] = {}
-        self.user_config['settings'][key]= value
-        self.save_config()
+    #
+    # def _set_setting_in_user_config(self, key, value):
+    #     if 'settings' not in self.user_config:
+    #         self.user_config['settings'] = {}
+    #     self.user_config['settings'][key]= value
+    #     self._save_config()
 
     def _check_is_database_set_up(self):
-        is_set_up = (self.get_setting_from_user_config('database_is_setup') == 'yes')
+        is_set_up = (self.config_module.get_setting_from_user_config('database_is_setup') == 'yes')
         return is_set_up
     
     def _set_database_is_set_up(self):
-        self._set_setting_in_user_config('database_is_setup', 'yes')
+        self.config_module.set_setting_to_user_config('database_is_setup', 'yes')
         
         
     def setup_database(self):
         print(interface_copy.SETTING_UP_DATABASE_MESSAGE())
         self.logger.debug("setting up the database tables")
-        self.cursor.execute('''
-            CREATE TABLE IF NOT EXISTS notes (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                filename TEXT NOT NULL
-            )
-        ''')
-        
-        self.cursor.execute('''
-            CREATE TABLE IF NOT EXISTS keywords (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                keyword TEXT NOT NULL
-            )
-        ''')
-        
-        self.cursor.execute('''
-            CREATE TABLE IF NOT EXISTS note_keywords (
-                note_id INTEGER,
-                keyword_id INTEGER,
-                FOREIGN KEY (note_id) REFERENCES notes(id),
-                FOREIGN KEY (keyword_id) REFERENCES keywords(id),
-                PRIMARY KEY (note_id, keyword_id)
-            )
-        ''')
-        self._commit_transaction()
-
+        self.database_service.setup_database()
         self._set_database_is_set_up()
         
-    def decrypt_and_print(self, filename, search_queries = None):
-        with tempfile.NamedTemporaryFile(delete=False) as temp_dec_file:
-            temp_dec_filename = temp_dec_file.name
-            subprocess.call(['gpg', '--yes', '--batch', '--quiet', '--output', temp_dec_filename, '--decrypt', filename])
-            with open(temp_dec_filename, 'r') as file:
-                content = file.read()
-                if search_queries is not None:
-                    content_lower = content.lower()
-                    lower_queries = [query.lower() for query in search_queries]
-                    if all(query in content_lower for query in lower_queries):
-                        print(f"\n{filename}:\n{content}")
-                        return True
-                    else:
-                        return False
-                else:
-                    print(f"\n{filename}:\n{content}")
-                    return True
-
-
-
-
 
     def _is_use_ascii_armor(self):
-        return (self.get_setting_from_user_config(key=ASCII_ARMOR_CONFIG_KEY) == "yes")
+        return (self.config_module.get_setting_from_user_config(key=ASCII_ARMOR_CONFIG_KEY) == "yes")
 
     def _set_use_ascii_armor(self, isUseArmor):
         value = 'yes' if isUseArmor else 'no'
-        self._set_setting_in_user_config(key=ASCII_ARMOR_CONFIG_KEY, value=value)
+        self.config_module.set_setting_to_user_config(key=ASCII_ARMOR_CONFIG_KEY, value=value)
         self.logger.debug(f"set {ASCII_ARMOR_CONFIG_KEY}=yes")
 
 
@@ -790,7 +741,7 @@ class SQNotes:
     def set_gpg_key_email(self, new_gpg_key_email):
         self.GPG_KEY_EMAIL = new_gpg_key_email
         key = "gpg_key_email"
-        self._set_setting_in_user_config(key=key, value=new_gpg_key_email)
+        self.config_module.set_setting_to_user_config(key=key, value=new_gpg_key_email)
         print(f"GPG Key set to: {self.GPG_KEY_EMAIL}")
 
 
@@ -802,13 +753,12 @@ class SQNotes:
         print(message)
     
     def startup(self):
-        self.load_setup_configuration()
-        self.open_or_create_and_open_user_config_file()
-
+        self._load_setup_configuration()
+        self._setup_user_configuration()
 
     def _configure_text_editor(self, editor):
         raise Exception('add some validation')
-        self._set_setting_in_user_config('text_editor', editor)
+        self.config_module.set_setting_to_user_config('text_editor', editor)
         
         
     def _get_input_until_condition_satisfied(self, prompt, condition):
@@ -867,13 +817,12 @@ class SQNotes:
         is_configured = self._is_text_editor_configured()
         if not is_configured:
             TEXT_EDITOR = input("No text editor configured. Please enter the path to your preferred terminal text editor (e.g. 'vim', 'nano')> ")
-            self._set_setting_in_user_config('text_editor', TEXT_EDITOR)
-            self.save_config()
+            self.config_module.set_setting_to_user_config('text_editor', TEXT_EDITOR)
             
 
 
 def __get_sqnotes():
-    injector = Injector([LoggingModule()])
+    injector = Injector([InjectionConfigurationModule()])
     
     sqnotes = injector.get(SQNotes)
     return sqnotes
@@ -961,7 +910,7 @@ def main():
         else:
             manual.print_main_page()
     else:
-        initialized = sqnotes.check_initialized()
+        initialized = sqnotes._check_initialized()
         if not initialized:
             print(interface_copy.SQNOTES_NOT_INITIALIZED_MESSAGE)
             return

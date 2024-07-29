@@ -3,7 +3,7 @@
 from unittest.mock import patch, mock_open, MagicMock, call, Mock
 import os
 import pytest
-from sqnotes import SQNotes, GPGSubprocessException
+from sqnotes.sqnotes_module import SQNotes, GPGSubprocessException
 from test.test_helper import get_all_mocked_print_output
 import logging
 

@@ -3,9 +3,9 @@ import unittest
 from unittest.mock import patch, MagicMock
 import os
 import pytest
-from sqnotes import SQNotes
+from sqnotes.sqnotes_module import SQNotes
 import tempfile
-from encrypted_note_helper import EncryptedNoteHelper, GPGSubprocessException
+from sqnotes.encrypted_note_helper import EncryptedNoteHelper, GPGSubprocessException
 from injector import Injector
 
 

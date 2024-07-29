@@ -4,7 +4,7 @@ import pytest
 import unittest
 from unittest.mock import patch, Mock
 from injector import Injector
-from encrypted_note_helper import EncryptedNoteHelper, GPGSubprocessException, CouldNotReadNoteException
+from sqnotes.encrypted_note_helper import EncryptedNoteHelper, GPGSubprocessException, CouldNotReadNoteException
 
 
 @pytest.fixture(scope='session', autouse=True)

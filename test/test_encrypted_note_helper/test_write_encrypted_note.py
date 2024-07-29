@@ -7,7 +7,7 @@ import pytest
 import tempfile
 import sqlite3
 from injector import Injector
-from encrypted_note_helper import EncryptedNoteHelper, GPGSubprocessException
+from sqnotes.encrypted_note_helper import EncryptedNoteHelper, GPGSubprocessException
 
 
 def get_all_mocked_print_output(mocked_print):

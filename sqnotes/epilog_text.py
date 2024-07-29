@@ -8,7 +8,7 @@ more quickly, there is a built-in keyword search.
 Simply include tags in your notes by adding #hashtags
 to the note content anywhere in the note, like '#apple'.
 Then to find all notes containing that keyword later
-use the keywords command as in `sqnotes keywords -k apple`.
+use the keywords command as in `py keywords -k apple`.
 
 Note that keywords are stored in a plaintext data-
 base. This is intentional and necessary. The purpose

@@ -2,7 +2,7 @@ import unittest
 from unittest.mock import patch
 import os
 import pytest
-from sqnotes import SQNotes
+from sqnotes.sqnotes_module import SQNotes
 from dotenv import load_dotenv
 from injector import Injector
 

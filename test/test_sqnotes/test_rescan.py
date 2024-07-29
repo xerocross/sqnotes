@@ -2,8 +2,8 @@ import unittest
 from unittest.mock import patch, mock_open, MagicMock, call, Mock
 import os
 import pytest
-from sqnotes import SQNotes
-from encrypted_note_helper import EncryptedNoteHelper
+from sqnotes.sqnotes_module import SQNotes
+from sqnotes.encrypted_note_helper import EncryptedNoteHelper
 from test.test_sqnotes_initializer import get_test_sqnotes
 
 

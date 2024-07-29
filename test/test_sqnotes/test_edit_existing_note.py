@@ -2,11 +2,11 @@ import unittest
 from unittest.mock import patch, mock_open, Mock
 import os
 import pytest
-from sqnotes import SQNotes, NoteNotFoundException,\
+from sqnotes.sqnotes_module import SQNotes, NoteNotFoundException,\
     NoteNotFoundInDatabaseException, GPGSubprocessException
 import tempfile
 from test.test_sqnotes.test_add_new_note import get_all_mocked_print_output
-from encrypted_note_helper import EncryptedNoteHelper
+from sqnotes.encrypted_note_helper import EncryptedNoteHelper
 
 from injector import Injector
 

@@ -4,7 +4,7 @@ import subprocess
 import os
 from injector import inject
 
-from sqnotes_logger import SQNotesLogger
+from sqnotes.sqnotes_logger import SQNotesLogger
 
 class GPGSubprocessException(Exception):
     """Raise when an exception or error occurs in calling gpg in a subprocess."""

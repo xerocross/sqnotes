@@ -2,14 +2,75 @@ import unittest
 from unittest.mock import patch, mock_open, MagicMock, call
 import os
 import pytest
+import shutil
 import tempfile
-from sqnotes import SQNotes
+from sqnotes.sqnotes_module import SQNotes, NotesDirNotConfiguredException
+from sqnotes.configuration_module import ConfigurationModule
+from sqnotes.database_service import DatabaseService
 from injector import Injector
+from test.test_helper import do_nothing
 
 
-@pytest.fixture(scope='session', autouse=True)
-def set_test_environment():
-    os.environ['TESTING'] = 'true'
+@pytest.fixture
+def sqnotes_obj(test_temporary_directory):
+    injector = Injector()
+    sqnotes_instance : SQNotes = injector.get(SQNotes)
+    sqnotes_instance.set_config_dir_override(config_dir_override = test_temporary_directory)
+    yield sqnotes_instance
+    
+    
+@pytest.fixture
+def test_temporary_directory():
+    temp_dir = tempfile.mkdtemp()
+    try:
+        yield temp_dir
+    finally:
+        if os.path.isdir(temp_dir):
+            shutil.rmtree(temp_dir)
+
+
+def describe_sqnotes():
+    
+    
+    def describe_database_setup():
+    
+        @patch.object(DatabaseService, 'setup_database')
+        def it_calls_setup_on_database_service(
+                                                mock_set_up_database,
+                                                sqnotes_obj : SQNotes
+                                                ):
+            sqnotes_obj.setup_database()
+            mock_set_up_database.assert_called_once()
+    
+    def describe_get_notes_dir_from_config():
+        
+        def it_calls_config_module_to_get_notes_dir(
+                                                        sqnotes_obj : SQNotes
+                                                    ):
+            with patch.object(sqnotes_obj.config_module, 'get_setting_from_user_config') as mock_get_config_setting:
+                sqnotes_obj.get_notes_dir_from_config()
+                mock_get_config_setting.assert_called_once_with(key = 'notes_path')
+            
+        @patch.object(ConfigurationModule, 'get_setting_from_user_config')
+        def it_returns_the_value_from_the_config_module(
+                                                        mock_get_config_setting,
+                                                        sqnotes_obj : SQNotes
+                                                    ):
+            test_notes_path = 'test/notes/path'
+            mock_get_config_setting.return_value = test_notes_path
+            return_value = sqnotes_obj.get_notes_dir_from_config()
+            assert return_value == test_notes_path
+        
+        
+        @patch.object(ConfigurationModule, 'get_setting_from_user_config')
+        def it_raises_if_notes_path_not_configured(
+                                                        mock_get_config_setting,
+                                                        sqnotes_obj : SQNotes
+                                                    ):
+            mock_get_config_setting.return_value = None
+            with pytest.raises(NotesDirNotConfiguredException):
+                sqnotes_obj.get_notes_dir_from_config()
+        
 
 
 class TestListFiles(unittest.TestCase):
@@ -33,7 +94,7 @@ class TestListFiles(unittest.TestCase):
                              mock_get_notes,
                              mock_get_notes_dir):
         mock_get_notes.return_value = self.test_files
-        mock_get_notes_dir.return_value = "sqnotes"
+        mock_get_notes_dir.return_value = "py"
         with patch('builtins.print') as mocked_print:
             self.sqnotes.notes_list()
             calls = [

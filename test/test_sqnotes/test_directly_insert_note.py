@@ -3,10 +3,10 @@ from unittest.mock import patch, mock_open, MagicMock, call
 import os
 import pytest
 import tempfile
-from encrypted_note_helper import EncryptedNoteHelper, GPGSubprocessException
+from sqnotes.encrypted_note_helper import EncryptedNoteHelper, GPGSubprocessException
 from test.test_helper import get_all_mocked_print_output
 from injector import Injector
-from sqnotes import SQNotes
+from sqnotes.sqnotes_module import SQNotes
 
 
 @pytest.fixture(scope='session', autouse=True)

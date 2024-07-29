@@ -3,7 +3,7 @@ import unittest
 from unittest.mock import patch, mock_open, MagicMock, call, Mock
 import os
 import pytest
-from sqnotes import SQNotes, NoteNotFoundException,\
+from sqnotes.sqnotes_module import SQNotes, NoteNotFoundException,\
     NoteNotFoundInDatabaseException, GPGSubprocessException,\
     TextEditorSubprocessException
 import tempfile

@@ -1,0 +1,3 @@
+
+class ExternalTextEditorHelper:
+    pass
