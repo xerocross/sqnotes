@@ -184,12 +184,6 @@ class TestCLIInitializedCommandsReferredCorrectly(unittest.TestCase):
         return mock_stdout.getvalue()
     
     
-    
-    
-    
-        
-    
-    
 
 if __name__ == '__main__':
     unittest.main()
