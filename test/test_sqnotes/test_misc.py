@@ -12,22 +12,12 @@ from test.test_helper import do_nothing
 
 
 @pytest.fixture
-def sqnotes_obj(test_temporary_directory):
+def sqnotes_obj(test_configuration_dir):
     injector = Injector()
     sqnotes_instance : SQNotes = injector.get(SQNotes)
-    sqnotes_instance.set_config_dir_override(config_dir_override = test_temporary_directory)
+    sqnotes_instance.set_config_dir_override(config_dir_override = test_configuration_dir)
     yield sqnotes_instance
     
-    
-@pytest.fixture
-def test_temporary_directory():
-    temp_dir = tempfile.mkdtemp()
-    try:
-        yield temp_dir
-    finally:
-        if os.path.isdir(temp_dir):
-            shutil.rmtree(temp_dir)
-
 
 def describe_sqnotes():
     
