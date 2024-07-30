@@ -4,7 +4,7 @@ from unittest.mock import patch, mock_open, MagicMock, call, Mock
 import os
 import pytest
 from sqnotes.sqnotes_module import SQNotes, NoteNotFoundException,\
-    NoteNotFoundInDatabaseException, GPGSubprocessException,\
+     GPGSubprocessException,\
     TextEditorSubprocessException
 import tempfile
 from test.test_sqnotes.test_add_new_note import get_all_mocked_print_output
