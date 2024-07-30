@@ -9,15 +9,15 @@ SQNotes Basic Usage\
 
 To create a new note interactively:
 
-`py new`
+`sqnotes new`
 
 To do a full text search within your notes:
 
-`py search [query1] ([query2] ...)`
+`sqnotes search [query1] ([query2] ...)`
 
 To search your notes by keyword:
 
-`py -k [keyword1] ([keyword2] ...)`
+`sqnotes -k [keyword1] ([keyword2] ...)`
 
 
 
@@ -37,7 +37,7 @@ your notes for hashtags upon creating or editing the note and \
 stores these keywords in a plaintext database locally on your \
 computer.
 
-Run `py new` to create a new note. This will open the configured \
+Run `sqnotes new` to create a new note. This will open the configured \
 text editor ('vim' by default). Write your new note, then save \
 and close the editor, and SQNotes will index, encrypt, and save your note.
 
