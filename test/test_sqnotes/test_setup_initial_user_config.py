@@ -1,7 +1,6 @@
 
 import pytest
 from unittest.mock import patch
-from test.test_fixtures import sqnotes_obj, test_temporary_directory
 from sqnotes.sqnotes_module import SQNotes
 from sqnotes.configuration_module import ConfigurationModule
 

@@ -4,7 +4,6 @@ from unittest.mock import patch
 import pytest
 from sqnotes.sqnotes_module import SQNotes
 import logging
-from test.test_fixtures import sqnotes_obj, test_temporary_directory
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
