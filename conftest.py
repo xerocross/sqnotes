@@ -102,6 +102,19 @@ def mock_exists():
     with patch('os.path.exists') as mock:
         yield mock
     
+@pytest.fixture
+def mock_get_decrypted_content_in_memory():
+    with patch.object(EncryptedNoteHelper, 'get_decrypted_content_in_memory') as mock:
+        mock.side_effect = [f"content{x}" for x in range(1, 20)]
+        yield mock
+     
+@pytest.fixture   
+def mock_insert_new_note():
+    # @patch.object(DatabaseService, 'insert_new_note_into_database')
+    with patch.object(DatabaseService, 'insert_new_note_into_database') as mock:
+        # mock.side_effect = [x for x in range(0, 20)]
+        yield mock
+   
 
 @pytest.fixture
 def test_note_filename(test_note_file):
