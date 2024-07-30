@@ -14,7 +14,8 @@ from sqnotes.printer_helper import print_to_so
 import sys
 from sqnotes.manual import Manual
 from sqnotes.command_validator import CommandValidator
-from sqnotes.encrypted_note_helper import EncryptedNoteHelper, GPGSubprocessException, CouldNotReadNoteException
+from sqnotes.encrypted_note_helper import EncryptedNoteHelper, \
+GPGSubprocessException
 from injector import inject, Injector
 from sqnotes.injection_configuration_module import InjectionConfigurationModule
 from sqnotes.sqnotes_logger import SQNotesLogger
@@ -55,7 +56,7 @@ class EnvironmentConfigurationNotFound(Exception):
     """Raise if the environment configuration file is not found."""
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
-project_root = os.path.abspath(os.path.join(current_dir, '../'))
+project_root = os.path.abspath(os.path.join(current_dir, '../../'))
 env_file_path = os.path.join(project_root, '.production.env')
 if os.getenv('TESTING') == 'true':
     env_file_path = os.path.join(project_root, '.test.env')
