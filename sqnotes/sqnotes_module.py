@@ -380,7 +380,7 @@ class SQNotes:
         # Extract hashtags using regular expression
         tags = [match[1:] for match in re.findall(r'\B#\w+\b', content)]
         unique_tags = set(tags)
-        return list(unique_tags)
+        return unique_tags
     
     def rescan_for_database(self):
         NOTES_DIR = self.get_notes_dir_from_config()
