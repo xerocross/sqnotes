@@ -15,3 +15,9 @@ def do_nothing(*args, **kwargs):
 
 def get_true(*args, **kwargs):
     return True
+
+def just_return(value):
+    
+    def return_value(*args, **kwargs):
+        return value
+    return return_value
