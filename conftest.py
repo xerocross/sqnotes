@@ -47,6 +47,12 @@ def database_service():
     injector = Injector()
     database_service : DatabaseService = injector.get(DatabaseService)
     yield database_service
+    
+    
+@pytest.fixture
+def mock_print():
+    with patch('builtins.print') as mock:
+        yield mock
 
 @pytest.fixture
 def database_service_connected_in_memory(database_service):
@@ -108,6 +114,11 @@ def mock_get_configured_text_editor():
         mock.return_value = 'vim'
         yield mock
     
+@pytest.fixture
+def mock_check_text_editor_is_configured():
+    with patch.object(SQNotes, 'check_text_editor_is_configured') as mock:
+        mock.return_value = True
+        yield mock
     
 @pytest.fixture
 def mock_exists():
@@ -167,6 +178,31 @@ def mock_delete_temp_file():
 def mock_get_gpg_key_email():
     with patch.object(SQNotes, 'get_gpg_key_email') as mock:
         mock.return_value = 'test@test.com'
+        yield mock
+        
+@pytest.fixture   
+def mock_is_use_ascii_armor():
+    with patch.object(SQNotes,'_is_use_ascii_armor') as mock:
+        mock.return_value = True
+        yield mock
+        
+@pytest.fixture   
+def mock_get_new_note_name():
+    with patch.object(SQNotes,'_get_new_note_name') as mock:
+        mock.side_effect = ['test1.txt.gpg', 'test2.txt.gpg']
+        yield mock
+        
+@pytest.fixture
+def mock_check_gpg_key_email():
+    with patch.object(SQNotes, 'check_gpg_key_email') as mock:
+        mock.return_value = True
+        yield mock
+     
+     
+@pytest.fixture
+def mock_check_gpg_verified():
+    with patch.object(SQNotes, '_check_gpg_verified') as mock:
+        mock.return_value = True
         yield mock
      
 @pytest.fixture   
