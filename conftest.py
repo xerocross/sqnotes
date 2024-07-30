@@ -10,6 +10,11 @@ from unittest.mock import Mock, patch
 from sqnotes.configuration_module import ConfigurationModule
 from sqnotes.encrypted_note_helper import EncryptedNoteHelper
 
+@pytest.fixture(scope='session', autouse=True)
+def set_test_environment():
+    os.environ['TESTING'] = 'true'
+    
+    
 @pytest.fixture
 def sqnotes_obj(test_temporary_directory):
     injector = Injector()
