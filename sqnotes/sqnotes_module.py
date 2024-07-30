@@ -239,7 +239,7 @@ class SQNotes:
         keywords = self._extract_keywords(note_content)
         keyword_ids = []
         for keyword in keywords:
-            keyword_id = self._insert_keyword_into_database(keyword)
+            keyword_id = self.database_service.insert_keyword_into_database(keyword=keyword)
             keyword_ids.append(keyword_id)
     
         for keyword_id in keyword_ids:
