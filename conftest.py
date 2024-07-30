@@ -55,6 +55,17 @@ def mock_print():
         yield mock
 
 @pytest.fixture
+def mock_transaction(database_service_open_in_memory : DatabaseService):
+    connection = database_service_open_in_memory._get_connection()
+    yield connection
+    connection.rollback()
+    
+@pytest.fixture
+def mock_print_to_so():
+    with patch('sqnotes.sqnotes_module.print_to_so') as mock:
+        yield mock
+
+@pytest.fixture
 def database_service_connected_in_memory(database_service):
     database_service.connect(db_file_path = ':memory:')
     yield database_service
