@@ -64,6 +64,12 @@ def mock_transaction(database_service_open_in_memory : DatabaseService):
 def mock_print_to_so():
     with patch('sqnotes.sqnotes_module.print_to_so') as mock:
         yield mock
+        
+@pytest.fixture
+def mock_get_is_initialized():
+    with patch.object(SQNotes, '_get_is_initialized') as mock:
+        mock.return_value = True
+        yield mock
 
 @pytest.fixture
 def database_service_connected_in_memory(database_service):

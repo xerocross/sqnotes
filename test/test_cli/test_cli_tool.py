@@ -61,7 +61,7 @@ class TestCLIInitializedCommandsReferredCorrectly(unittest.TestCase):
         return mock_stdout.getvalue()
     
     
-    @patch.object(SQNotes, '_get_is_initialized', lambda x : True)
+    @pytest.mark.usefixtures("mock_get_is_initialized")
     @patch.object(SQNotes, 'new_note')
     def test_new_command_refers_to_new_note_method(self, mock_new_note):
         """
@@ -70,7 +70,7 @@ class TestCLIInitializedCommandsReferredCorrectly(unittest.TestCase):
         self.run_cli(['sqnotes', 'new'])
         mock_new_note.assert_called_once()
     
-    @patch.object(SQNotes, '_get_is_initialized', lambda x : True)
+    @pytest.mark.usefixtures("mock_get_is_initialized")
     @patch.object(SQNotes, 'notes_list')
     def test_notes_command_refers_to_print_notes_method(self, mock_print_all_notes):
         """
@@ -79,19 +79,19 @@ class TestCLIInitializedCommandsReferredCorrectly(unittest.TestCase):
         self.run_cli(['sqnotes', 'notes-list'])
         mock_print_all_notes.assert_called_once()
         
-    @patch.object(SQNotes, '_get_is_initialized', lambda x : True)
+    @pytest.mark.usefixtures("mock_get_is_initialized")
     @patch.object(SQNotes, 'run_git_command')
     def test_git_command_refers_to_git_method(self, mock_run_git_command):
         self.run_cli(['sqnotes', 'git'])
         mock_run_git_command.assert_called_once()
         
-    @patch.object(SQNotes, '_get_is_initialized', lambda x : True)
+    @pytest.mark.usefixtures("mock_get_is_initialized")
     @patch.object(SQNotes, 'print_all_keywords')
     def test_keywords_command_refers_to_keywords_method(self, mock_print_all_keywords):
         self.run_cli(['sqnotes', 'print-keywords'])
         mock_print_all_keywords.assert_called_once()
     
-    @patch.object(SQNotes, '_get_is_initialized', lambda x : True)
+    @pytest.mark.usefixtures("mock_get_is_initialized")
     @patch.object(SQNotes, 'rescan_for_database')
     def test_rescan_command_refers_to_rescan_method(self, mock_rescan_for_database):
         self.run_cli(['sqnotes', 'rescan'])
@@ -99,70 +99,70 @@ class TestCLIInitializedCommandsReferredCorrectly(unittest.TestCase):
         
 
         
-    @patch.object(SQNotes, '_get_is_initialized', lambda x : True)
+    @pytest.mark.usefixtures("mock_get_is_initialized")
     @patch.object(SQNotes, 'edit_note')
     def test_edit_n_command_refers_to_edit_note_method(self, mock_edit_note):
         self.run_cli(['sqnotes', 'edit', '-n', 'note_1.txt'])
         mock_edit_note.assert_called_once_with('note_1.txt')
         
-    @patch.object(SQNotes, '_get_is_initialized', lambda x : True)
+    @pytest.mark.usefixtures("mock_get_is_initialized")
     @patch.object(SQNotes, 'edit_note')
     def test_edit_note_command_refers_to_edit_note_method(self, mock_edit_note):
         self.run_cli(['sqnotes', 'edit', '--note', 'note_1.txt'])
         mock_edit_note.assert_called_once_with('note_1.txt')
 
-    @patch.object(SQNotes, '_get_is_initialized', lambda x : True)
+    @pytest.mark.usefixtures("mock_get_is_initialized")
     @patch.object(SQNotes, 'search_notes')
     def test_search_t_command_refers_to_edit_note_method(self, mock_search_notes):
         self.run_cli(['sqnotes', 'search', '-t', 'apple', 'pear'])
         mock_search_notes.assert_called_once_with(['apple', 'pear'])
 
-    @patch.object(SQNotes, '_get_is_initialized', lambda x : True)
+    @pytest.mark.usefixtures("mock_get_is_initialized")
     @patch.object(SQNotes, 'search_notes')
     def test_search_text_command_refers_to_edit_note_method(self, mock_search_notes):
         self.run_cli(['sqnotes', 'search', '--text', 'apple', 'pear'])
         mock_search_notes.assert_called_once_with(['apple', 'pear'])
         
         
-    @patch.object(SQNotes, '_get_is_initialized', lambda x : True)
+    @pytest.mark.usefixtures("mock_get_is_initialized")
     @patch.object(SQNotes, 'set_gpg_key_email')
     def test_set_gpg_key_i_command_refers_to_set_gpg_key_method(self, mock_set_gpg_key_email):
         self.run_cli(['sqnotes', 'set-gpg-key', '-i', 'test@domain'])
         mock_set_gpg_key_email.assert_called_once_with('test@domain')
         
-    @patch.object(SQNotes, '_get_is_initialized', lambda x : True)
+    @pytest.mark.usefixtures("mock_get_is_initialized")
     @patch.object(SQNotes, 'set_gpg_key_email')
     def test_set_gpg_key_ID_command_refers_to_set_gpg_key_method(self, mock_set_gpg_key_email):
         self.run_cli(['sqnotes', 'set-gpg-key', '--id', 'test@domain'])
         mock_set_gpg_key_email.assert_called_once_with('test@domain')
 
 
-    @patch.object(SQNotes, '_get_is_initialized', lambda x : True)
+    @pytest.mark.usefixtures("mock_get_is_initialized")
     @patch.object(SQNotes, 'search_keywords')
     def test_main_command_with_k_option_calls_keyword_search(self, mock_search_keywords):
         self.run_cli(['sqnotes', '-k', 'apple', 'pear'])
         mock_search_keywords.assert_called_once_with(keywords=['apple', 'pear'])
         
-    @patch.object(SQNotes, '_get_is_initialized', lambda x : True)
+    @pytest.mark.usefixtures("mock_get_is_initialized")
     @patch.object(Manual, 'print_main_page')
     def test_shows_manual_main_page_if_man_command_even_not_initialized(self, mock_print_main_man_page):
         self.run_cli(['sqnotes', 'man'])
         mock_print_main_man_page.assert_called_once()
 
-    @patch.object(SQNotes, '_get_is_initialized', lambda x : True)
+    @pytest.mark.usefixtures("mock_get_is_initialized")
     @patch.object(Manual, 'print_encryption_page')
     def test_shows_manual_encryption_page_if_man_encryption_command(self, mock_print_man_encryption_page):
         self.run_cli(['sqnotes', 'man', 'encryption'])
         mock_print_man_encryption_page.assert_called_once()
         
-    @patch.object(SQNotes, '_get_is_initialized', lambda x : True)
+    @pytest.mark.usefixtures("mock_get_is_initialized")
     @patch.object(SQNotes, 'directly_insert_note')
     def test_new_argument_with_text_refers_to_direct_insert(self, 
                                                             mock_directly_insert):
         self.run_cli(['sqnotes', '-n', 'this is a test note'])
         mock_directly_insert.assert_called_once_with(text='this is a test note')
 
-    @patch.object(SQNotes, '_get_is_initialized', lambda x : True)
+    @pytest.mark.usefixtures("mock_get_is_initialized")
     @patch.object(SQNotes, 'search_notes')
     def test_s_argument_refers_to_search_notes(self, 
                                                             mock_search_notes):
