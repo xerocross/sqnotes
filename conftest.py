@@ -6,27 +6,39 @@ import tempfile
 import os
 import shutil
 from unittest.mock import Mock, patch
+from injector import Module, singleton
 
 from sqnotes.configuration_module import ConfigurationModule
 from sqnotes.encrypted_note_helper import EncryptedNoteHelper
+from sqnotes.sqnotes_logger import SQNotesLogger
 
 @pytest.fixture(scope='session', autouse=True)
 def set_test_environment():
     os.environ['TESTING'] = 'true'
     
     
+
+    
 @pytest.fixture
-def sqnotes_obj(test_temporary_directory):
-    injector = Injector()
+def sqnotes_obj(test_configuration_dir, database_service_open_in_memory):
+    
+    
+    class SQNotesTestConfigurationModule(Module):
+        def configure(self, binder):
+            binder.bind(SQNotesLogger, to=SQNotesLogger(), scope=singleton)
+            binder.bind(ConfigurationModule, to=ConfigurationModule(), scope=singleton)
+            binder.bind(DatabaseService, to=database_service_open_in_memory, scope=singleton)
+    
+    injector = Injector([SQNotesTestConfigurationModule()])
     sqnotes_instance : SQNotes = injector.get(SQNotes)
-    sqnotes_instance.set_config_dir_override(config_dir_override = test_temporary_directory)
+    sqnotes_instance.set_config_dir_override(config_dir_override = test_configuration_dir)
     yield sqnotes_instance
     
 @pytest.fixture
-def configuration_module(test_temporary_directory):
+def configuration_module(test_configuration_dir):
     injector = Injector()
     config_module : ConfigurationModule = injector.get(ConfigurationModule)
-    config_module._set_config_dir(test_temporary_directory)
+    config_module._set_config_dir(test_configuration_dir)
     yield config_module
     
 
@@ -55,7 +67,7 @@ def mock_open_database():
     
 
 @pytest.fixture
-def test_temporary_directory():
+def test_configuration_dir():
     temp_dir = tempfile.mkdtemp()
     try:
         yield temp_dir
