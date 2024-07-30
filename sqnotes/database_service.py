@@ -64,6 +64,20 @@ class DatabaseService:
         # self.logger.debug(f"insert new note filename : {note_filename_base}, id : {note_id}")
         return note_id
     
+    
+    def query_notes_by_keywords(self, keywords):
+        self.cursor.execute('''
+                SELECT n.filename
+                FROM notes n
+                JOIN note_keywords nk ON n.id = nk.note_id
+                JOIN keywords k ON nk.keyword_id = k.id
+                WHERE k.keyword IN ({})
+                GROUP BY n.filename
+                HAVING COUNT(*) = {}
+            '''.format(  ', '.join('?' for _ in keywords) , len(keywords)), keywords)
+        results = self.cursor.fetchall()
+        return results
+    
     def insert_note_keyword_into_database(self, note_id, keyword_id):
         query = '''
                     INSERT INTO note_keywords (note_id, keyword_id)

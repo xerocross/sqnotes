@@ -527,24 +527,10 @@ class SQNotes:
     def _print_note(self, note_path, decrypted_content):
         print(f"{note_path}:\n{decrypted_content}")
     
-    
-    def _query_notes_by_keywords(self, notes_dir, keywords):
-        self.cursor.execute('''
-                SELECT n.filename
-                FROM notes n
-                JOIN note_keywords nk ON n.id = nk.note_id
-                JOIN keywords k ON nk.keyword_id = k.id
-                WHERE k.keyword IN ({})
-                GROUP BY n.filename
-                HAVING COUNT(*) = {}
-            '''.format(  ', '.join('?' for _ in keywords) , len(keywords)), keywords)
-        results = self.cursor.fetchall()
-        return results
-    
     def search_keywords(self, keywords):
         NOTES_DIR = self.get_notes_dir_from_config()
         self.open_database()
-        results = self._query_notes_by_keywords(notes_dir=NOTES_DIR, keywords=keywords)
+        results = self.database_service.query_notes_by_keywords(keywords=keywords)
         if results:
             print('') # blank line
             for result in results:
@@ -829,7 +815,7 @@ def main():
     )
     
     keyword_search_subparser = subparsers.add_parser('keywords', help='Find notes keyword. (Fast because searches plaintext database.)')
-    keyword_search_subparser.add_argument('-k', '--keywords', nargs='+', help='Search notes by keywords')
+    keyword_search_subparser.add_argument('-k', '--keywords', nargs='+', help='Keywords to search for.', required = True)
     
     subparsers.add_parser('rescan', help='Rescan notes to populate database (useful for troubleshooting certain errors)')
     subparsers.add_parser('notes-list', help='Show a list of all notes (scans notes directory)')

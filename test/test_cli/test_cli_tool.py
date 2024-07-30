@@ -6,6 +6,7 @@ import io
 import sqnotes.sqnotes_module as sqnotes_module
 from sqnotes.sqnotes_module import SQNotes
 from sqnotes.manual import Manual
+from test.test_helper import get_all_mocked_print_output
 
 class TestCLI(unittest.TestCase):
     startup_patcher = None
@@ -162,28 +163,22 @@ def describe_sqnotes_cli():
             mock_search_notes.assert_called_once_with(search_queries=['apple', 'pear'])
 
 
-
-class TestCLIInitializedCommandsReferredCorrectly(unittest.TestCase):
-    """once initialized, command line arguments are referred correctly"""
-    
-    startup_patcher = None
-    
-    @classmethod
-    def setUpClass(cls):
-        cls.startup_patcher = patch.object(SQNotes, "startup", lambda x: None)
-        cls.startup_patcher.start()
         
-    @classmethod
-    def tearDownClass(cls):
-        cls.startup_patcher.stop()
 
-    @patch('sys.stdout', new_callable=io.StringIO)
-    def run_cli(self, args, mock_stdout):
-        with patch('sys.argv', args):
-            sqnotes_module.main()
-        return mock_stdout.getvalue()
-    
-    
+        def describe_keywords_command():
+            
+            @pytest.mark.usefixtures("mock_get_is_initialized")
+            @patch.object(SQNotes, 'search_keywords')
+            def it_maps_keyword_command_to_search_keywords_method(
+                                                                    mock_search_keywords):
+                run_cli(['sqnotes', 'keywords', '-k', 'apple', 'pear'])
+                mock_search_keywords.assert_called_once_with(keywords=['apple', 'pear'])
+            
+            
+            def it_requires_k_argument(mock_print):
+                with pytest.raises(SystemExit):
+                    run_cli(['sqnotes', 'keywords'])
+                    output = get_all_mocked_print_output(mocked_print=mock_print)
+                    expected_error_message = 'required: -k/--keywords'
+                    assert expected_error_message in output
 
-if __name__ == '__main__':
-    unittest.main()
