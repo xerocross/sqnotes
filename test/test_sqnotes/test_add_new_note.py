@@ -182,6 +182,76 @@ def describe_the_new_note_method():
                 sqnotes_obj.new_note()    
     
     
+    
+    def describe_database_error_during_database_insert_note():
+        
+        @pytest.mark.usefixtures("mock_check_gpg_key_email",
+                             "mock_is_use_ascii_armor",
+                             "mock_get_configured_text_editor",
+                             "mock_check_gpg_verified",
+                             "mock_check_text_editor_is_configured",
+                             "mock_commit_transaction",
+                             "mock_extract_and_save_keywords",
+                             "mock_open_database",
+                             "mock_get_new_note_name",
+                             "mock_get_gpg_key_email",
+                             "mock_open_database",
+                             "mock_write_encrypted_note")
+        @patch.object(SQNotes, '_check_for_database_exception', just_return(True))
+        @patch.object(DatabaseService, 'insert_new_note_into_database')
+        @patch.object(SQNotes, '_get_input_from_text_editor')
+        @patch.object(SQNotes, 'get_notes_dir_from_config')
+        def it_prints_database_error_message(
+                                            mock_get_notes_dir, 
+                                            mock_get_input, 
+                                            mock_insert_new_note_in_database,
+                                            test_configuration_dir,
+                                            sqnotes_obj,
+                                            mock_print
+                                            ):
+            mock_get_notes_dir.return_value = test_configuration_dir
+            mock_get_input.return_value = "test content"
+            mock_insert_new_note_in_database.side_effect = Exception
+    
+            with pytest.raises(SystemExit):
+                sqnotes_obj.new_note()
+                output = get_all_mocked_print_output(mocked_print = mock_print)
+                expected_error_message = interface_copy.DATABASE_EXCEPTION_MESSAGE()
+                data_not_saved = interface_copy.DATA_NOT_SAVED()
+                assert expected_error_message in output
+                assert data_not_saved in output
+    
+    
+        @pytest.mark.usefixtures("mock_check_gpg_key_email",
+                             "mock_is_use_ascii_armor",
+                             "mock_get_configured_text_editor",
+                             "mock_check_gpg_verified",
+                             "mock_check_text_editor_is_configured",
+                             "mock_commit_transaction",
+                             "mock_extract_and_save_keywords",
+                             "mock_open_database",
+                             "mock_get_new_note_name",
+                             "mock_get_gpg_key_email",
+                             "mock_open_database",
+                             "mock_write_encrypted_note")
+        @patch.object(SQNotes, '_check_for_database_exception', just_return(True))
+        @patch.object(DatabaseService, 'insert_new_note_into_database')
+        @patch.object(SQNotes, '_get_input_from_text_editor')
+        @patch.object(SQNotes, 'get_notes_dir_from_config')
+        def it_exits( 
+                            mock_get_notes_dir, 
+                            mock_get_input, 
+                            mock_insert_new_note_in_database,
+                            test_configuration_dir,
+                            sqnotes_obj
+                    ):
+            mock_get_notes_dir.return_value = test_configuration_dir
+            mock_get_input.return_value = "test content"
+            mock_insert_new_note_in_database.side_effect = Exception
+    
+            with pytest.raises(SystemExit):
+                sqnotes_obj.new_note()
+    
     def describe_unexpected_error_during_database_insert_note():
         
         @pytest.mark.usefixtures("mock_check_gpg_key_email",
