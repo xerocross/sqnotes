@@ -86,8 +86,7 @@ class DatabaseException(Exception):
 class DecryptionFailedException(Exception):
     """Raise if the GPG decryption process is not successfull."""
 
-class NoteNotFoundInDatabaseException(Exception):
-    """Raise when could not find a note reference in the database."""
+
 
 class TextEditorSubprocessException(Exception):
     """Raise when an exception occurs in calling the text editor in a subprocess."""
@@ -175,9 +174,11 @@ class SQNotes:
         print(note_added_message)
     
         try:
-            note_id = self._insert_new_note_into_database(note_filename_base=base_filename)
+            note_id = self.database_service.insert_new_note_into_database(note_filename_base=base_filename)
+            
             self._extract_and_save_keywords(note_id=note_id, note_content=note_content)
-            self._commit_transaction()
+            
+            self.database_service.commit_transaction()
         except Exception as e:
             is_database_exception = self._check_for_database_exception(e)
             if is_database_exception:
@@ -241,8 +242,11 @@ class SQNotes:
             keyword_ids.append(keyword_id)
     
         for keyword_id in keyword_ids:
-            self.insert_note_keyword_into_database(note_id, keyword_id)
+            self.database_service.insert_note_keyword_into_database(note_id, keyword_id)
         
+        
+        
+    
     
     def _check_initialized(self):
         value = self.config_module.get_global_from_user_config(INITIALIZED)
@@ -266,6 +270,9 @@ class SQNotes:
     
     def _delete_keywords_from_database_for_note(self, note_id):
         self.cursor.execute('DELETE FROM note_keywords WHERE note_id = ?', (note_id,))
+    
+    
+    
     
     def _delete_temp_file(self, temp_file):
         if os.path.exists(temp_file):
@@ -336,34 +343,16 @@ class SQNotes:
             self._delete_temp_file(temp_file=temp_dec_filename)
     
         try:
-            note_id = self._get_note_id_from_database_or_raise(filename = filename)
-            self._delete_keywords_from_database_for_note(note_id)
+            note_id = self.database_service.get_note_id_from_database_or_raise(filename = filename)
+            self.database_service.delete_keywords_from_database_for_note(note_id=note_id)
             self._extract_and_save_keywords(note_id=note_id, note_content=edited_content)
-            self._commit_transaction()
+            self.database_service.commit_transaction()
                 
         except Exception:
             raise DatabaseException()
             
         print(f"Note edited: {filename}")
     
-    def _get_note_id_from_database_or_raise(self, filename):
-        self.cursor.execute('SELECT id FROM notes WHERE filename = ?', (filename,))
-        result = self.cursor.fetchone()
-        if result:
-            note_id = result[0]
-            return note_id
-        else:
-            raise NoteNotFoundInDatabaseException()
-        
-    def _get_note_id_from_database_or_none(self, filename):
-        self.cursor.execute('SELECT id FROM notes WHERE filename = ?', (filename,))
-        result = self.cursor.fetchone()
-        if result:
-            note_id = result[0]
-            return note_id
-        else:
-            return None
-        
         
     def _check_for_database_exception(self, e):
         return (isinstance(e, sqlite3.IntegrityError) 
