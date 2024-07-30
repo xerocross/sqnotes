@@ -246,11 +246,8 @@ class SQNotes:
         for keyword_id in keyword_ids:
             self.database_service.insert_note_keyword_into_database(note_id, keyword_id)
         
-        
-        
     
-    
-    def _check_initialized(self):
+    def _get_is_initialized(self):
         value = self.config_module.get_global_from_user_config(INITIALIZED)
         self.logger.debug(f"checking initialized: {value}")
         return (self.config_module.get_global_from_user_config(INITIALIZED) == 'yes')
@@ -877,7 +874,7 @@ def main():
         else:
             manual.print_main_page()
     else:
-        initialized = sqnotes._check_initialized()
+        initialized = sqnotes._get_is_initialized()
         if not initialized:
             print(interface_copy.SQNOTES_NOT_INITIALIZED_MESSAGE)
             return
