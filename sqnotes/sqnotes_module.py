@@ -322,7 +322,10 @@ class SQNotes:
         
         note_path = os.path.join(NOTES_DIR, filename)
         if not os.path.exists(note_path):
-            raise NoteNotFoundException()
+            message = interface_copy.NOTE_NOT_FOUND_ERROR().format(note_path) + '\n' + interface_copy.EXITING()
+            print(message)
+            self.logger.error(message)
+            exit(1)
     
         temp_dec_filename = ''
         try:
