@@ -34,13 +34,17 @@ def describe_sqnotes():
     
     def describe_database_setup():
     
+        @patch.object(ConfigurationModule, 'set_setting_to_user_config', do_nothing)
         @patch.object(DatabaseService, 'setup_database')
         def it_calls_setup_on_database_service(
                                                 mock_set_up_database,
                                                 sqnotes_obj : SQNotes
                                                 ):
+            """calls setup on the database service"""
+            
             sqnotes_obj.setup_database()
             mock_set_up_database.assert_called_once()
+    
     
     def describe_get_notes_dir_from_config():
         
