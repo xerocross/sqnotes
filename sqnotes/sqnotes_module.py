@@ -33,6 +33,7 @@ INITIALIZED = 'initialized'
 DATABASE_IS_SET_UP_KEY = 'database_is_set_up'
 NO = 'no'
 NOTES_PATH_KEY = 'notes_path'
+GPG_KEY_EMAIL_KEY = 'gpg_key_email'
 
 
 SUPPORTED_TEXT_EDITORS = [
@@ -708,22 +709,17 @@ class SQNotes:
 
 
     def check_gpg_key_email(self):
+        self.GPG_KEY_EMAIL = self.get_gpg_key_email()
         if self.GPG_KEY_EMAIL is None:
-            print("Error: GPG key not set.")
-            print("Please set the GPG key. (Refer to help menu `-h`.)")
+            print(interface_copy.GPG_KEY_NOT_SET_MESSAGE())
             exit(1)
             
     def get_gpg_key_email(self):
-        if 'settings' in self.user_config and 'gpg_key_email' in self.user_config['settings']:
-            self.GPG_KEY_EMAIL = self.user_config['settings']['gpg_key_email']
-            return self.GPG_KEY_EMAIL
-        else:
-            return None
+        return self.config_module.get_setting_from_user_config(key = GPG_KEY_EMAIL_KEY)
     
     def set_gpg_key_email(self, new_gpg_key_email):
         self.GPG_KEY_EMAIL = new_gpg_key_email
-        key = "gpg_key_email"
-        self.config_module.set_setting_to_user_config(key=key, value=new_gpg_key_email)
+        self.config_module.set_setting_to_user_config(key=GPG_KEY_EMAIL_KEY, value=new_gpg_key_email)
         print(f"GPG Key set to: {self.GPG_KEY_EMAIL}")
 
 

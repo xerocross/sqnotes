@@ -16,3 +16,4 @@ NEED_TO_INSTALL_GPG = lambda : "Was not able to run GPG on this device. It may n
 CALLING_GPG_VERSION = lambda : "Attempting to get GPG version...\n\n"
 SUPPORTED_TEXT_EDITORS = lambda : "Supported text editors include these: {}"
 NOTE_NOT_FOUND_ERROR = lambda : "Could not find the selected note: {}"
+GPG_KEY_NOT_SET_MESSAGE = lambda : "Error: GPG key not set. \nPlease set the GPG key. (Refer to help menu `-h`.)"
