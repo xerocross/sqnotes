@@ -187,13 +187,14 @@ class SQNotes:
                 self.logger.error(message)
                 self.logger.error(e)
                 print(message)
+                exit(1)
             else:
                 message = interface_copy.UNKNOWN_ERROR() + '\n' + interface_copy.DATA_NOT_SAVED()
                 self.logger.error(message)
                 self.logger.error(e)
                 print(interface_copy.UNKNOWN_ERROR() + '\n' + interface_copy.DATA_NOT_SAVED())
+                exit(1)
                 
-
     def directly_insert_note(self, text):
         self._check_gpg_verified()
         self.GPG_KEY_EMAIL = self.get_gpg_key_email()
