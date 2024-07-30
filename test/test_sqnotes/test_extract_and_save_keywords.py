@@ -19,4 +19,13 @@ def describe_extract_and_save_keywords():
         call_args_list = mock_insert_keyword_into_database.call_args_list
         assert call_args_list[0].kwargs['keyword'] == 'apple'
         assert call_args_list[1].kwargs['keyword'] == 'pear'
+    
+def describe_extract_keywords():
+    
+    def it_extracts_hashtags_the_hashtags(sqnotes_obj : SQNotes):
+        
+        test_content = "#apple pear #banana #sunrise"
+        extracted_keywords = set(sqnotes_obj._extract_keywords(content=test_content))
+        assert extracted_keywords == set(['apple','banana','sunrise'])
+        
         
