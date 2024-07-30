@@ -8,12 +8,68 @@ from sqnotes.database_service import DatabaseService
 from test.test_helper import get_all_mocked_print_output, do_nothing
 from injector import Injector
 from sqnotes.sqnotes_module import SQNotes
+from sqnotes import interface_copy
 
 
-@pytest.fixture(scope='session', autouse=True)
-def set_test_environment():
-    os.environ['TESTING'] = 'true'
+def describe_directly_insert_note():
     
+    
+    def describe_exception_on_opening_database():
+        
+        @pytest.mark.usefixtures("mock_check_gpg_key_email",
+                             "mock_is_use_ascii_armor",
+                             "mock_get_configured_text_editor",
+                             "mock_check_gpg_verified",
+                             "mock_check_text_editor_is_configured",
+                             "mock_commit_transaction",
+                             "mock_extract_and_save_keywords",
+                             "mock_get_new_note_name",
+                             "mock_get_gpg_key_email",
+                             "mock_open_database",
+                             "mock_write_encrypted_note",
+                             "mock_insert_new_note",
+                             "mock_get_configured_text_editor",
+                             "mock_get_notes_dir_from_config")
+        @patch.object(SQNotes, 'open_database')
+        def it_exits(
+                        mock_open_database,
+                        sqnotes_obj : SQNotes
+                    ):
+            mock_open_database.side_effect = Exception()
+            test_direct_input = "a note about #apples"
+            with pytest.raises(SystemExit):
+                sqnotes_obj.directly_insert_note(text=test_direct_input)
+
+        @pytest.mark.usefixtures("mock_check_gpg_key_email",
+                             "mock_is_use_ascii_armor",
+                             "mock_get_configured_text_editor",
+                             "mock_check_gpg_verified",
+                             "mock_check_text_editor_is_configured",
+                             "mock_commit_transaction",
+                             "mock_extract_and_save_keywords",
+                             "mock_get_new_note_name",
+                             "mock_get_gpg_key_email",
+                             "mock_open_database",
+                             "mock_write_encrypted_note",
+                             "mock_insert_new_note",
+                             "mock_get_configured_text_editor",
+                             "mock_get_notes_dir_from_config")
+        @patch.object(SQNotes, 'open_database')
+        def it_prints_error_message(
+                        mock_open_database,
+                        sqnotes_obj : SQNotes,
+                        mock_print
+                    ):
+            mock_open_database.side_effect = Exception()
+            test_direct_input = "a note about #apples"
+            with pytest.raises(SystemExit):
+                sqnotes_obj.directly_insert_note(text=test_direct_input)
+                output = get_all_mocked_print_output(mocked_print=mock_print)
+                expected_message = interface_copy.COULD_NOT_OPEN_DATABASE()
+                exiting_message = interface_copy.EXITING()
+                assert expected_message in output
+                assert exiting_message in output
+
         
 class TestSQNotesCreateNewNote(unittest.TestCase):
     open_database_patcher = None
