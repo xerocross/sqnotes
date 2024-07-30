@@ -5,8 +5,7 @@ from sqnotes.encrypted_note_helper import EncryptedNoteHelper
 from sqnotes.configuration_module import ConfigurationModule, ConfigFileReadingException,\
     ConfigModuleNotInitializedException
 import configparser
-from test.test_configuration_module.test_helper import configuration_module, touch, test_temporary_directory
-from test.test_helper import do_nothing
+from test.test_helper import do_nothing, touch
 
 def describe_configuration_module():
 

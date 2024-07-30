@@ -5,8 +5,6 @@ import pytest
 from sqnotes.configuration_module import ConfigurationModule
 import logging
 
-from test.test_configuration_module.test_helper import configuration_module, test_temporary_directory
-
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 

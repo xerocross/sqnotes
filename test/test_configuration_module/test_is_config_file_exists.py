@@ -1,7 +1,6 @@
 
 import pytest
 from unittest.mock import patch
-from test.test_configuration_module.test_helper import configuration_module, test_temporary_directory
 from sqnotes.configuration_module import ConfigurationModule
 
 def describe_configuration_module():
