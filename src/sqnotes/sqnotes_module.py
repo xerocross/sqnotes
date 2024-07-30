@@ -7,7 +7,7 @@ import tempfile
 from datetime import datetime
 import sqlite3
 import re
-import configparser
+
 from dotenv import load_dotenv
 from sqnotes import interface_copy
 from sqnotes.printer_helper import print_to_so
@@ -66,8 +66,6 @@ if not os.path.exists(env_file_path):
 else:
     load_dotenv(env_file_path)
 
-
-USE_DIRECT_NOTE_INSERTION = os.getenv('DIRECT_NOTE_INSERTION') == "yes"
 
 class NotesDirNotConfiguredException(Exception):
     """Exception raised if the user notes directory is not configured."""
@@ -774,8 +772,7 @@ def main():
     group = parser.add_mutually_exclusive_group()
     group.add_argument('-k', '--keywords', nargs='+', help='Keywords for keyword search')
     group.add_argument('-s', '--search', nargs='+', help='Search term for full text search.')
-    if USE_DIRECT_NOTE_INSERTION:
-        group.add_argument('-n', '--new', help='Text for new note.', type=str)
+    group.add_argument('-n', '--new', help='Text for new note.', type=str)
     
     subparsers = parser.add_subparsers(dest='command', help='Subcommands')
 
