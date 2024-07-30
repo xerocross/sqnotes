@@ -22,7 +22,7 @@ class DatabaseService:
     def _get_cursor(self):
         return self.cursor
         
-    def _get_all_keywords_from_database(self):
+    def get_all_keywords(self):
         self.cursor.execute('SELECT keyword FROM keywords')
         rows = self.cursor.fetchall()
         keywords = [row[0] for row in rows]

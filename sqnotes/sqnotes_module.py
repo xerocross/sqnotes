@@ -10,6 +10,7 @@ import re
 import configparser
 from dotenv import load_dotenv
 from sqnotes import interface_copy
+from sqnotes.printer_helper import print_to_so
 import sys
 from sqnotes.manual import Manual
 from sqnotes.command_validator import CommandValidator
@@ -234,7 +235,6 @@ class SQNotes:
         
         self._insert_new_note(note_content=note_content, notes_dir=NOTES_DIR)
         
-        
 
     def _extract_and_save_keywords(self, note_id, note_content):
         keywords = self._extract_keywords(note_content)
@@ -255,26 +255,14 @@ class SQNotes:
         self.logger.debug(f"checking initialized: {value}")
         return (self.config_module.get_global_from_user_config(INITIALIZED) == 'yes')
     
-    def _get_all_keywords_from_database(self):
-        self.cursor.execute('SELECT keyword FROM keywords')
-        rows = self.cursor.fetchall()
-        keywords = [row[0] for row in rows]
-        return keywords
-    
-    
     def print_all_keywords(self):
         self.open_database()
-        keywords = self._get_all_keywords_from_database()
+        keywords = self.database_service.get_all_keywords()
         for kw in keywords:
             print(kw)
-    
-
-    
-    def _delete_keywords_from_database_for_note(self, note_id):
-        self.cursor.execute('DELETE FROM note_keywords WHERE note_id = ?', (note_id,))
-    
-    
-    
+        if len(keywords) == 0:
+            message = interface_copy.NO_KEYWORDS_IN_DATABASE()
+            print_to_so(message)
     
     def _delete_temp_file(self, temp_file):
         if os.path.exists(temp_file):
