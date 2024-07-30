@@ -319,7 +319,7 @@ class SQNotes:
         self.check_text_editor_is_configured
         self.TEXT_EDITOR = self._get_configured_text_editor()
         self.open_database()
-        
+        self.logger.debug(f"editing note: {NOTES_DIR} / {filename}")
         note_path = os.path.join(NOTES_DIR, filename)
         if not os.path.exists(note_path):
             message = interface_copy.NOTE_NOT_FOUND_ERROR().format(note_path) + '\n' + interface_copy.EXITING()
