@@ -4,7 +4,8 @@ import os
 import pytest
 import tempfile
 from sqnotes.encrypted_note_helper import EncryptedNoteHelper, GPGSubprocessException
-from test.test_helper import get_all_mocked_print_output
+from sqnotes.database_service import DatabaseService
+from test.test_helper import get_all_mocked_print_output, do_nothing
 from injector import Injector
 from sqnotes.sqnotes_module import SQNotes
 
@@ -26,16 +27,16 @@ class TestSQNotesCreateNewNote(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.open_database_patcher = patch.object(SQNotes, "open_database", lambda x: None)
+        cls.open_database_patcher = patch.object(SQNotes, "open_database", do_nothing)
         cls.open_database_patcher.start()
         
         cls.use_ascii_armor_patcher = patch.object(SQNotes, '_is_use_ascii_armor', lambda _ : False)
         cls.use_ascii_armor_patcher.start()
         
-        cls.gpg_verified_patcher = patch.object(SQNotes,'_check_gpg_verified', lambda x : None)
+        cls.gpg_verified_patcher = patch.object(SQNotes,'_check_gpg_verified', do_nothing)
         cls.gpg_verified_patcher.start()
         
-        cls.mock_commit_patcher = patch.object(SQNotes, '_commit_transaction', lambda x : None)
+        cls.mock_commit_patcher = patch.object(DatabaseService, 'commit_transaction', do_nothing)
         cls.mock_commit_patcher.start()
         
         cls.check_gpg_key_email_patcher = patch.object(SQNotes, 'check_gpg_key_email', lambda x: True)
@@ -47,8 +48,8 @@ class TestSQNotesCreateNewNote(unittest.TestCase):
         cls.mock_get_notes_dir_from_config_patcher = patch.object(SQNotes, 'get_notes_dir_from_config', lambda x: 'sqnotes_notes')
         cls.mock_get_notes_dir_from_config_patcher.start()
         
-        cls.mock_get_notes_dir_from_config_patcher = patch.object(SQNotes, '_get_new_note_name', lambda x: 'note1.txt')
-        cls.mock_get_notes_dir_from_config_patcher.start()
+        cls.mock_get_new_note_name_patcher = patch.object(SQNotes, '_get_new_note_name', lambda x: 'note1.txt')
+        cls.mock_get_new_note_name_patcher.start()
         
         
     @classmethod
@@ -60,18 +61,19 @@ class TestSQNotesCreateNewNote(unittest.TestCase):
         cls.check_gpg_key_email_patcher.stop()
         cls.mock_get_gpg_key_email_patcher.stop()
         cls.mock_get_notes_dir_from_config_patcher.stop()
-        cls.mock_get_notes_dir_from_config_patcher.stop()
+        cls.mock_get_new_note_name_patcher.stop()
 
     def setUp(self):
         self.test_dir = tempfile.TemporaryDirectory()
         injector = Injector()
         self.sqnotes = self.sqnotes = injector.get(SQNotes)
 
-    @patch.object(SQNotes, '_insert_new_note_into_database', lambda x : None)
-    @patch.object(SQNotes, '_extract_and_save_keywords', lambda x : None)
+    @patch.object(DatabaseService, 'insert_new_note_into_database', do_nothing)
+    @patch.object(SQNotes, '_extract_and_save_keywords', do_nothing)
     @patch.object(EncryptedNoteHelper, 'write_encrypted_note')
     def test_exits_if_gpg_subprocess_exception_on_write(self, 
-                                                 mock_write_encrypted_note):
+                                                 mock_write_encrypted_note,
+                                                 ):
         """
         If encounters a GPGSubprocessException during writing
         encrypted note, application exits.
@@ -82,12 +84,13 @@ class TestSQNotesCreateNewNote(unittest.TestCase):
         with self.assertRaises(SystemExit):
             self.sqnotes.directly_insert_note(text=test_direct_input)
             
-    
-    @patch.object(SQNotes, '_insert_new_note_into_database', lambda x : None)
-    @patch.object(SQNotes, '_extract_and_save_keywords', lambda x : None)
+    @patch.object(DatabaseService, 'insert_new_note_into_database', do_nothing)
+    @patch.object(SQNotes, '_extract_and_save_keywords', do_nothing)
     @patch.object(EncryptedNoteHelper, 'write_encrypted_note')
-    def test_prints_error_message_if_gpg_subprocess_exception_on_write(self, 
-                                                 mock_write_encrypted_note):
+    def test_prints_error_message_if_gpg_subprocess_exception_on_write(
+                                                        self, 
+                                                        mock_write_encrypted_note,
+                                                            ):
         mock_write_encrypted_note.side_effect = GPGSubprocessException()
         
         test_direct_input = "a note about #apples"
@@ -99,11 +102,12 @@ class TestSQNotesCreateNewNote(unittest.TestCase):
                 self.assertIn("GPG", printed_text)
                 
         
-    @patch.object(SQNotes, '_insert_new_note_into_database', lambda x : None)
-    @patch.object(SQNotes, '_extract_and_save_keywords', lambda x : None)
+    @patch.object(DatabaseService, 'insert_new_note_into_database', do_nothing)
+    @patch.object(SQNotes, '_extract_and_save_keywords', do_nothing)
     @patch.object(EncryptedNoteHelper, 'write_encrypted_note')
     def test_passes_note_content_into_write_function(self, 
-                                                 mock_write_encrypted_note):
+                                                 mock_write_encrypted_note
+                                                 ):
         
         test_direct_input = "a note about #apples"
         self.sqnotes.directly_insert_note(text=test_direct_input)
