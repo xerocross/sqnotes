@@ -21,3 +21,7 @@ def just_return(value):
     def return_value(*args, **kwargs):
         return value
     return return_value
+
+def touch(file_path):
+    with open(file_path, 'a') as file:
+        pass
