@@ -119,6 +119,34 @@ def describe_edit_note():
                                  "mock_get_notes_dir_from_config",
                                  "mock_get_configured_text_editor",
                                  "mock_delete_temp_file")
+        def it_calls_to_edit_the_note_created_by_decrypting (
+                                            sqnotes_obj,
+                                            test_note_file,
+                                            test_note_filename,
+                                            mock_exists,
+                                            mock_decrypt_note_into_temp_file,
+                                            test_note_temp_file,
+                                            mock_get_edited_note_content,
+                                            mock_get_note_id_or_raise
+                                        ):
+            mock_exists.return_value = True
+            mock_decrypt_note_into_temp_file.return_value = test_note_temp_file
+            mock_get_edited_note_content.return_value = "edited test content"
+            mock_get_note_id_or_raise.return_value = 1
+            
+            sqnotes_obj.edit_note(filename=test_note_file)
+            mock_get_edited_note_content.assert_called_once_with(temp_filename=test_note_temp_file)
+                
+                
+        @pytest.mark.usefixtures("mock_delete_keywords_from_database_for_note",
+                                 "mock_write_encrypted_note",
+                                 "mock_extract_and_save_keywords",
+                                 "mock_commit_transaction",
+                                 "mock_get_gpg_key_email",
+                                 "mock_open_database",
+                                 "mock_get_notes_dir_from_config",
+                                 "mock_get_configured_text_editor",
+                                 "mock_delete_temp_file")
         def it_calls_to_decrypt_note (
                                             sqnotes_obj,
                                             test_note_file,
