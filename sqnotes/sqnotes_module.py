@@ -354,15 +354,8 @@ class SQNotes:
             or isinstance(e, sqlite3.DatabaseError)
             or isinstance(e, sqlite3.NotSupportedError)
             )
-        
-    def _handle_database_exception(self, e):
-        self.logger.error("encountered a database exception")
-        self.logger.error(e)
-        print(interface_copy.DATABASE_EXCEPTION_MESSAGE())
-
     
     def _extract_keywords(self, content):
-        # Extract hashtags using regular expression
         tags = [match[1:] for match in re.findall(r'\B#\w+\b', content)]
         unique_tags = set(tags)
         return unique_tags
@@ -467,16 +460,7 @@ class SQNotes:
                                                         initial_settings = self._INITIAL_SETTINGS
                                                 )
         
-    def _generate_initial_user_config_information(self):
-        self.config_module.set_global_to_user_config(key=INITIALIZED, value='no')
-        self.config_module.set_global_to_user_config(key='database_is_setup', value='no')
         
-        
-    def _get_database_cursor(self):
-        return self.cursor
-    
-    def _get_database_connection(self):
-        return self.conn
     
     def open_database(self):
         notes_dir = self.get_notes_dir_from_config()
