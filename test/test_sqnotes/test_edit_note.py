@@ -191,8 +191,46 @@ def describe_edit_note():
             mock_get_edited_note_content.return_value = test_content
             mock_get_note_id_or_raise.return_value = 1
             sqnotes_obj.edit_note(filename=test_note_file)
-            mock_write_encrypted_note.assert_called_once_with(note_file_path=test_note_file,note_content=test_content)
+            mock_write_encrypted_note.assert_called()
+            _, call_kwargs = mock_write_encrypted_note.call_args
+            assert call_kwargs['note_file_path'] == test_note_file
+            assert call_kwargs['note_content'] == test_content
                 
+        @pytest.mark.usefixtures("mock_delete_keywords_from_database_for_note",
+                                 "mock_extract_and_save_keywords",
+                                 "mock_commit_transaction",
+                                 "mock_get_gpg_key_email",
+                                 "mock_open_database",
+                                 "mock_get_notes_dir_from_config",
+                                 "mock_get_configured_text_editor",
+                                 "mock_delete_temp_file",
+                                 "mock_get_gpg_key_email")
+        def it_passes_gpg_key_email_into_write_function (
+                                                            sqnotes_obj,
+                                                            test_note_file,
+                                                            test_note_filename,
+                                                            mock_exists,
+                                                            mock_decrypt_note_into_temp_file,
+                                                            test_note_temp_file,
+                                                            mock_get_edited_note_content,
+                                                            mock_get_note_id_or_raise,
+                                                            mock_write_encrypted_note,
+                                                            mock_get_gpg_key_email
+                                                            ):
+            gpg_key_email = 'test@test.com'
+            mock_get_gpg_key_email.return_value = gpg_key_email
+            mock_exists.return_value = True
+            mock_decrypt_note_into_temp_file.return_value = test_note_temp_file
+            test_content = "edited test content"
+            mock_get_edited_note_content.return_value = test_content
+            mock_get_note_id_or_raise.return_value = 1
+            sqnotes_obj.edit_note(filename=test_note_file)
+            call_args = mock_write_encrypted_note.call_args
+            _, kwargs = call_args
+            passed_config = kwargs['config']
+            passed_gpg_key_email = passed_config['GPG_KEY_EMAIL']
+            assert passed_gpg_key_email == gpg_key_email
+            
                 
     def describe_if_decryption_raises_gpg_subprocess_exception():
         

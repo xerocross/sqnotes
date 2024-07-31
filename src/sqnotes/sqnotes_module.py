@@ -321,6 +321,11 @@ class SQNotes:
             self.logger.error(message)
             exit(1)
     
+        config = {
+            'GPG_KEY_EMAIL' : self.GPG_KEY_EMAIL
+        }
+        
+
         temp_dec_filename = ''
         try:
             temp_dec_filename = self.encrypted_note_helper.decrypt_note_into_temp_file(note_path=note_path)
@@ -328,7 +333,12 @@ class SQNotes:
             
             print("edited_content:")
             print(edited_content)
-            self.encrypted_note_helper.write_encrypted_note(note_file_path=note_path, note_content=edited_content)
+            self.encrypted_note_helper.write_encrypted_note(
+                note_file_path=note_path, 
+                note_content=edited_content,
+                config = config
+            )
+        
         except GPGSubprocessException as e:
             self.logger.error(e)
             message = interface_copy.GPG_SUBPROCESS_ERROR_MESSAGE() + '\n' + interface_copy.EXITING()
