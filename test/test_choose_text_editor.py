@@ -6,10 +6,8 @@ from injector import Injector
 from sqnotes.choose_text_editor import ChooseTextEditor,\
     MaxInputAttemptsException
 from sqnotes import interface_copy
-from sqnotes.sqnotes_module import SQNotes, TEXT_EDITOR_KEY
 from test.test_helper import get_all_mocked_print_output, just_return,\
     get_all_mocked_print_output_to_string
-from sqnotes.configuration_module import ConfigurationModule
 
 
 @pytest.fixture
@@ -25,6 +23,41 @@ def mock_input():
         yield mock
 
 def describe_choose_text_editor():
+    
+    
+    def describe_exactly_one_editor_available():
+        only_available_editor = 'vim'
+        supported_editors = [only_available_editor]
+        available_editors = [only_available_editor]
+        
+        
+        @pytest.fixture
+        def choose_text_editor():
+            injector = Injector()
+            
+            choose_text_editor:ChooseTextEditor = injector.get(ChooseTextEditor)
+            choose_text_editor.set_supported_editors(supported_editors=supported_editors)
+            choose_text_editor.set_available_editors(available_editors=available_editors)
+            yield choose_text_editor
+            
+            
+        @pytest.mark.usefixtures("mock_input")
+        def it_returns_the_only_available_editor (
+                                    choose_text_editor : ChooseTextEditor,
+                                    mock_printer_helper_print
+                                ):
+            result = choose_text_editor.choose_text_editor_interactive()
+            assert result == only_available_editor
+    
+        @pytest.mark.usefixtures("mock_input")
+        def it_prints_the_one_available_editor_message (
+                                    choose_text_editor : ChooseTextEditor,
+                                    mock_printer_helper_print
+                                ):
+            choose_text_editor.choose_text_editor_interactive()
+            message = interface_copy.ONLY_ONE_AVAILABLE_TEXT_EDITOR().format(only_available_editor)
+            output = get_all_mocked_print_output(mocked_print=mock_printer_helper_print)
+            assert message in output
     
     
     def describe_no_available_editors():
@@ -244,23 +277,6 @@ def describe_choose_text_editor():
                             choose_text_editor.choose_text_editor_interactive()
                         
                     
-                    
-def describe_set_configured_text_editor():
-    
-    def describe_input_editor_is_supported():
-    
-        @patch.object(SQNotes, '_get_supported_text_editors', just_return(['vim', 'nano']))
-        @patch.object(ConfigurationModule, 'set_setting_to_user_config')
-        def it_sets_text_editor_in_configuration_module(
-                                                    mock_set_config_setting,
-                                                    sqnotes_obj : SQNotes,
-                                                    configuration_module
-                                                    ):
-            test_editor = 'vim'
-            sqnotes_obj._set_configured_text_editor(editor = test_editor)
-            mock_set_config_setting.assert_called_once_with(key = TEXT_EDITOR_KEY, value = test_editor)
-            
-        
-            
+
             
             

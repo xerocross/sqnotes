@@ -10,7 +10,7 @@ import re
 
 from dotenv import load_dotenv
 from sqnotes import interface_copy
-from sqnotes.printer_helper import print_to_so
+from sqnotes.printer_helper import print_to_so, PrinterHelper
 import sys
 from sqnotes.manual import Manual
 from sqnotes.command_validator import CommandValidator
@@ -117,7 +117,8 @@ class SQNotes:
                  sqnotes_logger : SQNotesLogger,
                  config_module : ConfigurationModule,
                  database_service : DatabaseService,
-                 choose_text_editor : ChooseTextEditor):
+                 choose_text_editor : ChooseTextEditor,
+                 printer_helper : PrinterHelper):
         
         self.encrypted_note_helper = encrypted_note_helper
         self.sqnotes_logger = sqnotes_logger
@@ -129,6 +130,7 @@ class SQNotes:
         self._INITIAL_SETTINGS = INIT_SETTINGS
         self.database_service = database_service
         self.choose_text_editor = choose_text_editor
+        self.printer_helper = printer_helper
         
     def _get_input_from_text_editor(self, TEXT_EDITOR):
         with tempfile.NamedTemporaryFile(delete=False) as temp_file:
@@ -704,6 +706,8 @@ class SQNotes:
         try:
             selected_editor = self.choose_text_editor.choose_text_editor_interactive()
             self._set_configured_text_editor(editor = selected_editor)
+            confirm_message = interface_copy.TEXT_EDITOR_WAS_CONFIGURED().format(selected_editor)
+            self.printer_helper.print_to_so(confirm_message)
         except MaxInputAttemptsException:
             message = interface_copy.DID_NOT_SET_TEXT_EDITOR_TRY_AGAIN()
             print(message)

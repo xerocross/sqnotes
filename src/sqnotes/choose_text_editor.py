@@ -56,6 +56,12 @@ class ChooseTextEditor:
             
             return selected_editor
 
-        else:
-            #set only available editor
-            pass
+        elif len(available_editors) == 1:
+            only_available_editor = available_editors[0]
+            message = interface_copy.ONLY_ONE_AVAILABLE_TEXT_EDITOR().format(only_available_editor)
+            self.printer_helper.print_to_so(message)
+            return only_available_editor
+            
+            
+            
+            
