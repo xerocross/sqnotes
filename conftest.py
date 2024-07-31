@@ -78,6 +78,12 @@ def database_service_connected_in_memory(database_service):
     database_service._get_connection().close()
 
 @pytest.fixture
+def mock_get_database_file_path(database_service):
+    with patch.object(SQNotes, '_get_db_file_path') as mock:
+        mock.return_value = ':memory:'
+        yield mock
+
+@pytest.fixture
 def database_service_open_in_memory(database_service_connected_in_memory : DatabaseService):
     database_service_connected_in_memory.setup_database()
     yield database_service_connected_in_memory

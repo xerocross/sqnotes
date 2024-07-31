@@ -96,6 +96,8 @@ class TextEditorSubprocessException(Exception):
 class CouldNotRunGPG(Exception):
     """Raise when a command is called that requires GPG and GPG is not available."""
 
+class CouldNotOpenDatabaseException(Exception):
+    """Raise if error encountered while attempting to open the database."""
 
 
 
@@ -381,7 +383,7 @@ class SQNotes:
                 raise DatabaseException()
         print("rescan complete")
     
-    def get_db_file_path(self, notes_dir):
+    def _get_db_file_path(self, notes_dir):
 
         if os.getenv('TESTING') == 'true':
             return os.getenv('DATABASE_URL')
@@ -408,14 +410,6 @@ class SQNotes:
         text_editor = self.config_module.get_setting_from_user_config('text_editor')
         return text_editor is not None and text_editor != ''
     
-    def get_setting_from_user_config(self, key):
-        if 'settings' in self.user_config and key in self.user_config['settings']:
-            return self.user_config['settings'][key]
-        else:
-            return None
-        
-    def insert_note_keyword_into_database(self, note_id, keyword_id):
-        self.database_service.insert_note_keyword_into_database(note_id=note_id, keyword_id=keyword_id)
 
     def _get_all_note_paths(self, notes_dir):
         extensions = ['txt.gpg', 'txt']
@@ -465,18 +459,14 @@ class SQNotes:
         notes_dir = self.get_notes_dir_from_config()
         if notes_dir is None:
             raise NotesDirNotSelectedException()
-        self.DB_PATH = self.get_db_file_path(notes_dir)
-        self.database_service.connect(db_file_path = self.get_db_file_path(notes_dir))
-        
-        
+        self.DB_PATH = self._get_db_file_path(notes_dir)
         self.logger.debug(f"opening database at {self.DB_PATH}")
+        
         try:
-            self.conn = sqlite3.connect(self.DB_PATH)
-            self.cursor = self.conn.cursor()
+            self.database_service.connect(db_file_path = self._get_db_file_path(notes_dir))
         except Exception as e:
-            self.logger.error(f"could not open database at {self.DB_PATH}")
             self.logger.error(e)
-            raise e
+            raise CouldNotOpenDatabaseException()
         
         is_database_set_up = self._check_is_database_set_up()
         if not is_database_set_up:
@@ -632,12 +622,6 @@ class SQNotes:
         else:
             self._set_gpg_verified()
             
-    #
-    # def _set_setting_in_user_config(self, key, value):
-    #     if 'settings' not in self.user_config:
-    #         self.user_config['settings'] = {}
-    #     self.user_config['settings'][key]= value
-    #     self._save_config()
 
     def _check_is_database_set_up(self):
         is_set_up = (self.config_module.get_setting_from_user_config('database_is_setup') == 'yes')
