@@ -4,7 +4,8 @@ import pytest
 from unittest.mock import Mock, patch
 from sqnotes.sqnotes_module import SQNotes
 
-from test.test_helper import do_nothing, get_all_mocked_print_output
+from test.test_helper import do_nothing, get_all_mocked_print_output,\
+    just_return
 from sqnotes.encrypted_note_helper import GPGSubprocessException
 from sqnotes import interface_copy
 
@@ -51,7 +52,8 @@ def describe_edit_note():
                                  "mock_open_database",
                                  "mock_get_notes_dir_from_config",
                                  "mock_get_configured_text_editor",
-                                 "mock_delete_temp_file")
+                                 "mock_delete_temp_file",
+                                 "mock_is_use_ascii_armor")
         
         @patch('builtins.print')
         def it_prints_note_not_found_error (
@@ -89,7 +91,8 @@ def describe_edit_note():
                                  "mock_open_database",
                                  "mock_get_notes_dir_from_config",
                                  "mock_get_configured_text_editor",
-                                 "mock_delete_temp_file")
+                                 "mock_delete_temp_file",
+                                 "mock_is_use_ascii_armor")
         def it_executes_without_throwing(
                                             sqnotes_obj,
                                             test_note_file,
@@ -118,7 +121,8 @@ def describe_edit_note():
                                  "mock_open_database",
                                  "mock_get_notes_dir_from_config",
                                  "mock_get_configured_text_editor",
-                                 "mock_delete_temp_file")
+                                 "mock_delete_temp_file",
+                                 "mock_is_use_ascii_armor")
         def it_calls_to_edit_the_note_created_by_decrypting (
                                             sqnotes_obj,
                                             test_note_file,
@@ -146,7 +150,8 @@ def describe_edit_note():
                                  "mock_open_database",
                                  "mock_get_notes_dir_from_config",
                                  "mock_get_configured_text_editor",
-                                 "mock_delete_temp_file")
+                                 "mock_delete_temp_file",
+                                 "mock_is_use_ascii_armor")
         def it_calls_to_decrypt_note (
                                             sqnotes_obj,
                                             test_note_file,
@@ -173,7 +178,8 @@ def describe_edit_note():
                                  "mock_open_database",
                                  "mock_get_notes_dir_from_config",
                                  "mock_get_configured_text_editor",
-                                 "mock_delete_temp_file")
+                                 "mock_delete_temp_file",
+                                 "mock_is_use_ascii_armor")
         def it_calls_write_function_with_content_from_editor(
                                                             sqnotes_obj,
                                                             test_note_file,
@@ -204,7 +210,8 @@ def describe_edit_note():
                                  "mock_get_notes_dir_from_config",
                                  "mock_get_configured_text_editor",
                                  "mock_delete_temp_file",
-                                 "mock_get_gpg_key_email")
+                                 "mock_get_gpg_key_email",
+                                 "mock_is_use_ascii_armor")
         def it_passes_gpg_key_email_into_write_function (
                                                             sqnotes_obj,
                                                             test_note_file,
@@ -231,6 +238,77 @@ def describe_edit_note():
             passed_gpg_key_email = passed_config['GPG_KEY_EMAIL']
             assert passed_gpg_key_email == gpg_key_email
             
+            
+        def describe_using_ascii_armor():
+            
+            @pytest.mark.usefixtures("mock_delete_keywords_from_database_for_note",
+                                     "mock_extract_and_save_keywords",
+                                     "mock_commit_transaction",
+                                     "mock_get_gpg_key_email",
+                                     "mock_open_database",
+                                     "mock_get_notes_dir_from_config",
+                                     "mock_get_configured_text_editor",
+                                     "mock_delete_temp_file",
+                                     "mock_get_gpg_key_email")
+            @patch.object(SQNotes, '_is_use_ascii_armor', just_return(True))
+            def it_passes_ascii_armor_yes_into_config_into_write_function (
+                                                                sqnotes_obj,
+                                                                test_note_file,
+                                                                test_note_filename,
+                                                                mock_exists,
+                                                                mock_decrypt_note_into_temp_file,
+                                                                test_note_temp_file,
+                                                                mock_get_edited_note_content,
+                                                                mock_get_note_id_or_raise,
+                                                                mock_write_encrypted_note
+                                                                ):
+                mock_exists.return_value = True
+                mock_decrypt_note_into_temp_file.return_value = test_note_temp_file
+                test_content = "edited test content"
+                mock_get_edited_note_content.return_value = test_content
+                mock_get_note_id_or_raise.return_value = 1
+                sqnotes_obj.edit_note(filename=test_note_file)
+                call_args = mock_write_encrypted_note.call_args
+                _, kwargs = call_args
+                passed_config = kwargs['config']
+                passed_ascii_armor_config = passed_config['USE_ASCII_ARMOR']
+                assert passed_ascii_armor_config == True
+                
+        def describe_not_using_ascii_armor():
+            
+            @pytest.mark.usefixtures("mock_delete_keywords_from_database_for_note",
+                                     "mock_extract_and_save_keywords",
+                                     "mock_commit_transaction",
+                                     "mock_get_gpg_key_email",
+                                     "mock_open_database",
+                                     "mock_get_notes_dir_from_config",
+                                     "mock_get_configured_text_editor",
+                                     "mock_delete_temp_file",
+                                     "mock_get_gpg_key_email")
+            @patch.object(SQNotes, '_is_use_ascii_armor', just_return(False))
+            def it_passes_ascii_armor_false_into_config_into_write_function (
+                                                                sqnotes_obj,
+                                                                test_note_file,
+                                                                test_note_filename,
+                                                                mock_exists,
+                                                                mock_decrypt_note_into_temp_file,
+                                                                test_note_temp_file,
+                                                                mock_get_edited_note_content,
+                                                                mock_get_note_id_or_raise,
+                                                                mock_write_encrypted_note
+                                                                ):
+                mock_exists.return_value = True
+                mock_decrypt_note_into_temp_file.return_value = test_note_temp_file
+                test_content = "edited test content"
+                mock_get_edited_note_content.return_value = test_content
+                mock_get_note_id_or_raise.return_value = 1
+                sqnotes_obj.edit_note(filename=test_note_file)
+                call_args = mock_write_encrypted_note.call_args
+                _, kwargs = call_args
+                passed_config = kwargs['config']
+                passed_ascii_armor_config = passed_config['USE_ASCII_ARMOR']
+                assert passed_ascii_armor_config == False
+                
                 
     def describe_if_decryption_raises_gpg_subprocess_exception():
         
@@ -242,7 +320,8 @@ def describe_edit_note():
                                  "mock_open_database",
                                  "mock_get_notes_dir_from_config",
                                  "mock_get_configured_text_editor",
-                                 "mock_delete_temp_file")
+                                 "mock_delete_temp_file",
+                                 "mock_is_use_ascii_armor")
         def it_exits(
                         sqnotes_obj,
                         test_note_file,
@@ -267,7 +346,8 @@ def describe_edit_note():
                                  "mock_open_database",
                                  "mock_get_notes_dir_from_config",
                                  "mock_get_configured_text_editor",
-                                 "mock_delete_temp_file")
+                                 "mock_delete_temp_file",
+                                 "mock_is_use_ascii_armor")
         @patch('builtins.print')
         def it_prints_gpg_error_message(
                                     mock_print,

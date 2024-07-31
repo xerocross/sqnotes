@@ -322,7 +322,8 @@ class SQNotes:
             exit(1)
     
         config = {
-            'GPG_KEY_EMAIL' : self.GPG_KEY_EMAIL
+            'GPG_KEY_EMAIL' : self.GPG_KEY_EMAIL,
+            'USE_ASCII_ARMOR' : self._is_use_ascii_armor()
         }
         
 
