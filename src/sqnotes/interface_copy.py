@@ -26,3 +26,7 @@ NO_SUPPORTED_TEXT_EDITORS_AVAILABLE = lambda : 'No supported text editors were i
 PLEASE_INSTALL_TEXT_EDITOR_MESSAGE = lambda : 'Please install a supported editor and try again.'
 ONLY_ONE_AVAILABLE_TEXT_EDITOR = lambda : 'Found only one available text editor: {}.'
 TEXT_EDITOR_WAS_CONFIGURED = lambda : 'Set text editor for use with SQNotes: {}'
+INITIALIZATION_COMPLETE = lambda : 'Initialization completed.'
+PROMPT_FOR_PATH = lambda : 'Please enter a path. > '
+SETTING_THE_NOTES_PATH = lambda : 'Setting the path for the directory in which we will store your notes.'
+PATH_INPUT_COULD_NOT_BE_VERIFIED = lambda : 'Input path {} could not be verified as an available path on this system.'

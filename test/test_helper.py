@@ -16,6 +16,17 @@ def get_all_single_arg_inputs(mocked_fn):
     arguments_list = [args[0] for args, _ in call_args]
     return arguments_list
 
+
+def get_all_inputs_by_kw(mocked_fn, kw):
+    call_args = mocked_fn.call_args_list
+    arguments_list = []
+    for call in call_args:
+        _, kwargs = call
+        if kw in kwargs:
+            arguments_list.append(kwargs[kw])
+
+    return arguments_list
+
 def do_nothing(*args, **kwargs):
     pass
 

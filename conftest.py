@@ -13,22 +13,24 @@ from sqnotes.encrypted_note_helper import EncryptedNoteHelper
 from sqnotes.sqnotes_logger import SQNotesLogger
 from sqnotes.choose_text_editor import ChooseTextEditor
 from sqnotes.printer_helper import PrinterHelper
+from sqnotes.path_input_helper import PathInputHelper
 
 @pytest.fixture(scope='session', autouse=True)
 def set_test_environment():
     os.environ['TESTING'] = 'true'
     
-    
-
-    
 @pytest.fixture
-def sqnotes_obj(test_configuration_dir, database_service_open_in_memory, configuration_module):
+def sqnotes_obj(test_configuration_dir, 
+                database_service_open_in_memory, 
+                configuration_module,
+                mock_path_input_helper):
     
     
     class SQNotesTestConfigurationModule(Module):
         def configure(self, binder):
             binder.bind(SQNotesLogger, to=SQNotesLogger(), scope=singleton)
             binder.bind(ConfigurationModule, to=configuration_module, scope=singleton)
+            binder.bind(PathInputHelper, to=mock_path_input_helper, scope=singleton)
             binder.bind(DatabaseService, to=database_service_open_in_memory, scope=singleton)
     
     injector = Injector([SQNotesTestConfigurationModule()])
@@ -84,6 +86,13 @@ def mock_print_to_so():
 def mock_printer_helper_print():
     with patch.object(PrinterHelper, 'print_to_so') as mock:
         yield mock
+        
+        
+@pytest.fixture
+def mock_path_input_helper():
+    injector = Injector()
+    path_input_helper : PathInputHelper = injector.get(PathInputHelper)
+    yield path_input_helper
         
 @pytest.fixture
 def mock_get_is_initialized():

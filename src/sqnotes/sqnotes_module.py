@@ -23,6 +23,7 @@ from sqnotes.configuration_module import ConfigurationModule
 from sqnotes.database_service import DatabaseService
 from sqnotes.choose_text_editor import ChooseTextEditor,\
     MaxInputAttemptsException
+from sqnotes.path_input_helper import PathInputHelper
 
 
 VERSION = '0.2'
@@ -118,7 +119,8 @@ class SQNotes:
                  config_module : ConfigurationModule,
                  database_service : DatabaseService,
                  choose_text_editor : ChooseTextEditor,
-                 printer_helper : PrinterHelper):
+                 printer_helper : PrinterHelper,
+                 path_input_helper : PathInputHelper):
         
         self.encrypted_note_helper = encrypted_note_helper
         self.sqnotes_logger = sqnotes_logger
@@ -131,6 +133,7 @@ class SQNotes:
         self.database_service = database_service
         self.choose_text_editor = choose_text_editor
         self.printer_helper = printer_helper
+        self.path_input_helper = path_input_helper
         
     def _get_input_from_text_editor(self, TEXT_EDITOR):
         with tempfile.NamedTemporaryFile(delete=False) as temp_file:
@@ -654,6 +657,10 @@ class SQNotes:
         self.database_service.setup_database()
         self._set_database_is_set_up()
         
+    def set_notes_path_interactive(self):
+        self.printer_helper.print_to_so(interface_copy.SETTING_THE_NOTES_PATH())
+        self.path_input_helper.get_path_interactive()
+        
 
     def _is_use_ascii_armor(self):
         return (self.config_module.get_setting_from_user_config(key=ASCII_ARMOR_CONFIG_KEY) == "yes")
@@ -749,6 +756,10 @@ def main():
                     action='store_true', 
                     help='Enable debugging mode with detailed log messages')
     
+    
+    
+    
+    
     group = parser.add_mutually_exclusive_group()
     group.add_argument('-k', '--keywords', nargs='+', help='Keywords for keyword search')
     group.add_argument('-s', '--search', nargs='+', help='Search term for full text search.')
@@ -761,6 +772,10 @@ def main():
     subparsers.add_parser('init', help='Initialize app.')
     
     subparsers.add_parser('text-editors', help='Show supported text editors available on your system.')
+    
+    SET_NOTES_PATH_COMMAND = 'set-notes-path'
+    if SET_NOTES_PATH_INTERACTIVE_FLAG:
+        subparsers.add_parser('set-notes-path', help='Set the directory path for storing your note files.')
     
     if SET_TEXT_EDITOR_INTERACTIVE_FLAG:
         subparsers.add_parser('config-text-editor', help='Choose your text editor (interactive).')
@@ -841,6 +856,8 @@ def main():
             
             elif SET_TEXT_EDITOR_INTERACTIVE_FLAG and args.command == 'config-text-editor':
                 sqnotes.choose_text_editor_interactive()
+            elif SET_NOTES_PATH_INTERACTIVE_FLAG and args.command == SET_NOTES_PATH_COMMAND:
+                sqnotes.set_notes_path_interactive()
             elif args.command == 'text-editors':
                 sqnotes.check_available_text_editors()
             elif args.command == 'set-gpg-key':
