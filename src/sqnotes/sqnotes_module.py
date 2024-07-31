@@ -31,6 +31,7 @@ DEBUGGING = '--debug' in sys.argv
 ASCII_ARMOR_CONFIG_KEY = "armor"
 GPG_VERIFIED_KEY = "gpg_verified"
 SET_TEXT_EDITOR_INTERACTIVE_FLAG = True
+SET_NOTES_PATH_INTERACTIVE_FLAG = False
 VIM = 'vim'
 NANO = 'nano'
 GPG = 'gpg'
