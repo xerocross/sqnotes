@@ -529,11 +529,6 @@ class SQNotes:
     def run_git_command(self, args):
         subprocess.call(['git'] + args, cwd=self.NOTES_DIR)
     
-    def _save_config(self):
-        with open(self.CONFIG_FILE, 'w') as configfile:
-            self.user_config.write(configfile)
-    
-    
     def _print_note(self, note_path, decrypted_content):
         print(f"{note_path}:\n{decrypted_content}")
     
@@ -632,7 +627,7 @@ class SQNotes:
     def initialize(self):
         selected_path = self.prompt_for_user_notes_path()
 
-        self.config_module.set_global_to_user_config(key=INITIALIZED, value='yes')
+        
         self.config_module.set_setting_to_user_config(key=NOTES_PATH_KEY, value=selected_path)
         self.config_module.set_setting_to_user_config(key=ASCII_ARMOR_CONFIG_KEY, value='yes')
 
@@ -642,6 +637,12 @@ class SQNotes:
             print(interface_copy.NEED_TO_INSTALL_GPG)
         else:
             self._set_gpg_verified()
+            
+        
+        self.choose_text_editor_interactive()
+        
+        self.printer_helper.print_to_so(interface_copy.INITIALIZATION_COMPLETE())
+        self.config_module.set_global_to_user_config(key=INITIALIZED, value='yes')
             
 
     def _check_is_database_set_up(self):
