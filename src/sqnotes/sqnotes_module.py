@@ -693,7 +693,7 @@ class SQNotes:
         available_editors = self._get_available_text_editors()
         if len(available_editors) == 0:
             print("No supported text editors were installed.")
-            supported_editors_message = interface_copy.SUPPORTED_TEXT_EDITORS.format(", ".join(SUPPORTED_TEXT_EDITORS))
+            supported_editors_message = interface_copy.SUPPORTED_TEXT_EDITORS().format(", ".join(SUPPORTED_TEXT_EDITORS))
             print(supported_editors_message)
             print("Please install a supported text editor and try again.")
         elif len(available_editors) > 1:
@@ -736,8 +736,6 @@ class SQNotes:
             TEXT_EDITOR = input("No text editor configured. Please enter the path to your preferred terminal text editor (e.g. 'vim', 'nano')> ")
             self.config_module.set_setting_to_user_config('text_editor', TEXT_EDITOR)
             
-
-
 def __get_sqnotes():
     injector = Injector([InjectionConfigurationModule()])
     
