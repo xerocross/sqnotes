@@ -11,6 +11,8 @@ from injector import Module, singleton
 from sqnotes.configuration_module import ConfigurationModule
 from sqnotes.encrypted_note_helper import EncryptedNoteHelper
 from sqnotes.sqnotes_logger import SQNotesLogger
+from sqnotes.choose_text_editor import ChooseTextEditor
+from sqnotes.printer_helper import PrinterHelper
 
 @pytest.fixture(scope='session', autouse=True)
 def set_test_environment():
@@ -20,13 +22,13 @@ def set_test_environment():
 
     
 @pytest.fixture
-def sqnotes_obj(test_configuration_dir, database_service_open_in_memory):
+def sqnotes_obj(test_configuration_dir, database_service_open_in_memory, configuration_module):
     
     
     class SQNotesTestConfigurationModule(Module):
         def configure(self, binder):
             binder.bind(SQNotesLogger, to=SQNotesLogger(), scope=singleton)
-            binder.bind(ConfigurationModule, to=ConfigurationModule(), scope=singleton)
+            binder.bind(ConfigurationModule, to=configuration_module, scope=singleton)
             binder.bind(DatabaseService, to=database_service_open_in_memory, scope=singleton)
     
     injector = Injector([SQNotesTestConfigurationModule()])
@@ -48,6 +50,18 @@ def database_service():
     database_service : DatabaseService = injector.get(DatabaseService)
     yield database_service
     
+
+@pytest.fixture
+def choose_text_editor():
+    choose_text_editor = ChooseTextEditor()
+    yield choose_text_editor
+    
+@pytest.fixture
+def mock_input():
+    with patch('builtins.input') as mock:
+        yield mock
+    
+    
     
 @pytest.fixture
 def mock_print():
@@ -63,6 +77,12 @@ def mock_transaction(database_service_open_in_memory : DatabaseService):
 @pytest.fixture
 def mock_print_to_so():
     with patch('sqnotes.sqnotes_module.print_to_so') as mock:
+        yield mock
+        
+        
+@pytest.fixture
+def mock_printer_helper_print():
+    with patch.object(PrinterHelper, 'print_to_so') as mock:
         yield mock
         
 @pytest.fixture

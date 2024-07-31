@@ -21,6 +21,8 @@ from sqnotes.injection_configuration_module import InjectionConfigurationModule
 from sqnotes.sqnotes_logger import SQNotesLogger
 from sqnotes.configuration_module import ConfigurationModule
 from sqnotes.database_service import DatabaseService
+from sqnotes.choose_text_editor import ChooseTextEditor,\
+    MaxInputAttemptsException
 
 
 VERSION = '0.2'
@@ -36,7 +38,7 @@ DATABASE_IS_SET_UP_KEY = 'database_is_set_up'
 NO = 'no'
 NOTES_PATH_KEY = 'notes_path'
 GPG_KEY_EMAIL_KEY = 'gpg_key_email'
-
+TEXT_EDITOR_KEY = 'text_editor'
 
 SUPPORTED_TEXT_EDITORS = [
     VIM, 
@@ -114,7 +116,8 @@ class SQNotes:
                  encrypted_note_helper: EncryptedNoteHelper,
                  sqnotes_logger : SQNotesLogger,
                  config_module : ConfigurationModule,
-                 database_service : DatabaseService):
+                 database_service : DatabaseService,
+                 choose_text_editor : ChooseTextEditor):
         
         self.encrypted_note_helper = encrypted_note_helper
         self.sqnotes_logger = sqnotes_logger
@@ -125,6 +128,7 @@ class SQNotes:
         self._INITIAL_GLOBALS = INIT_GLOBALS
         self._INITIAL_SETTINGS = INIT_SETTINGS
         self.database_service = database_service
+        self.choose_text_editor = choose_text_editor
         
     def _get_input_from_text_editor(self, TEXT_EDITOR):
         with tempfile.NamedTemporaryFile(delete=False) as temp_file:
@@ -673,9 +677,9 @@ class SQNotes:
         self._load_setup_configuration()
         self._setup_user_configuration()
 
-    def _configure_text_editor(self, editor):
-        raise Exception('add some validation')
-        self.config_module.set_setting_to_user_config('text_editor', editor)
+    def _set_configured_text_editor(self, editor):
+        if editor in self._get_supported_text_editors():
+            self.config_module.set_setting_to_user_config(key = TEXT_EDITOR_KEY, value = editor)
         
         
     def _get_input_until_condition_satisfied(self, prompt, condition):
@@ -687,46 +691,24 @@ class SQNotes:
             else:
                 continue
         
+    def _get_supported_text_editors(self):
+        return SUPPORTED_TEXT_EDITORS
 
 
     def choose_text_editor_interactive(self):
         available_editors = self._get_available_text_editors()
-        if len(available_editors) == 0:
-            print("No supported text editors were installed.")
-            supported_editors_message = interface_copy.SUPPORTED_TEXT_EDITORS().format(", ".join(SUPPORTED_TEXT_EDITORS))
-            print(supported_editors_message)
-            print("Please install a supported text editor and try again.")
-        elif len(available_editors) > 1:
-            print("Please choose a text editor:")
-            for index, editor in enumerate(available_editors):
-                print(f"{index} : {editor}")
-            text_editor_index_choice = None
-            while text_editor_index_choice == None:
-                text_editor_choice = input("Enter the number of your choice here.> ")
-                try:
-                    input_as_number = int(text_editor_choice)
-                except ValueError as e:
-                    self.logger.error(e)
-                    print("input wasn't an integer")
-                    continue
-                except TypeError as e:
-                    self.logger.error(e)
-                    print("input wasn't an integer")
-                    continue
-                if input_as_number >= 0 and input_as_number < len(available_editors):
-                    text_editor_index_choice = input_as_number
-                    selected_editor = available_editors[text_editor_index_choice]
-                    self.logger.debug(f"user selected editor {text_editor_choice}->{input_as_number} : {selected_editor}")
-                    print(f"selected {selected_editor}")
-                    self._configure_text_editor(editor=available_editors[text_editor_index_choice])
-                else:
-                    print("input wasn't an index")
-                    self.logger.debug("input wasn't an index")
-                    continue
-        else:
-            #set only available editor
-            pass
-                    
+        
+        self.choose_text_editor.set_available_editors(available_editors = available_editors)
+        self.choose_text_editor.set_supported_editors(supported_editors=self._get_supported_text_editors())
+        
+        try:
+            selected_editor = self.choose_text_editor.choose_text_editor_interactive()
+            self._set_configured_text_editor(editor = selected_editor)
+        except MaxInputAttemptsException:
+            message = interface_copy.DID_NOT_SET_TEXT_EDITOR_TRY_AGAIN()
+            print(message)
+            
+        
                     
 
     def check_text_editor_is_configured(self):
@@ -841,7 +823,8 @@ def main():
                 sqnotes.notes_list()
             elif args.command == 'verify-gpg':
                 sqnotes.check_gpg_installed()
-            elif args.command == 'config-text-editor':
+            
+            elif SET_TEXT_EDITOR_INTERACTIVE_FLAG and args.command == 'config-text-editor':
                 sqnotes.choose_text_editor_interactive()
             elif args.command == 'text-editors':
                 sqnotes.check_available_text_editors()
