@@ -1,14 +1,12 @@
 
 import unittest
-from unittest.mock import patch, mock_open, MagicMock, call, Mock
+from unittest.mock import patch, mock_open, MagicMock
 import os
 import pytest
-from sqnotes.sqnotes_module import SQNotes, NoteNotFoundException,\
-     GPGSubprocessException,\
-    TextEditorSubprocessException
+from sqnotes.sqnotes_module import SQNotes
 import tempfile
-from test.test_sqnotes.test_add_new_note import get_all_mocked_print_output
 from injector import Injector
+from sqnotes.custom_exceptions import TextEditorSubprocessException
 
 @pytest.fixture(scope='session', autouse=True)
 def set_test_environment():
