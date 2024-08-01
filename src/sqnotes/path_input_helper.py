@@ -11,7 +11,7 @@ def _is_a_valid_path(input_string):
         return False
     return True
 
-PATH_VALIDATION_FAILURE = 'Input was not a valid path; please try again.'
+PATH_VALIDATION_FAILURE = interface_copy.PATH_INPUT_COULD_NOT_BE_VERIFIED()
 ATTEMPT_LIMIT = 3
 
 class PathInputHelper:

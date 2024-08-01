@@ -1,6 +1,4 @@
 
-
-
 VALIDATION_FAILURE_MESSAGE = 'Input {} failed validation.'
 class ValidationFailureException(Exception):
     """Raise if input fails user-input validation function."""
@@ -31,9 +29,12 @@ class UserInputHelper:
                 is_valid = validator(user_input)
                 if not is_valid:
                     if validation_failure_message is not None:
-                        print(validation_failure_message)
+                        message = validation_failure_message
                     else:
-                        print(VALIDATION_FAILURE_MESSAGE)
+                        message = VALIDATION_FAILURE_MESSAGE
+                    if '{}' in message:
+                        message = message.format(user_input)
+                    print(message)
                 else:
                     break
             else:

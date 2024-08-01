@@ -20,6 +20,12 @@ def mock_apple_input():
     with patch('builtins.input') as mock:
         mock.side_effect = ['apple' for _ in range(0,10)]
         yield mock
+        
+@pytest.fixture 
+def mock_is_valid_path():
+    with patch('sqnotes.path_input_helper._is_a_valid_path') as mock:
+        mock.side_effect = [False, False, False, False]
+        yield mock
 
 def describe_path_input_helper():
 
@@ -39,64 +45,70 @@ def describe_path_input_helper():
     
         def describe_second_input_nonempty_string():
     
-            @patch('builtins.input')
-            @patch('builtins.print')
             def it_prompts_again(
                                     mock_print,
                                     mock_input,
+                                    mock_is_valid_path,
                                     mock_path_input_helper
                                     ):
                 mock_input.side_effect = ['', 'apple']
+                mock_is_valid_path.side_effect = [False, True]
                 mock_path_input_helper.get_path_interactive()
                 output = get_all_mocked_print_output_to_string(mocked_print=mock_print)
                 expected_prompt = interface_copy.PROMPT_FOR_PATH()
                 number_of_promps = output.count(expected_prompt)
                 assert number_of_promps == 2
 
-    #
-    #
-    # def describe_first_input_is_a_nonempty_string():
-    #
-    #
-    #     def describe_is_a_valid_path():
-    #
-    #         @patch('sqnotes.path_input_helper._is_a_valid_path')
-    #         @patch('builtins.input')
-    #         @patch('builtins.print')
-    #         def it_checks_if_input_valid_path(
-    #                                 mock_print,
-    #                                 mock_input,
-    #                                 mock_is_a_valid_path,
-    #                                 mock_path_input_helper
-    #                                 ):
-    #             test_path = 'some/path/input'
-    #             mock_is_a_valid_path.return_value = True
-    #             mock_input.side_effect = [test_path]
-    #             mock_path_input_helper.get_path_interactive()
-    #             mock_is_a_valid_path.assert_called_once_with(input_string = test_path)
-    #
-    #     def describe_is_not_a_valid_path():
-    #
-    #         @patch('sqnotes.path_input_helper._is_a_valid_path')
-    #         @patch('builtins.input')
-    #         @patch('builtins.print')
-    #         def it_prints_invalid_path_message (
-    #                                                         mock_print,
-    #                                                         mock_input,
-    #                                                         mock_is_a_valid_path,
-    #                                                         mock_path_input_helper
-    #                                                         ):
-    #             test_path = 'some/path/input'
-    #             test_path2 = 'some/other/path/input'
-    #             mock_is_a_valid_path.side_effect = [False, True]
-    #             mock_input.side_effect = [test_path, test_path2]
-    #             mock_path_input_helper.get_path_interactive()
-    #             expected_message = interface_copy.PATH_INPUT_COULD_NOT_BE_VERIFIED().format(test_path)
-    #             output = get_all_mocked_print_output(mocked_print=mock_print)
-    #             assert expected_message in output
-    #
-    #
-
+    
+    
+    def describe_first_input_is_a_nonempty_string():
+    
+    
         
-            
+    
+        def describe_is_a_valid_path():
+    
+            def it_checks_if_input_valid_path(
+                                    mock_print,
+                                    mock_input,
+                                    mock_is_valid_path,
+                                    mock_path_input_helper
+                                    ):
+                test_path = 'some/path/input'
+                mock_is_valid_path.side_effect = [True, True]
+                mock_input.side_effect = [test_path]
+                mock_path_input_helper.get_path_interactive()
+                mock_is_valid_path.assert_called_once_with(test_path)
+    
+        def describe_is_not_a_valid_path():
+    
+            def it_prints_invalid_path_message (
+                                                            mock_print,
+                                                            mock_input,
+                                                            mock_is_valid_path,
+                                                            mock_path_input_helper
+                                                            ):
+                test_path = 'some/path/input'
+                test_path2 = 'some/other/path/input'
+                mock_is_valid_path.side_effect = [False, True]
+                mock_input.side_effect = [test_path, test_path2]
+                mock_path_input_helper.get_path_interactive()
+                expected_message = interface_copy.PATH_INPUT_COULD_NOT_BE_VERIFIED().format(test_path)
+                output = get_all_mocked_print_output(mocked_print=mock_print)
+                assert expected_message in output
+
+            def it_prompts_again(
+                                    mock_print,
+                                    mock_input,
+                                    mock_is_valid_path,
+                                    mock_path_input_helper
+                                    ):
+                mock_input.side_effect = ['some/path', 'some/other/path']
+                mock_is_valid_path.side_effect = [False, True]
+                mock_path_input_helper.get_path_interactive()
+                
+                output = get_all_mocked_print_output_to_string(mocked_print=mock_print)
+                expected_prompt = interface_copy.PROMPT_FOR_PATH()
+                number_of_promps = output.count(expected_prompt)
+                assert number_of_promps == 2
         
