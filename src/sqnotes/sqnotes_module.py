@@ -936,6 +936,9 @@ def main():
     sqnotes = __get_sqnotes()
     sqnotes.startup()
 
+
+
+
     if args.command == "init":
         sqnotes.initialize()
     elif args.command == "man":
@@ -945,60 +948,59 @@ def main():
         else:
             manual.print_main_page()
     else:
-        initialized = sqnotes._get_is_initialized()
-        if not initialized:
-            print(interface_copy.SQNOTES_NOT_INITIALIZED_MESSAGE())
-            return
-        else:
-            # if not IS_INITIALIZATION_GATE_REFACTORED_INSIDE_SQNOTES:
+        if not IS_INITIALIZATION_GATE_REFACTORED_INSIDE_SQNOTES:
+            is_initialized = sqnotes._get_is_initialized()
+            if not is_initialized:
+                print(interface_copy.SQNOTES_NOT_INITIALIZED_MESSAGE())
+                exit(0)
             
-            if args.command == "new":
-                sqnotes.new_note()
-            elif args.new:
-                sqnotes.directly_insert_note(text=args.new)
-            elif args.search:
-                sqnotes.search_notes(search_queries=args.search)
-            elif args.keywords:
-                sqnotes.search_keywords(keywords=args.keywords)
-            elif args.command == "notes-list":
-                sqnotes.notes_list()
-            elif args.command == "verify-gpg":
-                sqnotes.check_gpg_installed()
+        if args.command == "new":
+            sqnotes.new_note()
+        elif args.new:
+            sqnotes.directly_insert_note(text=args.new)
+        elif args.search:
+            sqnotes.search_notes(search_queries=args.search)
+        elif args.keywords:
+            sqnotes.search_keywords(keywords=args.keywords)
+        elif args.command == "notes-list":
+            sqnotes.notes_list()
+        elif args.command == "verify-gpg":
+            sqnotes.check_gpg_installed()
 
-            elif (
-                SET_TEXT_EDITOR_INTERACTIVE_FLAG
-                and args.command == "config-text-editor"
-            ):
-                sqnotes.choose_text_editor_interactive()
-            elif (
-                SET_NOTES_PATH_INTERACTIVE_FLAG
-                and args.command == SET_NOTES_PATH_COMMAND
-            ):
-                sqnotes.set_notes_path_interactive()
-            elif args.command == "text-editors":
-                sqnotes.check_available_text_editors()
-            elif args.command == "set-gpg-key":
-                sqnotes.set_gpg_key_email(args.id)
-            elif args.command == "use-ascii-armor":
-                if args.yes:
-                    sqnotes._set_use_ascii_armor(isUseArmor=True)
-                elif args.no:
-                    sqnotes._set_use_ascii_armor(isUseArmor=False)
-            elif args.command == "search":
-                sqnotes.search_notes(args.text)
-            elif args.command == "keywords":
-                sqnotes.search_keywords(args.keywords)
-            elif args.command == "edit":
-                sqnotes.edit_note(args.note)
-            elif args.command == "git":
-                sqnotes.run_git_command(args.git_args)
-            elif args.command == "print-keywords":
-                sqnotes.print_all_keywords()
-            elif args.command == "rescan":
-                sqnotes.rescan_for_database()
+        elif (
+            SET_TEXT_EDITOR_INTERACTIVE_FLAG
+            and args.command == "config-text-editor"
+        ):
+            sqnotes.choose_text_editor_interactive()
+        elif (
+            SET_NOTES_PATH_INTERACTIVE_FLAG
+            and args.command == SET_NOTES_PATH_COMMAND
+        ):
+            sqnotes.set_notes_path_interactive()
+        elif args.command == "text-editors":
+            sqnotes.check_available_text_editors()
+        elif args.command == "set-gpg-key":
+            sqnotes.set_gpg_key_email(args.id)
+        elif args.command == "use-ascii-armor":
+            if args.yes:
+                sqnotes._set_use_ascii_armor(isUseArmor=True)
+            elif args.no:
+                sqnotes._set_use_ascii_armor(isUseArmor=False)
+        elif args.command == "search":
+            sqnotes.search_notes(args.text)
+        elif args.command == "keywords":
+            sqnotes.search_keywords(args.keywords)
+        elif args.command == "edit":
+            sqnotes.edit_note(args.note)
+        elif args.command == "git":
+            sqnotes.run_git_command(args.git_args)
+        elif args.command == "print-keywords":
+            sqnotes.print_all_keywords()
+        elif args.command == "rescan":
+            sqnotes.rescan_for_database()
 
-            else:
-                parser.print_help()
+        else:
+            parser.print_help()
 
 
 if __name__ == "__main__":
