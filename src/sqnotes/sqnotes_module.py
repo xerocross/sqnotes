@@ -106,6 +106,259 @@ class SQNotes:
         self.printer_helper = printer_helper
         self.path_input_helper = path_input_helper
 
+
+    def new_note(self):
+        self._check_gpg_verified()
+        self.GPG_KEY_EMAIL = self.get_gpg_key_email()
+        self.check_gpg_key_email()
+        NOTES_DIR = self.get_notes_dir_from_config()
+        self.check_text_editor_is_configured()
+        TEXT_EDITOR = self._get_configured_text_editor()
+
+        try:
+            self.open_database()
+        except Exception as e:
+            message = (
+                interface_copy.COULD_NOT_OPEN_DATABASE()
+                + " "
+                + interface_copy.EXITING()
+            )
+            print(message)
+            exit(1)
+
+        try:
+            note_content = self._get_input_from_text_editor(TEXT_EDITOR=TEXT_EDITOR)
+        except TextEditorSubprocessException:
+            message = interface_copy.TEXT_EDITOR_SUBPROCESS_ERROR().format(
+                self._get_configured_text_editor()
+            )
+            self.logger.error(message)
+            print(message)
+            exit(1)
+
+        self._insert_new_note(note_content=note_content, notes_dir=NOTES_DIR)
+
+    def directly_insert_note(self, text):
+        self._check_gpg_verified()
+        self.GPG_KEY_EMAIL = self.get_gpg_key_email()
+        self.check_gpg_key_email()
+        NOTES_DIR = self.get_notes_dir_from_config()
+        try:
+            self.open_database()
+        except Exception as e:
+            message = (
+                interface_copy.COULD_NOT_OPEN_DATABASE()
+                + " "
+                + interface_copy.EXITING()
+            )
+            print(message)
+            exit(1)
+
+        self._insert_new_note(note_content=text, notes_dir=NOTES_DIR)
+
+    def search_keywords(self, keywords):
+        NOTES_DIR = self.get_notes_dir_from_config()
+        self.open_database()
+        results = self.database_service.query_notes_by_keywords(keywords=keywords)
+        if results:
+            print("")  # blank line
+            for result in results:
+                note_path = os.path.join(NOTES_DIR, result[0])
+                try:
+                    decrypted_content = (
+                        self.encrypted_note_helper.get_decrypted_content_in_memory(
+                            note_path=note_path
+                        )
+                    )
+                except GPGSubprocessException:
+                    message = (
+                        interface_copy.GPG_SUBPROCESS_ERROR_MESSAGE()
+                        + "\n"
+                        + interface_copy.EXITING()
+                    )
+                    print(message)
+                    self.logger.error(message)
+                    exit(1)
+
+                self._print_note(
+                    note_path=note_path, decrypted_content=decrypted_content
+                )
+                print("")  # blank line
+
+        else:
+            print(f"No notes found with keywords: {keywords}")
+
+    def edit_note(self, filename):
+        self.GPG_KEY_EMAIL = self.get_gpg_key_email()
+        self.check_gpg_key_email()
+        NOTES_DIR = self.get_notes_dir_from_config()
+        self.check_text_editor_is_configured
+        self.TEXT_EDITOR = self._get_configured_text_editor()
+        self.open_database()
+        self.logger.debug(f"editing note: {NOTES_DIR} / {filename}")
+        note_path = os.path.join(NOTES_DIR, filename)
+        if not os.path.exists(note_path):
+            message = (
+                interface_copy.NOTE_NOT_FOUND_ERROR().format(note_path)
+                + "\n"
+                + interface_copy.EXITING()
+            )
+            print(message)
+            self.logger.error(message)
+            exit(1)
+
+        config = {
+            "GPG_KEY_EMAIL": self.GPG_KEY_EMAIL,
+            "USE_ASCII_ARMOR": self._is_use_ascii_armor(),
+        }
+
+        temp_dec_filename = ""
+        try:
+            temp_dec_filename = self.encrypted_note_helper.decrypt_note_into_temp_file(
+                note_path=note_path
+            )
+            edited_content = self._get_edited_note_from_text_editor(
+                temp_filename=temp_dec_filename
+            )
+
+            print("edited_content:")
+            print(edited_content)
+            self.encrypted_note_helper.write_encrypted_note(
+                note_file_path=note_path, note_content=edited_content, config=config
+            )
+
+        except GPGSubprocessException as e:
+            self.logger.error(e)
+            message = (
+                interface_copy.GPG_SUBPROCESS_ERROR_MESSAGE()
+                + "\n"
+                + interface_copy.EXITING()
+            )
+            print(message)
+            self.logger.error(message)
+            self._delete_temp_file(temp_file=temp_dec_filename)
+            exit(1)
+        finally:
+            self._delete_temp_file(temp_file=temp_dec_filename)
+
+        try:
+            note_id = self.database_service.get_note_id_from_database_or_raise(
+                filename=filename
+            )
+            self.database_service.delete_keywords_from_database_for_note(
+                note_id=note_id
+            )
+            self._extract_and_save_keywords(
+                note_id=note_id, note_content=edited_content
+            )
+            self.database_service.commit_transaction()
+
+        except Exception:
+            raise DatabaseException()
+
+        print(f"Note edited: {filename}")
+
+    def search_notes(self, search_queries):
+        print(interface_copy.SOME_DELAY_FOR_DECRYPTION())
+        is_found_any_matches = False
+        notes_dir = self.get_notes_dir_from_config()
+
+        note_paths = self._get_all_note_paths(notes_dir=notes_dir)
+        queries_in_lower_case = [query.lower() for query in search_queries]
+        for note_path in note_paths:
+            try:
+                decrypted_content = (
+                    self.encrypted_note_helper.get_decrypted_content_in_memory(
+                        note_path=note_path
+                    )
+                )
+            except GPGSubprocessException as e:
+                self.logger.error(e)
+                message = (
+                    interface_copy.GPG_SUBPROCESS_ERROR_MESSAGE()
+                    + "\n"
+                    + interface_copy.EXITING()
+                )
+                self.logger.error(message)
+                print(message)
+                exit(1)
+
+            content_in_lower_case = decrypted_content.lower()
+            if all(
+                lowercase_query in content_in_lower_case
+                for lowercase_query in queries_in_lower_case
+            ):
+                print(f"\n{note_path}:\n{decrypted_content}")
+                is_found_any_matches = True
+
+        if not is_found_any_matches:
+            print("no notes match search query")
+
+
+    def rescan_for_database(self):
+        NOTES_DIR = self.get_notes_dir_from_config()
+        self.open_database()
+        files = self._get_all_note_paths(notes_dir=NOTES_DIR)
+        files_info = [
+            FileInfo(path=file, base_name=os.path.basename(file)) for file in files
+        ]
+
+        for file_info in files_info:
+            content = self.encrypted_note_helper.get_decrypted_content_in_memory(
+                note_path=file_info.path
+            )
+            try:
+                note_id = self.database_service.get_note_id_from_database_or_none(
+                    filename=file_info
+                )
+
+                if note_id is None:
+                    note_id = self.database_service.insert_new_note_into_database(
+                        note_filename_base=file_info.base_name
+                    )
+
+                self.database_service.delete_keywords_from_database_for_note(
+                    note_id=note_id
+                )
+                self._extract_and_save_keywords(note_id=note_id, note_content=content)
+                self.database_service.commit_transaction()
+
+            except Exception:
+                raise DatabaseException()
+        print("rescan complete")
+
+    def print_all_keywords(self):
+        self.open_database()
+        keywords = self.database_service.get_all_keywords()
+        for kw in keywords:
+            print(kw)
+        if len(keywords) == 0:
+            message = interface_copy.NO_KEYWORDS_IN_DATABASE()
+            print_to_so(message)
+
+    def notes_list(self):
+        self.logger.debug("printing notes list")
+        notes_dir = self.get_notes_dir_from_config()
+        files = self._get_all_note_paths(notes_dir=notes_dir)
+        filenames = [os.path.basename(file) for file in files]
+        for file in filenames:
+            self.logger.debug(f"note found: {file}")
+            print(file)
+
+    def check_available_text_editors(self):
+        available_editors = self._get_available_text_editors()
+        if len(available_editors) > 0:
+            print("supported text editors installed:")
+            print(available_editors)
+        else:
+            print("No supported text editors installed.")
+            print(
+                f"Supported text editors include these: {', '.join(SUPPORTED_TEXT_EDITORS)}."
+            )
+
+    def run_git_command(self, args):
+        subprocess.call(["git"] + args, cwd=self.NOTES_DIR)
+
     def _get_input_from_text_editor(self, TEXT_EDITOR):
         with tempfile.NamedTemporaryFile(delete=False) as temp_file:
             temp_filename = temp_file.name
@@ -197,55 +450,6 @@ class SQNotes:
                 )
                 exit(1)
 
-    def directly_insert_note(self, text):
-        self._check_gpg_verified()
-        self.GPG_KEY_EMAIL = self.get_gpg_key_email()
-        self.check_gpg_key_email()
-        NOTES_DIR = self.get_notes_dir_from_config()
-        try:
-            self.open_database()
-        except Exception as e:
-            message = (
-                interface_copy.COULD_NOT_OPEN_DATABASE()
-                + " "
-                + interface_copy.EXITING()
-            )
-            print(message)
-            exit(1)
-
-        self._insert_new_note(note_content=text, notes_dir=NOTES_DIR)
-
-    def new_note(self):
-        self._check_gpg_verified()
-        self.GPG_KEY_EMAIL = self.get_gpg_key_email()
-        self.check_gpg_key_email()
-        NOTES_DIR = self.get_notes_dir_from_config()
-        self.check_text_editor_is_configured()
-        TEXT_EDITOR = self._get_configured_text_editor()
-
-        try:
-            self.open_database()
-        except Exception as e:
-            message = (
-                interface_copy.COULD_NOT_OPEN_DATABASE()
-                + " "
-                + interface_copy.EXITING()
-            )
-            print(message)
-            exit(1)
-
-        try:
-            note_content = self._get_input_from_text_editor(TEXT_EDITOR=TEXT_EDITOR)
-        except TextEditorSubprocessException:
-            message = interface_copy.TEXT_EDITOR_SUBPROCESS_ERROR().format(
-                self._get_configured_text_editor()
-            )
-            self.logger.error(message)
-            print(message)
-            exit(1)
-
-        self._insert_new_note(note_content=note_content, notes_dir=NOTES_DIR)
-
     def _extract_and_save_keywords(self, note_id, note_content):
         keywords = self._extract_keywords(note_content)
         keyword_ids = []
@@ -263,14 +467,7 @@ class SQNotes:
         self.logger.debug(f"checking initialized: {value}")
         return self.config_module.get_global_from_user_config(INITIALIZED) == "yes"
 
-    def print_all_keywords(self):
-        self.open_database()
-        keywords = self.database_service.get_all_keywords()
-        for kw in keywords:
-            print(kw)
-        if len(keywords) == 0:
-            message = interface_copy.NO_KEYWORDS_IN_DATABASE()
-            print_to_so(message)
+    
 
     def _delete_temp_file(self, temp_file):
         if os.path.exists(temp_file):
@@ -299,88 +496,7 @@ class SQNotes:
             if editor_is_supported:
                 available_editors.append(editor)
         return available_editors
-
-    def check_available_text_editors(self):
-        available_editors = self._get_available_text_editors()
-        if len(available_editors) > 0:
-            print("supported text editors installed:")
-            print(available_editors)
-        else:
-            print("No supported text editors installed.")
-            print(
-                f"Supported text editors include these: {', '.join(SUPPORTED_TEXT_EDITORS)}."
-            )
-
-    def edit_note(self, filename):
-        self.GPG_KEY_EMAIL = self.get_gpg_key_email()
-        self.check_gpg_key_email()
-        NOTES_DIR = self.get_notes_dir_from_config()
-        self.check_text_editor_is_configured
-        self.TEXT_EDITOR = self._get_configured_text_editor()
-        self.open_database()
-        self.logger.debug(f"editing note: {NOTES_DIR} / {filename}")
-        note_path = os.path.join(NOTES_DIR, filename)
-        if not os.path.exists(note_path):
-            message = (
-                interface_copy.NOTE_NOT_FOUND_ERROR().format(note_path)
-                + "\n"
-                + interface_copy.EXITING()
-            )
-            print(message)
-            self.logger.error(message)
-            exit(1)
-
-        config = {
-            "GPG_KEY_EMAIL": self.GPG_KEY_EMAIL,
-            "USE_ASCII_ARMOR": self._is_use_ascii_armor(),
-        }
-
-        temp_dec_filename = ""
-        try:
-            temp_dec_filename = self.encrypted_note_helper.decrypt_note_into_temp_file(
-                note_path=note_path
-            )
-            edited_content = self._get_edited_note_from_text_editor(
-                temp_filename=temp_dec_filename
-            )
-
-            print("edited_content:")
-            print(edited_content)
-            self.encrypted_note_helper.write_encrypted_note(
-                note_file_path=note_path, note_content=edited_content, config=config
-            )
-
-        except GPGSubprocessException as e:
-            self.logger.error(e)
-            message = (
-                interface_copy.GPG_SUBPROCESS_ERROR_MESSAGE()
-                + "\n"
-                + interface_copy.EXITING()
-            )
-            print(message)
-            self.logger.error(message)
-            self._delete_temp_file(temp_file=temp_dec_filename)
-            exit(1)
-        finally:
-            self._delete_temp_file(temp_file=temp_dec_filename)
-
-        try:
-            note_id = self.database_service.get_note_id_from_database_or_raise(
-                filename=filename
-            )
-            self.database_service.delete_keywords_from_database_for_note(
-                note_id=note_id
-            )
-            self._extract_and_save_keywords(
-                note_id=note_id, note_content=edited_content
-            )
-            self.database_service.commit_transaction()
-
-        except Exception:
-            raise DatabaseException()
-
-        print(f"Note edited: {filename}")
-
+    
     def _check_for_database_exception(self, e):
         return (
             isinstance(e, sqlite3.IntegrityError)
@@ -398,38 +514,7 @@ class SQNotes:
         unique_tags = set(tags)
         return unique_tags
 
-    def rescan_for_database(self):
-        NOTES_DIR = self.get_notes_dir_from_config()
-        self.open_database()
-        files = self._get_all_note_paths(notes_dir=NOTES_DIR)
-        files_info = [
-            FileInfo(path=file, base_name=os.path.basename(file)) for file in files
-        ]
-
-        for file_info in files_info:
-            content = self.encrypted_note_helper.get_decrypted_content_in_memory(
-                note_path=file_info.path
-            )
-            try:
-                note_id = self.database_service.get_note_id_from_database_or_none(
-                    filename=file_info
-                )
-
-                if note_id is None:
-                    note_id = self.database_service.insert_new_note_into_database(
-                        note_filename_base=file_info.base_name
-                    )
-
-                self.database_service.delete_keywords_from_database_for_note(
-                    note_id=note_id
-                )
-                self._extract_and_save_keywords(note_id=note_id, note_content=content)
-                self.database_service.commit_transaction()
-
-            except Exception:
-                raise DatabaseException()
-        print("rescan complete")
-
+    
     def _get_db_file_path(self, notes_dir):
 
         if os.getenv("TESTING") == "true":
@@ -466,15 +551,6 @@ class SQNotes:
             files = glob.glob(pattern)
             all_notes.extend(files)
         return all_notes
-
-    def notes_list(self):
-        self.logger.debug("printing notes list")
-        notes_dir = self.get_notes_dir_from_config()
-        files = self._get_all_note_paths(notes_dir=notes_dir)
-        filenames = [os.path.basename(file) for file in files]
-        for file in filenames:
-            self.logger.debug(f"note found: {file}")
-            print(file)
 
     def set_config_dir_override(self, config_dir_override):
         self.CONFIG_DIR_OVERRIDE = config_dir_override
@@ -556,84 +632,12 @@ class SQNotes:
     def prompt_to_initialize(self):
         print("sqnotes not initialized; please run initialization")
 
-    def run_git_command(self, args):
-        subprocess.call(["git"] + args, cwd=self.NOTES_DIR)
-
     def _print_note(self, note_path, decrypted_content):
         print(f"{note_path}:\n{decrypted_content}")
 
-    def search_keywords(self, keywords):
-        NOTES_DIR = self.get_notes_dir_from_config()
-        self.open_database()
-        results = self.database_service.query_notes_by_keywords(keywords=keywords)
-        if results:
-            print("")  # blank line
-            for result in results:
-                note_path = os.path.join(NOTES_DIR, result[0])
-                try:
-                    decrypted_content = (
-                        self.encrypted_note_helper.get_decrypted_content_in_memory(
-                            note_path=note_path
-                        )
-                    )
-                except GPGSubprocessException:
-                    message = (
-                        interface_copy.GPG_SUBPROCESS_ERROR_MESSAGE()
-                        + "\n"
-                        + interface_copy.EXITING()
-                    )
-                    print(message)
-                    self.logger.error(message)
-                    exit(1)
-
-                self._print_note(
-                    note_path=note_path, decrypted_content=decrypted_content
-                )
-                print("")  # blank line
-
-        else:
-            print(f"No notes found with keywords: {keywords}")
-
-    def search_notes(self, search_queries):
-        print(interface_copy.SOME_DELAY_FOR_DECRYPTION())
-        is_found_any_matches = False
-        notes_dir = self.get_notes_dir_from_config()
-
-        note_paths = self._get_all_note_paths(notes_dir=notes_dir)
-        queries_in_lower_case = [query.lower() for query in search_queries]
-        for note_path in note_paths:
-            try:
-                decrypted_content = (
-                    self.encrypted_note_helper.get_decrypted_content_in_memory(
-                        note_path=note_path
-                    )
-                )
-            except GPGSubprocessException as e:
-                self.logger.error(e)
-                message = (
-                    interface_copy.GPG_SUBPROCESS_ERROR_MESSAGE()
-                    + "\n"
-                    + interface_copy.EXITING()
-                )
-                self.logger.error(message)
-                print(message)
-                exit(1)
-
-            content_in_lower_case = decrypted_content.lower()
-            if all(
-                lowercase_query in content_in_lower_case
-                for lowercase_query in queries_in_lower_case
-            ):
-                print(f"\n{note_path}:\n{decrypted_content}")
-                is_found_any_matches = True
-
-        if not is_found_any_matches:
-            print("no notes match search query")
 
     def _try_to_make_path(self, selected_path):
-
         if os.path.exists(selected_path):
-            # path exists
             return True
         else:
             directory = os.path.dirname(selected_path)
