@@ -89,6 +89,30 @@ def describe_user_input_helper():
         
         
         def describe_validation_failure_message_specified():
+            
+            
+            def describe_input_is_blank():
+                
+                def it_prints_validation_failure_message_with_blank(
+                                                    mock_input,
+                                                    mock_print,
+                                                    user_input_helper,
+                                                    mock_validator
+                                                    ):
+                    empty_input_input = ''
+                    mock_validator.side_effect = [False, True]
+                    mock_input.side_effect = [empty_input_input, second_user_input]
+                    validator_failure_message = 'test with {}'
+                    expected_failure_message = "test with ''"
+                    
+                    user_input_helper.get_string_input(prompt = test_prompt, 
+                                                           validator = mock_validator,
+                                                           validation_failure_message = validator_failure_message
+                                                        )
+                    
+                    output = get_all_mocked_print_output_to_string(mocked_print=mock_print)
+                    assert expected_failure_message in output    
+            
         
             def it_prints_validation_failure_message (
                                                     mock_input,
@@ -96,10 +120,12 @@ def describe_user_input_helper():
                                                     user_input_helper
                                                         ):
                 test_user_input = 'apple'
-                validation_failure = 'validation failure message'
+                validation_failure = VALIDATION_FAILURE_MESSAGE.format(test_user_input)
                 validator = Mock()
                 validator.side_effect = [False, True]
                 mock_input.side_effect = [test_user_input, 'input2']
+                
+                
                 user_input_helper.get_string_input(prompt = test_prompt, 
                                                        validator = validator,
                                                        validation_failure_message = validation_failure
@@ -151,17 +177,18 @@ def describe_user_input_helper():
             def it_prints_validation_failure_message (
                                                     mock_input,
                                                     mock_print,
-                                                    user_input_helper
-                                                        ):
+                                                    user_input_helper,
+                                                    mock_validator
+                                                    ):
                 test_user_input = 'apple'
-                validator = Mock()
-                validator.side_effect = [False, True]
+                mock_validator.side_effect = [False, True]
                 mock_input.side_effect = [test_user_input, 'input2']
+                message = VALIDATION_FAILURE_MESSAGE.format(test_user_input)
                 user_input_helper.get_string_input(prompt = test_prompt, 
-                                                       validator = validator,
-                                                       )
+                                                       validator = mock_validator,
+                                                    )
                 output = get_all_mocked_print_output_to_string(mocked_print=mock_print)
-                assert VALIDATION_FAILURE_MESSAGE in output       
+                assert message in output       
             
         
         def describe_limit_attempts_is_2():

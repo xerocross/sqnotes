@@ -16,6 +16,13 @@ class UserInputHelper:
                          attempt_limit = None):
         user_input = None
         attempt_number = 0
+        
+        if validator is not None:
+            if validation_failure_message is not None:
+                pre_format_validation_failure_message = validation_failure_message
+            else:
+                pre_format_validation_failure_message = VALIDATION_FAILURE_MESSAGE
+        
         while True:
             attempt_number += 1
             if attempt_limit is not None:
@@ -28,12 +35,10 @@ class UserInputHelper:
             if validator is not None:
                 is_valid = validator(user_input)
                 if not is_valid:
-                    if validation_failure_message is not None:
-                        message = validation_failure_message
-                    else:
-                        message = VALIDATION_FAILURE_MESSAGE
-                    if '{}' in message:
-                        message = message.format(user_input)
+                    message = pre_format_validation_failure_message
+                    if '{}' in pre_format_validation_failure_message:
+                        input_slug = "''" if user_input == '' else user_input
+                        message = message.format(input_slug)
                     print(message)
                 else:
                     break
