@@ -6,7 +6,6 @@ from unittest.mock import patch
 
 from sqnotes.path_input_helper import PathInputHelper
 from sqnotes.sqnotes_module import SQNotes
-from conftest import mock_printer_helper_print
 from test.test_helper import get_all_mocked_print_output_to_string
 from sqnotes import interface_copy
 
@@ -18,7 +17,7 @@ def mock_get_path_interactive():
 
 def describe_set_notes_path_interactive():
     
-    def it_prints_message_setting_notes_path_message (
+    def it_prints_setting_notes_path_message (
                                             mock_get_path_interactive,
                                             sqnotes_obj : SQNotes,
                                             mock_printer_helper_print
@@ -35,3 +34,6 @@ def describe_set_notes_path_interactive():
                                             ):
         sqnotes_obj.set_notes_path_interactive()
         mock_get_path_interactive.assert_called_once()
+        
+
+        

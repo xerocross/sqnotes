@@ -39,6 +39,12 @@ def sqnotes_obj(test_configuration_dir,
     yield sqnotes_instance
     
 @pytest.fixture
+def mock_is_valid_path():
+    with patch.object(PathInputHelper, 'get_path_interactive') as mock:
+        yield mock
+
+    
+@pytest.fixture
 def configuration_module(test_configuration_dir):
     injector = Injector()
     config_module : ConfigurationModule = injector.get(ConfigurationModule)
