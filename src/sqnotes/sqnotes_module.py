@@ -75,6 +75,7 @@ else:
 
 
 SET_NOTES_PATH_INTERACTIVE_FLAG = (os.getenv("SET_NOTES_PATH_INTERACTIVE") == 'yes')
+IS_INITIALIZATION_GATE_REFACTORED_INSIDE_SQNOTES = (os.getenv("IS_INITIALIZATION_GATE_REFACTORED_INSIDE_SQNOTES") == 'yes')
 
 
 
@@ -108,6 +109,10 @@ class SQNotes:
 
 
     def new_note(self):
+        if IS_INITIALIZATION_GATE_REFACTORED_INSIDE_SQNOTES and not self._get_is_initialized():
+            print(interface_copy.SQNOTES_NOT_INITIALIZED_MESSAGE())
+            exit(1)
+        
         self._check_gpg_verified()
         self.GPG_KEY_EMAIL = self.get_gpg_key_email()
         self.check_gpg_key_email()
@@ -942,9 +947,11 @@ def main():
     else:
         initialized = sqnotes._get_is_initialized()
         if not initialized:
-            print(interface_copy.SQNOTES_NOT_INITIALIZED_MESSAGE)
+            print(interface_copy.SQNOTES_NOT_INITIALIZED_MESSAGE())
             return
         else:
+            if not IS_INITIALIZATION_GATE_REFACTORED_INSIDE_SQNOTES:
+            
             if args.command == "new":
                 sqnotes.new_note()
             elif args.new:

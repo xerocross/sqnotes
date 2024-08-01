@@ -1,5 +1,5 @@
 
-SQNOTES_NOT_INITIALIZED_MESSAGE = "SQNotes is not initialized; please initialize now. (Run py with -h to see the help menu.)"
+SQNOTES_NOT_INITIALIZED_MESSAGE = lambda: "SQNotes is not initialized; please initialize now. (Run py with -h to see the help menu.)"
 DATABASE_EXCEPTION_MESSAGE = lambda : "SQNotes encountered an unexpected database error."
 SETTING_UP_DATABASE_MESSAGE = lambda : 'SQNotes is setting up your notes database for keeping track of keywords.'
 UNKNOWN_ERROR = lambda : 'Sorry. An unknown error has occurred.'
