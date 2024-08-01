@@ -950,7 +950,7 @@ def main():
             print(interface_copy.SQNOTES_NOT_INITIALIZED_MESSAGE())
             return
         else:
-            if not IS_INITIALIZATION_GATE_REFACTORED_INSIDE_SQNOTES:
+            # if not IS_INITIALIZATION_GATE_REFACTORED_INSIDE_SQNOTES:
             
             if args.command == "new":
                 sqnotes.new_note()
