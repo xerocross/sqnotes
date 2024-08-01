@@ -5,7 +5,7 @@ from sqnotes.database_service import DatabaseService
 import tempfile
 import os
 import shutil
-from unittest.mock import Mock, patch
+from unittest.mock import Mock, patch, MagicMock
 from injector import Module, singleton
 
 from sqnotes.configuration_module import ConfigurationModule
@@ -14,6 +14,7 @@ from sqnotes.sqnotes_logger import SQNotesLogger
 from sqnotes.choose_text_editor import ChooseTextEditor
 from sqnotes.printer_helper import PrinterHelper
 from sqnotes.path_input_helper import PathInputHelper
+from test.test_helper import do_nothing
 
 @pytest.fixture(scope='session', autouse=True)
 def set_test_environment():
@@ -23,7 +24,8 @@ def set_test_environment():
 def sqnotes_obj(test_configuration_dir, 
                 database_service_open_in_memory, 
                 configuration_module,
-                mock_path_input_helper):
+                mock_path_input_helper,
+                mock_encrypted_note_helper):
     
     
     class SQNotesTestConfigurationModule(Module):
@@ -32,6 +34,7 @@ def sqnotes_obj(test_configuration_dir,
             binder.bind(ConfigurationModule, to=configuration_module, scope=singleton)
             binder.bind(PathInputHelper, to=mock_path_input_helper, scope=singleton)
             binder.bind(DatabaseService, to=database_service_open_in_memory, scope=singleton)
+            binder.bind(EncryptedNoteHelper, to=mock_encrypted_note_helper, scope=singleton)
     
     injector = Injector([SQNotesTestConfigurationModule()])
     sqnotes_instance : SQNotes = injector.get(SQNotes)
@@ -293,4 +296,21 @@ def mock_decrypt_note_into_temp_file():
     with patch.object(EncryptedNoteHelper, 'decrypt_note_into_temp_file') as mock:
         yield mock
     
-            
+@pytest.fixture
+def mock_temp_file():
+    mock_temp_file = MagicMock(spec=tempfile.NamedTemporaryFile)
+    mock_temp_file.name = "mock_temp_file_name"
+    mock_temp_file.write = do_nothing
+    yield mock_temp_file
+
+@pytest.fixture
+def mock_NamedTemporaryFile(mock_temp_file):
+    with patch('tempfile.NamedTemporaryFile') as mock:
+        mock.return_value.__enter__.return_value = mock_temp_file
+        yield mock
+
+@pytest.fixture
+def mock_encrypted_note_helper():
+    injector = Injector()
+    encrypted_note_helper = injector.get(EncryptedNoteHelper)
+    yield encrypted_note_helper
