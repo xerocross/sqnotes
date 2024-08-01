@@ -25,7 +25,7 @@ class UserInputHelper:
                     raise ExceededMaxInputAttemptsException(f"Exceeded {attempt_limit} attempts.")
             
             
-            print(prompt)
+            print(prompt, end='')
             user_input = input()
             if validator is not None:
                 is_valid = validator(user_input)
