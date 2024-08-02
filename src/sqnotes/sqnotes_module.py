@@ -21,6 +21,8 @@ from sqnotes.user_configuration_helper import UserConfigurationHelper
 from sqnotes.database_service import DatabaseService
 from sqnotes.choose_text_editor import ChooseTextEditor, MaxInputAttemptsException
 from sqnotes.path_input_helper import PathInputHelper
+from sqnotes.fileinfo import FileInfo
+
 from sqnotes.custom_exceptions import (
     TextEditorSubprocessException,
     DatabaseException,
@@ -815,12 +817,6 @@ class SQNotes:
             )
             self.user_configuration_helper.set_setting_to_user_config("text_editor", TEXT_EDITOR)
 
-
-class FileInfo:
-
-    def __init__(self, path, base_name):
-        self.path = path
-        self.base_name = base_name
 
 def __get_sqnotes():
     injector = Injector([InjectionConfigurationModule()])
