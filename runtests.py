@@ -25,6 +25,11 @@ def main():
     
     subparsers.add_parser('sqnotes-module', help='Run sqnotes module tests.')
     
+    subparsers.add_parser('open-database', help='Run tests for opening the database.')
+    subparsers.add_parser('init', help='Run tests for SQNotes initialization.')
+    subparsers.add_parser('choose-text-editor', help='Run tests for choosing the text editor.')
+    subparsers.add_parser('path-input', help='Run tests for PathInputUser')
+    
     parser.add_argument('--spec', 
                     action='store_true', 
                     help='Enable spec printout.')
@@ -34,12 +39,22 @@ def main():
     subdirectory = None
     if args.command == 'sqnotes-module':
         
-        subdirectory = 'test/test_sqnotes'
+        subdirectory = ['test/test_sqnotes']
+    elif args.command == 'open-database':
+        subdirectory = ['test/test_sqnotes/test_open_and_setup_database.py']
+    elif args.command == 'choose-text-editor':
+        subdirectory = ['test/test_sqnotes/test_choose_text_editor_interactive.py']
+    elif args.command == 'init':
+        subdirectory = ['test/test_sqnotes/test_initialization.py']
+    elif args.command == 'path-input':
+        subdirectory = ['test/test_path_input_helper.py', 
+                        'test/test_sqnotes/test_set_notes_path_interactive.py']
         
     
     test_run_command = [sys.executable, '-m', 'pytest']
     if subdirectory is not None:
-        test_run_command.append(subdirectory)
+        for s in subdirectory:
+            test_run_command.append(s)
     
     if args.spec:
         test_run_command.insert(3, '--spec')
