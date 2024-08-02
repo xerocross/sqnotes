@@ -82,6 +82,7 @@ IS_INITIALIZATION_GATE_REFACTORED_INSIDE_SQNOTES = (os.getenv("IS_INITIALIZATION
 
 class SQNotes:
 
+    NOT_INITIALIZED = 18
     @inject
     def __init__(
         self,
@@ -111,7 +112,7 @@ class SQNotes:
     def new_note(self):
         if IS_INITIALIZATION_GATE_REFACTORED_INSIDE_SQNOTES and not self._get_is_initialized():
             print(interface_copy.SQNOTES_NOT_INITIALIZED_MESSAGE())
-            exit(1)
+            exit(self.NOT_INITIALIZED)
         
         self._check_gpg_verified()
         self.GPG_KEY_EMAIL = self.get_gpg_key_email()

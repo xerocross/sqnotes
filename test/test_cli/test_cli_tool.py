@@ -32,8 +32,9 @@ class TestCLI(unittest.TestCase):
 
     @patch.object(SQNotes, '_get_is_initialized', lambda x : False)
     def test_new_command_called_not_initialized_prints_not_initialized_message(self):
-        output = self.run_cli(['sqnotes', 'new'])
-        self.assertIn("not initialized", output, "output message did not contain 'not initialized'")
+        with pytest.raises(SystemExit):
+            output = self.run_cli(['sqnotes', 'new'])
+            self.assertIn("not initialized", output, "output message did not contain 'not initialized'")
 
 
     def test_invalid_action_raises_exit(self):
