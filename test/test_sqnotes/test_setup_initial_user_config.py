@@ -2,7 +2,7 @@
 import pytest
 from unittest.mock import patch
 from sqnotes.sqnotes_module import SQNotes
-from sqnotes.configuration_module import ConfigurationModule
+from sqnotes.user_configuration_helper import UserConfigurationHelper
 
 
 def describe_sqnotes():
@@ -10,7 +10,7 @@ def describe_sqnotes():
     def describe_setup_user_configuration():
         
         
-        @patch.object(ConfigurationModule, 'open_or_create_and_open_user_config_file')
+        @patch.object(UserConfigurationHelper, 'open_or_create_and_open_user_config_file')
         def it_calls_config_module_open_or_create_with_initial_globals(
                                                                         mock_open_or_create_and_open_user_config,
                                                                         sqnotes_obj : SQNotes,
@@ -27,7 +27,7 @@ def describe_sqnotes():
             _, kwargs = first_call_args
             assert kwargs['initial_globals'] == sqnotes_obj._INITIAL_GLOBALS
             
-        @patch.object(ConfigurationModule, 'open_or_create_and_open_user_config_file')
+        @patch.object(UserConfigurationHelper, 'open_or_create_and_open_user_config_file')
         def it_calls_config_module_open_or_create_with_initial_settings(
                                                                         mock_open_or_create_and_open_user_config,
                                                                         sqnotes_obj : SQNotes,

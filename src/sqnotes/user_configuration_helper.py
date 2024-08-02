@@ -8,12 +8,12 @@ class ConfigFileReadingException(Exception):
     """Raise if encounter an error trying to parse the config file."""
 
 class ConfigModuleNotInitializedException(Exception):
-    """Raise if get/set method called on ConfigurationModule before initialized."""
+    """Raise if get/set method called on UserConfigurationHelper before initialized."""
 
 SETTINGS_KEY = 'settings'
 GLOBAL_KEY = 'global'
 
-class ConfigurationModule:
+class UserConfigurationHelper:
     
     
     

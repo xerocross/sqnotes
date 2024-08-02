@@ -5,7 +5,7 @@ import pytest
 import shutil
 import tempfile
 from sqnotes.sqnotes_module import SQNotes, NotesDirNotConfiguredException
-from sqnotes.configuration_module import ConfigurationModule
+from sqnotes.user_configuration_helper import UserConfigurationHelper
 from sqnotes.database_service import DatabaseService
 from injector import Injector
 from test.test_helper import do_nothing
@@ -24,7 +24,7 @@ def describe_sqnotes():
     
     def describe_database_setup():
     
-        @patch.object(ConfigurationModule, 'set_setting_to_user_config', do_nothing)
+        @patch.object(UserConfigurationHelper, 'set_setting_to_user_config', do_nothing)
         @patch.object(DatabaseService, 'setup_database')
         def it_calls_setup_on_database_service(
                                                 mock_set_up_database,
@@ -41,11 +41,11 @@ def describe_sqnotes():
         def it_calls_config_module_to_get_notes_dir(
                                                         sqnotes_obj : SQNotes
                                                     ):
-            with patch.object(sqnotes_obj.config_module, 'get_setting_from_user_config') as mock_get_config_setting:
+            with patch.object(sqnotes_obj.user_configuration_helper, 'get_setting_from_user_config') as mock_get_config_setting:
                 sqnotes_obj.get_notes_dir_from_config()
                 mock_get_config_setting.assert_called_once_with(key = 'notes_path')
             
-        @patch.object(ConfigurationModule, 'get_setting_from_user_config')
+        @patch.object(UserConfigurationHelper, 'get_setting_from_user_config')
         def it_returns_the_value_from_the_config_module(
                                                         mock_get_config_setting,
                                                         sqnotes_obj : SQNotes
@@ -56,7 +56,7 @@ def describe_sqnotes():
             assert return_value == test_notes_path
         
         
-        @patch.object(ConfigurationModule, 'get_setting_from_user_config')
+        @patch.object(UserConfigurationHelper, 'get_setting_from_user_config')
         def it_raises_if_notes_path_not_configured(
                                                         mock_get_config_setting,
                                                         sqnotes_obj : SQNotes

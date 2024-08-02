@@ -9,7 +9,7 @@ from test.test_helper import get_all_mocked_print_output, do_nothing,\
 from sqnotes.choose_text_editor import ChooseTextEditor,\
     MaxInputAttemptsException
 from sqnotes import interface_copy
-from sqnotes.configuration_module import ConfigurationModule
+from sqnotes.user_configuration_helper import UserConfigurationHelper
 
 def side_effect_callable():
     side_effect_callable.called = getattr(side_effect_callable, "called", 0) + 1
@@ -141,8 +141,8 @@ def describe_set_configured_text_editor():
     def describe_input_editor_is_supported():
     
         @patch.object(SQNotes, '_get_supported_text_editors', just_return(['vim', 'nano']))
-        @patch.object(ConfigurationModule, 'set_setting_to_user_config')
-        def it_sets_text_editor_in_configuration_module(
+        @patch.object(UserConfigurationHelper, 'set_setting_to_user_config')
+        def it_sets_text_editor_in_user_configuration(
                                                     mock_set_config_setting,
                                                     sqnotes_obj : SQNotes,
                                                 ):

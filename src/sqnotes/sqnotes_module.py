@@ -17,7 +17,7 @@ from sqnotes.encrypted_note_helper import EncryptedNoteHelper, GPGSubprocessExce
 from injector import inject, Injector
 from sqnotes.injection_configuration_module import InjectionConfigurationModule
 from sqnotes.sqnotes_logger import SQNotesLogger
-from sqnotes.configuration_module import ConfigurationModule
+from sqnotes.user_configuration_helper import UserConfigurationHelper
 from sqnotes.database_service import DatabaseService
 from sqnotes.choose_text_editor import ChooseTextEditor, MaxInputAttemptsException
 from sqnotes.path_input_helper import PathInputHelper
@@ -88,7 +88,7 @@ class SQNotes:
         self,
         encrypted_note_helper: EncryptedNoteHelper,
         sqnotes_logger: SQNotesLogger,
-        config_module: ConfigurationModule,
+        user_configuration_helper: UserConfigurationHelper,
         database_service: DatabaseService,
         choose_text_editor: ChooseTextEditor,
         printer_helper: PrinterHelper,
@@ -99,7 +99,7 @@ class SQNotes:
         self.sqnotes_logger = sqnotes_logger
         sqnotes_logger.configure(debug=DEBUGGING)
         self.logger = sqnotes_logger.get_logger("SQNotes")
-        self.config_module = config_module
+        self.user_configuration_helper = user_configuration_helper
         self.CONFIG_DIR_OVERRIDE = None
         self._INITIAL_GLOBALS = INIT_GLOBALS
         self._INITIAL_SETTINGS = INIT_SETTINGS
@@ -469,9 +469,9 @@ class SQNotes:
             self.database_service.insert_note_keyword_into_database(note_id, keyword_id)
 
     def _get_is_initialized(self):
-        value = self.config_module.get_global_from_user_config(INITIALIZED)
+        value = self.user_configuration_helper.get_global_from_user_config(INITIALIZED)
         self.logger.debug(f"checking initialized: {value}")
-        return self.config_module.get_global_from_user_config(INITIALIZED) == "yes"
+        return self.user_configuration_helper.get_global_from_user_config(INITIALIZED) == "yes"
 
     
 
@@ -530,7 +530,7 @@ class SQNotes:
 
     def get_notes_dir_from_config(self):
         self.logger.debug(f"about to call to get notes dir from config")
-        notes_dir_path = self.config_module.get_setting_from_user_config(
+        notes_dir_path = self.user_configuration_helper.get_setting_from_user_config(
             key=NOTES_PATH_KEY
         )
         if notes_dir_path is None:
@@ -539,14 +539,14 @@ class SQNotes:
             return notes_dir_path
 
     def _get_configured_text_editor(self):
-        text_editor = self.config_module.get_setting_from_user_config("text_editor")
+        text_editor = self.user_configuration_helper.get_setting_from_user_config("text_editor")
 
         if text_editor is None:
             raise TextEditorNotConfiguredException()
         return text_editor
 
     def _is_text_editor_configured(self):
-        text_editor = self.config_module.get_setting_from_user_config("text_editor")
+        text_editor = self.user_configuration_helper.get_setting_from_user_config("text_editor")
         return text_editor is not None and text_editor != ""
 
     def _get_all_note_paths(self, notes_dir):
@@ -579,8 +579,8 @@ class SQNotes:
         self.logger.debug(
             f"setting config module config dir value to {self.CONFIG_DIR}"
         )
-        self.config_module._set_config_dir(config_dir=self.CONFIG_DIR)
-        self.config_module.open_or_create_and_open_user_config_file(
+        self.user_configuration_helper._set_config_dir(config_dir=self.CONFIG_DIR)
+        self.user_configuration_helper.open_or_create_and_open_user_config_file(
             initial_globals=self._INITIAL_GLOBALS,
             initial_settings=self._INITIAL_SETTINGS,
         )
@@ -676,21 +676,21 @@ class SQNotes:
                 raise CouldNotRunGPG()
 
     def _set_gpg_verified(self):
-        self.config_module.set_setting_to_user_config(key=GPG_VERIFIED_KEY, value="yes")
+        self.user_configuration_helper.set_setting_to_user_config(key=GPG_VERIFIED_KEY, value="yes")
 
     def _get_gpg_verified(self):
         return (
-            self.config_module.get_setting_from_user_config(key=GPG_VERIFIED_KEY)
+            self.user_configuration_helper.get_setting_from_user_config(key=GPG_VERIFIED_KEY)
             == "yes"
         )
 
     def initialize(self):
         selected_path = self.prompt_for_user_notes_path()
 
-        self.config_module.set_setting_to_user_config(
+        self.user_configuration_helper.set_setting_to_user_config(
             key=NOTES_PATH_KEY, value=selected_path
         )
-        self.config_module.set_setting_to_user_config(
+        self.user_configuration_helper.set_setting_to_user_config(
             key=ASCII_ARMOR_CONFIG_KEY, value="yes"
         )
 
@@ -703,17 +703,17 @@ class SQNotes:
         self.choose_text_editor_interactive()
 
         self.printer_helper.print_to_so(interface_copy.INITIALIZATION_COMPLETE())
-        self.config_module.set_global_to_user_config(key=INITIALIZED, value="yes")
+        self.user_configuration_helper.set_global_to_user_config(key=INITIALIZED, value="yes")
 
     def _check_is_database_set_up(self):
         is_set_up = (
-            self.config_module.get_setting_from_user_config("database_is_setup")
+            self.user_configuration_helper.get_setting_from_user_config("database_is_setup")
             == "yes"
         )
         return is_set_up
 
     def _set_database_is_set_up(self):
-        self.config_module.set_setting_to_user_config("database_is_setup", "yes")
+        self.user_configuration_helper.set_setting_to_user_config("database_is_setup", "yes")
 
     def setup_database(self):
         print(interface_copy.SETTING_UP_DATABASE_MESSAGE())
@@ -727,13 +727,13 @@ class SQNotes:
 
     def _is_use_ascii_armor(self):
         return (
-            self.config_module.get_setting_from_user_config(key=ASCII_ARMOR_CONFIG_KEY)
+            self.user_configuration_helper.get_setting_from_user_config(key=ASCII_ARMOR_CONFIG_KEY)
             == "yes"
         )
 
     def _set_use_ascii_armor(self, isUseArmor):
         value = "yes" if isUseArmor else "no"
-        self.config_module.set_setting_to_user_config(
+        self.user_configuration_helper.set_setting_to_user_config(
             key=ASCII_ARMOR_CONFIG_KEY, value=value
         )
         self.logger.debug(f"set {ASCII_ARMOR_CONFIG_KEY}=yes")
@@ -745,11 +745,11 @@ class SQNotes:
             exit(1)
 
     def get_gpg_key_email(self):
-        return self.config_module.get_setting_from_user_config(key=GPG_KEY_EMAIL_KEY)
+        return self.user_configuration_helper.get_setting_from_user_config(key=GPG_KEY_EMAIL_KEY)
 
     def set_gpg_key_email(self, new_gpg_key_email):
         self.GPG_KEY_EMAIL = new_gpg_key_email
-        self.config_module.set_setting_to_user_config(
+        self.user_configuration_helper.set_setting_to_user_config(
             key=GPG_KEY_EMAIL_KEY, value=new_gpg_key_email
         )
         print(f"GPG Key set to: {self.GPG_KEY_EMAIL}")
@@ -769,7 +769,7 @@ class SQNotes:
 
     def _set_configured_text_editor(self, editor):
         if editor in self._get_supported_text_editors():
-            self.config_module.set_setting_to_user_config(
+            self.user_configuration_helper.set_setting_to_user_config(
                 key=TEXT_EDITOR_KEY, value=editor
             )
 
@@ -813,7 +813,7 @@ class SQNotes:
             TEXT_EDITOR = input(
                 "No text editor configured. Please enter the path to your preferred terminal text editor (e.g. 'vim', 'nano')> "
             )
-            self.config_module.set_setting_to_user_config("text_editor", TEXT_EDITOR)
+            self.user_configuration_helper.set_setting_to_user_config("text_editor", TEXT_EDITOR)
 
 
 class FileInfo:

@@ -8,7 +8,7 @@ import shutil
 from unittest.mock import Mock, patch, MagicMock
 from injector import Module, singleton
 
-from sqnotes.configuration_module import ConfigurationModule
+from sqnotes.user_configuration_helper import UserConfigurationHelper
 from sqnotes.encrypted_note_helper import EncryptedNoteHelper
 from sqnotes.sqnotes_logger import SQNotesLogger
 from sqnotes.choose_text_editor import ChooseTextEditor
@@ -23,7 +23,7 @@ def set_test_environment():
 @pytest.fixture
 def sqnotes_obj(test_configuration_dir, 
                 database_service_open_in_memory, 
-                configuration_module,
+                user_configuration_helper,
                 mock_path_input_helper,
                 mock_encrypted_note_helper):
     
@@ -31,7 +31,7 @@ def sqnotes_obj(test_configuration_dir,
     class SQNotesTestConfigurationModule(Module):
         def configure(self, binder):
             binder.bind(SQNotesLogger, to=SQNotesLogger(), scope=singleton)
-            binder.bind(ConfigurationModule, to=configuration_module, scope=singleton)
+            binder.bind(UserConfigurationHelper, to=user_configuration_helper, scope=singleton)
             binder.bind(PathInputHelper, to=mock_path_input_helper, scope=singleton)
             binder.bind(DatabaseService, to=database_service_open_in_memory, scope=singleton)
             binder.bind(EncryptedNoteHelper, to=mock_encrypted_note_helper, scope=singleton)
@@ -46,14 +46,13 @@ def mock_is_valid_path():
     with patch.object(PathInputHelper, 'get_path_interactive') as mock:
         yield mock
 
-    
 @pytest.fixture
-def configuration_module(test_configuration_dir):
+def user_configuration_helper(test_configuration_dir):
     injector = Injector()
-    config_module : ConfigurationModule = injector.get(ConfigurationModule)
-    config_module._set_config_dir(test_configuration_dir)
-    yield config_module
-    
+    user_configuration_helper : UserConfigurationHelper = injector.get(UserConfigurationHelper)
+    user_configuration_helper._set_config_dir(test_configuration_dir)
+    yield user_configuration_helper
+
 
 @pytest.fixture
 def database_service():
