@@ -1,0 +1,6 @@
+VERSION : 0.1.2
+INIT_GLOBALS:
+	- key: initialized
+	  value: no
+	- key: database_is_set_up
+	  value: no
