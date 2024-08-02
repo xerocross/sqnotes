@@ -1,5 +1,5 @@
 import pytest
-from injector import Injector
+from injector import Injector, provider
 from sqnotes.sqnotes_module import SQNotes
 from sqnotes.database_service import DatabaseService
 import tempfile
@@ -14,27 +14,74 @@ from sqnotes.sqnotes_logger import SQNotesLogger
 from sqnotes.choose_text_editor import ChooseTextEditor
 from sqnotes.printer_helper import PrinterHelper
 from sqnotes.path_input_helper import PathInputHelper
+from sqnotes.sqnotes_config_module import SQNotesConfig
+
 from test.test_helper import do_nothing
+
+
+
+current_dir = os.path.dirname(os.path.abspath(__file__))
+test_root = os.path.abspath(os.path.join(current_dir, "test"))
+test_resources_root = os.path.join(test_root, 'resources')
+test_config_file = os.path.join(test_resources_root, 'test_config.yaml')
+
 
 @pytest.fixture(scope='session', autouse=True)
 def set_test_environment():
     os.environ['TESTING'] = 'true'
     
 @pytest.fixture
+def mock_subprocess_call():
+    with patch('subprocess.call') as mock:
+        yield mock
+    
+    
+@pytest.fixture
+def mock_sqnotes_config_from_resource_file():
+    
+    class ConfigModule(Module):
+        @provider
+        def provide_config_file_path(self) -> str:
+            return test_config_file
+    
+    injector = Injector([ConfigModule()])
+    sqnotes_config : SQNotesConfig = injector.get(SQNotesConfig)
+    yield sqnotes_config
+    
+    
+@pytest.fixture
+def mock_config_data():
+    data = {}
+    yield data
+    
+    
+@pytest.fixture
+def sqnotes_config_with_mocked_data(mock_config_data):
+    with patch('yaml.safe_load') as mock_yaml_load:
+        with patch('builtins.open'):
+            mock_yaml_load.return_value = mock_config_data
+            injector = Injector()
+            sqnotes_config : SQNotesConfig = injector.get(SQNotesConfig)
+            yield sqnotes_config
+    
+@pytest.fixture
 def sqnotes_obj(test_configuration_dir, 
                 database_service_open_in_memory, 
                 user_configuration_helper,
                 mock_path_input_helper,
-                mock_encrypted_note_helper):
+                mock_encrypted_note_helper,
+                sqnotes_config_with_mocked_data):
     
     
     class SQNotesTestConfigurationModule(Module):
+        
         def configure(self, binder):
             binder.bind(SQNotesLogger, to=SQNotesLogger(), scope=singleton)
             binder.bind(UserConfigurationHelper, to=user_configuration_helper, scope=singleton)
             binder.bind(PathInputHelper, to=mock_path_input_helper, scope=singleton)
             binder.bind(DatabaseService, to=database_service_open_in_memory, scope=singleton)
             binder.bind(EncryptedNoteHelper, to=mock_encrypted_note_helper, scope=singleton)
+            binder.bind(SQNotesConfig, to=sqnotes_config_with_mocked_data, scope=singleton )
     
     injector = Injector([SQNotesTestConfigurationModule()])
     sqnotes_instance : SQNotes = injector.get(SQNotes)

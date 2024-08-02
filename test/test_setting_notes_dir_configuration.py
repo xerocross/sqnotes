@@ -17,22 +17,32 @@ def get_notes_by_keyword (*args, **kwargs):
 @pytest.fixture(scope='session', autouse=True)
 def set_test_environment():
     os.environ['TESTING'] = 'true'
-    
+#
+# @pytest.fixture
+# def sqnotes_obj():
+#     injector = Injector()
+#     sqnotes_obj = injector.get(SQNotes)
+#     sqnotes_obj.DEFAULT_NOTE_DIR = "test_dir"
+#     yield sqnotes_obj
+
 @pytest.fixture
-def sqnotes_obj():
-    injector = Injector()
-    sqnotes_obj = injector.get(SQNotes)
-    sqnotes_obj.DEFAULT_NOTE_DIR = "test_dir"
-    yield sqnotes_obj
+def mock_get_default_notes_dir():
+    with patch.object(SQNotes, '_get_default_notes_dir') as mock:
+        mock.return_value = "detault/notes/dir/path"
+        yield mock
     
+@pytest.mark.usefixtures('mock_get_default_notes_dir')
 @patch('builtins.input')
-def test_prompts_user_for_path_input(mock_input,
-                                     sqnotes_obj):
+def test_prompts_user_for_path_input(
+                                        mock_input,
+                                        sqnotes_obj
+                                    ):
     sqnotes_obj.prompt_for_user_notes_path()
     mock_input.assert_called()
     inputs = get_all_single_arg_inputs(mocked_fn=mock_input)
-    assert any('enter a path' in input for input in inputs)
+    assert any('enter a path' in i for i in inputs)
     
+@pytest.mark.usefixtures('mock_get_default_notes_dir')
 @patch.object(SQNotes, '_try_to_make_path')
 @patch('builtins.input')
 def test_returns_path_if_make_path_successful(
@@ -46,7 +56,7 @@ def test_returns_path_if_make_path_successful(
     submitted_path = sqnotes_obj.prompt_for_user_notes_path()
     assert submitted_path == test_path
     
-    
+@pytest.mark.usefixtures('mock_get_default_notes_dir')
 @patch.object(SQNotes, '_try_to_make_path')
 @patch('builtins.input')
 def test_prompt_repeats_if_user_input_unsuccessful_successful_second_try(
@@ -61,7 +71,7 @@ def test_prompt_repeats_if_user_input_unsuccessful_successful_second_try(
     assert len(call_args_list) == 2
     
 
-
+@pytest.mark.usefixtures('mock_get_default_notes_dir')
 @patch('builtins.print')
 @patch.object(SQNotes, '_try_to_make_path')
 @patch('builtins.input')
