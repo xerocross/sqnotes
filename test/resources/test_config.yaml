@@ -5,3 +5,4 @@ INIT_GLOBALS:
 DEFAULT_NOTES_DIR: '~/sqnotes_notes'
 USER_CONFIG_DIR: '~/.sqnotes'
 USER_CONFIG_FILE_NAME: ''
+key_with_no_value : no
