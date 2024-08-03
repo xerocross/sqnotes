@@ -612,19 +612,23 @@ class SQNotes:
         if not is_database_set_up:
             self.logger.debug("found database not set up")
             self.setup_database()
+            
+    def _get_default_notes_dir(self):
+        return self.DEFAULT_NOTE_DIR
 
     def prompt_for_user_notes_path(self):
         user_input_notes_path = None
         attempt_num = 0
         max_attempts = 2
+        default_notes_dir = self._get_default_notes_dir()
         while user_input_notes_path is None:
             prompt = "Please enter a path for saving your notes \nin the format '[full_path_to_parent]/[note_directory]'. \nPress enter to use default '{}'.".format(
-                self.DEFAULT_NOTE_DIR
+                default_notes_dir
             )
             user_input_notes_path = input(prompt + ">")
 
             if user_input_notes_path == "":
-                selected_path = self.DEFAULT_NOTE_DIR
+                selected_path = default_notes_dir
                 return selected_path
             else:
                 selected_path = user_input_notes_path
