@@ -78,13 +78,13 @@ def describe_rescan_notes():
                                                             mock_get_note_id_or_none,
                                                             sqnotes_obj,
                                                             mock_extract_and_save_keywords,
-                                                            mock_insert_new_note,
+                                                            mock_insert_new_note_into_database,
                                                             mock_commit_transaction
                                                             ):
             mock_get_notes_dir.return_value = "sqnotes"
             mock_get_all_note_paths.return_value = ['file1', 'file2', 'file3']
             mock_get_note_id_or_none.side_effect = [3, 2, 1]
-            mock_insert_new_note.side_effect = []
+            mock_insert_new_note_into_database.side_effect = []
             sqnotes_obj.rescan_for_database()
             num_commit_transaction_calls = len(mock_commit_transaction.call_args_list)
             assert num_commit_transaction_calls == 3
@@ -102,14 +102,14 @@ def describe_rescan_notes():
         def it_calls_to_remove_existing_note_keywords(
                                                             mock_get_all_note_paths,
                                                             mock_get_notes_dir,
-                                                            mock_insert_new_note,
+                                                            mock_insert_new_note_into_database,
                                                             mock_delete_keywords_from_database_for_note,
                                                             mock_get_decrypted_content_in_memory,
                                                             mock_get_note_id_or_none,
                                                             sqnotes_obj
                                                             ):
             mock_get_notes_dir.return_value = "sqnotes"
-            mock_insert_new_note.return_value = 3
+            mock_insert_new_note_into_database.return_value = 3
             mock_get_all_note_paths.return_value = ['file1', 'file2']
             mock_get_note_id_or_none.side_effect = [None, 2]
             sqnotes_obj.rescan_for_database()
@@ -129,18 +129,18 @@ def describe_rescan_notes():
         def it_inserts_unfound_notes_in_database(
                                                     mock_get_all_note_paths,
                                                     mock_get_notes_dir,
-                                                    mock_insert_new_note,
+                                                    mock_insert_new_note_into_database,
                                                     mock_delete_keywords_from_database_for_note,
                                                     mock_get_decrypted_content_in_memory,
                                                     mock_get_note_id_or_none,
                                                     sqnotes_obj
                                                 ):
             mock_get_notes_dir.return_value = "sqnotes"
-            mock_insert_new_note.side_effect = [6, 7]
+            mock_insert_new_note_into_database.side_effect = [6, 7]
             mock_get_all_note_paths.return_value = ['file1', 'file2', 'file3', 'file4', 'file5']
             mock_get_note_id_or_none.side_effect = [1, None, None, 4, 2]
             sqnotes_obj.rescan_for_database()
-            call_args_list = mock_insert_new_note.call_args_list
+            call_args_list = mock_insert_new_note_into_database.call_args_list
             first_call = call_args_list[0]
             _, first_call_kwargs = first_call
             assert first_call_kwargs['note_filename_base'] == 'file2'
@@ -160,12 +160,12 @@ def describe_rescan_notes():
                                                             mock_get_note_id_or_none,
                                                             sqnotes_obj,
                                                             mock_extract_and_save_keywords,
-                                                            mock_insert_new_note
+                                                            mock_insert_new_note_into_database
                                                             ):
             mock_get_notes_dir.return_value = "sqnotes"
             mock_get_all_note_paths.return_value = ['file1', 'file2', 'file3']
             mock_get_note_id_or_none.side_effect = [3, None, 1]
-            mock_insert_new_note.side_effect = [5]
+            mock_insert_new_note_into_database.side_effect = [5]
             sqnotes_obj.rescan_for_database()
             call_args_list = mock_extract_and_save_keywords.call_args_list
             assert call_args_list[0].kwargs == {'note_id': 3, 'note_content' : 'content1'}
@@ -184,13 +184,13 @@ def describe_rescan_notes():
                                                             mock_get_note_id_or_none,
                                                             sqnotes_obj,
                                                             mock_extract_and_save_keywords,
-                                                            mock_insert_new_note,
+                                                            mock_insert_new_note_into_database,
                                                             mock_commit_transaction
                                                             ):
             mock_get_notes_dir.return_value = "sqnotes"
             mock_get_all_note_paths.return_value = ['file1', 'file2', 'file3']
             mock_get_note_id_or_none.side_effect = [3, None, 1]
-            mock_insert_new_note.side_effect = [5]
+            mock_insert_new_note_into_database.side_effect = [5]
             sqnotes_obj.rescan_for_database()
             num_commit_transaction_calls = len(mock_commit_transaction.call_args_list)
             assert num_commit_transaction_calls == 3
