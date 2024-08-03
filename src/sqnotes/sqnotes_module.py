@@ -23,6 +23,7 @@ from sqnotes.database_service import DatabaseService
 from sqnotes.choose_text_editor import ChooseTextEditor, MaxInputAttemptsException
 from sqnotes.path_input_helper import PathInputHelper
 from sqnotes.fileinfo import FileInfo
+from sqnotes.sqnotes_config_module import SQNotesConfig
 
 from sqnotes.custom_exceptions import (
     TextEditorSubprocessException,
@@ -97,6 +98,7 @@ class SQNotes:
         choose_text_editor: ChooseTextEditor,
         printer_helper: PrinterHelper,
         path_input_helper: PathInputHelper,
+        sqnotes_config : SQNotesConfig
     ):
 
         self.encrypted_note_helper = encrypted_note_helper
@@ -111,6 +113,7 @@ class SQNotes:
         self.choose_text_editor = choose_text_editor
         self.printer_helper = printer_helper
         self.path_input_helper = path_input_helper
+        self.sqnotes_config = sqnotes_config
 
 
     def new_note(self):

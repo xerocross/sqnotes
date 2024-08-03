@@ -3,7 +3,7 @@ import pytest
 import os
 from unittest.mock import patch
 from injector import Injector, Module, provider
-from sqnotes.config import SQNotesConfig
+from sqnotes.sqnotes_config_module import SQNotesConfig
 import logging
 
 logger = logging.getLogger("test_config")
@@ -15,32 +15,9 @@ test_resources_root = os.path.join(test_root, 'resources')
 config_file = os.path.join(test_resources_root, 'test_config.yaml')
 
 
-@pytest.fixture
-def mock_sqnotes_config_from_resource_file():
     
-    class ConfigModule(Module):
-        @provider
-        def provide_config_file_path(self) -> str:
-            return config_file
-    
-    injector = Injector([ConfigModule()])
-    sqnotes_config : SQNotesConfig = injector.get(SQNotesConfig)
-    yield sqnotes_config
-    
-    
-@pytest.fixture
-def mock_config_data():
-    data = {}
-    yield data
-    
-@pytest.fixture
-def sqnotes_config_with_mocked_data(mock_config_data):
-    with patch('yaml.safe_load') as mock_yaml_load:
-        with patch('builtins.open'):
-            mock_yaml_load.return_value = mock_config_data
-            injector = Injector()
-            sqnotes_config : SQNotesConfig = injector.get(SQNotesConfig)
-            yield sqnotes_config
+
+
     
     
 def describe_config():
