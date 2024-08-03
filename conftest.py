@@ -236,6 +236,17 @@ def mock_get_notes_dir_from_config(test_notes_directory):
         yield mock
         
 @pytest.fixture
+def mock_get_user_config_dir():
+    with patch.object(SQNotes, '_get_user_config_dir') as mock:
+        mock.return_value = "/some/fake/dir"
+        yield mock
+        
+@pytest.fixture
+def mock_get_initial_globals_from_config():
+    with patch.object(SQNotes, '_get_initial_globals_from_config') as mock:
+        yield mock
+        
+@pytest.fixture
 def mock_get_input_from_text_editor():
     with patch.object(SQNotes, '_get_input_from_text_editor') as mock:
         mock.return_value = "edited content"
