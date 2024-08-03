@@ -56,13 +56,27 @@ def mock_config_data():
     
     
 @pytest.fixture
+def mock_note_files(test_notes_directory):
+    notes = ['test1.txt.gpg', 'test2.txt.gpg']
+    note_paths = [test_notes_directory / n for n in notes]
+    for p in note_paths:
+        with open(p, 'w'):
+            pass
+        
+    yield [str(p) for p in note_paths]
+    for p in note_paths:
+        if os.path.isfile(p):
+            os.remove(p)
+        
+    
+@pytest.fixture
 def sqnotes_config_with_mocked_data(mock_config_data):
     with patch('yaml.safe_load') as mock_yaml_load:
         with patch('builtins.open'):
             mock_yaml_load.return_value = mock_config_data
             injector = Injector()
             sqnotes_config : SQNotesConfig = injector.get(SQNotesConfig)
-            yield sqnotes_config
+    yield sqnotes_config
     
 @pytest.fixture
 def sqnotes_obj(test_configuration_dir, 
@@ -191,14 +205,10 @@ def test_configuration_dir():
             
             
 @pytest.fixture
-def test_notes_directory():
-    temp_dir = tempfile.mkdtemp()
-    try:
-        yield temp_dir
-    finally:
-        if os.path.isdir(temp_dir):
-            shutil.rmtree(temp_dir)
-            
+def test_notes_directory(tmp_path):
+    temp_notes_path = tmp_path / "notes"
+    temp_notes_path.mkdir()
+    yield temp_notes_path
             
 @pytest.fixture
 def test_note_file(test_notes_directory):
