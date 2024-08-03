@@ -85,6 +85,7 @@ IS_INITIALIZATION_GATE_REFACTORED_INSIDE_SQNOTES = (os.getenv("IS_INITIALIZATION
 class SQNotes:
 
     NOT_INITIALIZED = 18
+    GPG_ERROR = 12
     @inject
     def __init__(
         self,
@@ -284,12 +285,12 @@ class SQNotes:
                 self.logger.error(e)
                 message = (
                     interface_copy.GPG_SUBPROCESS_ERROR_MESSAGE()
-                    + "\n"
+                    + " "
                     + interface_copy.EXITING()
                 )
-                self.logger.error(message)
-                print(message)
-                exit(1)
+                print(f"printing message: {message}")
+                self.printer_helper.print_to_so(message)
+                exit(self.GPG_ERROR)
 
             content_in_lower_case = decrypted_content.lower()
             if all(
@@ -413,13 +414,14 @@ class SQNotes:
             self.logger.error(e)
             message = (
                 interface_copy.GPG_SUBPROCESS_ERROR_MESSAGE()
-                + "\n"
+                + " "
                 + interface_copy.EXITING()
             )
             self.logger.error(message)
-            print(message)
-            exit(1)
+            self.printer_helper.print_to_so(message)
+            exit(self.GPG_ERROR)
 
+        
         note_added_message = interface_copy.NOTE_ADDED().format(base_filename)
         print(note_added_message)
 
