@@ -1,2 +1,7 @@
-key_with_no_value: no
-initialized: 'no'
+VERSION : 0.1.2
+INIT_GLOBALS:
+  initialized: 'no'
+  database_is_set_up: 'no'
+DEFAULT_NOTES_DIR: '~/sqnotes_notes'
+USER_CONFIG_DIR: '~/.sqnotes'
+USER_CONFIG_FILE_NAME: ''
