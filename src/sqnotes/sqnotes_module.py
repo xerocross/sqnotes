@@ -54,10 +54,6 @@ TEXT_EDITOR_KEY = "text_editor"
 
 SUPPORTED_TEXT_EDITORS = [VIM, NANO]
 
-INIT_GLOBALS = {INITIALIZED: NO, DATABASE_IS_SET_UP_KEY: NO}
-
-INIT_SETTINGS = {}
-
 
 class EnvironmentConfigurationNotFound(Exception):
     """Raise if the environment configuration file is not found."""
@@ -86,6 +82,8 @@ class SQNotes:
     GPG_ERROR = 12
     DEFAULT_NOTES_DIR_KEY = 'DEFAULT_NOTES_DIR'
     USER_CONFIG_DIR_KEY = 'USER_CONFIG_DIR'
+    INIT_GLOBALS_KEY = 'INIT_GLOBALS'
+    INIT_USER_SETTINGS_KEY = 'INIT_USER_SETTINGS'
     @inject
     def __init__(
         self,
@@ -104,8 +102,6 @@ class SQNotes:
         sqnotes_logger.configure(debug=DEBUGGING)
         self.logger = sqnotes_logger.get_logger("SQNotes")
         self.user_configuration_helper = user_configuration_helper
-        self._INITIAL_GLOBALS = INIT_GLOBALS
-        self._INITIAL_SETTINGS = INIT_SETTINGS
         self.database_service = database_service
         self.choose_text_editor = choose_text_editor
         self.printer_helper = printer_helper
@@ -757,10 +753,19 @@ class SQNotes:
         user_config_dir = self._get_user_config_dir()
         self.user_configuration_helper._set_config_dir(config_dir=user_config_dir)
         
+        init_globals = self._get_initial_globals_from_config()
+        init_user_settings = self._get_initial_user_settings_from_config()
+        
         self.user_configuration_helper.open_or_create_and_open_user_config_file(
-            initial_globals=self._INITIAL_GLOBALS,
-            initial_settings=self._INITIAL_SETTINGS,
+            initial_globals=init_globals,
+            initial_settings=init_user_settings
         )
+        
+    def _get_initial_globals_from_config(self):
+        return self.sqnotes_config.get(key = self.INIT_GLOBALS_KEY)
+    
+    def _get_initial_user_settings_from_config(self):
+        return self.sqnotes_config.get(key = self.INIT_USER_SETTINGS_KEY)
 
     def _set_configured_text_editor(self, editor):
         if editor in self._get_supported_text_editors():
