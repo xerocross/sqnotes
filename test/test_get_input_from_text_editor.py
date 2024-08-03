@@ -11,7 +11,8 @@ MOCK_NOTE_CONTENT = 'mock content'
 
 def describe_get_input_from_text_editor():
     
-    @pytest.mark.usefixtures('mock_NamedTemporaryFile')
+    @pytest.mark.usefixtures('mock_NamedTemporaryFile',
+                             'mock_builtin_open')
     def it_calls_subprocess_with_correct_temp_filename (
                                                         sqnotes_obj :SQNotes, 
                                                         mock_subprocess_call,

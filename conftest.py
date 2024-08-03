@@ -361,6 +361,12 @@ def test_note_temp_file(test_notes_directory):
         except FileNotFoundError:
             pass
     
+    
+@pytest.fixture
+def mock_builtin_open():
+    with patch('builtins.open') as mock:
+        yield mock
+    
 @pytest.fixture
 def mock_decrypt_note_into_temp_file():
     with patch.object(EncryptedNoteHelper, 'decrypt_note_into_temp_file') as mock:
