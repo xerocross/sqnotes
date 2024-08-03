@@ -16,7 +16,7 @@ from sqnotes.printer_helper import PrinterHelper
 from sqnotes.path_input_helper import PathInputHelper
 from sqnotes.sqnotes_config_module import SQNotesConfig
 
-from test.test_helper import do_nothing
+from test.test_helper import do_nothing, get_all_mocked_print_output_to_string
 
 
 
@@ -179,6 +179,7 @@ def mock_open_database():
         yield mock
     
 
+
 @pytest.fixture
 def test_configuration_dir():
     temp_dir = tempfile.mkdtemp()
@@ -216,6 +217,12 @@ def mock_get_notes_dir_from_config(test_notes_directory):
         yield mock
         
 @pytest.fixture
+def mock_get_input_from_text_editor():
+    with patch.object(SQNotes, '_get_input_from_text_editor') as mock:
+        mock.return_value = "edited content"
+        yield mock
+        
+@pytest.fixture
 def mock_get_configured_text_editor():
     with patch.object(SQNotes, '_get_configured_text_editor') as mock:
         mock.return_value = 'vim'
@@ -239,7 +246,7 @@ def mock_get_decrypted_content_in_memory():
         yield mock
      
 @pytest.fixture   
-def mock_insert_new_note():
+def mock_insert_new_note_into_database():
     # @patch.object(DatabaseService, 'insert_new_note_into_database')
     with patch.object(DatabaseService, 'insert_new_note_into_database') as mock:
         # mock.side_effect = [x for x in range(0, 20)]
