@@ -84,6 +84,7 @@ class SQNotes:
 
     NOT_INITIALIZED = 18
     GPG_ERROR = 12
+    DEFAULT_NOTES_DIR_KEY = 'DEFAULT_NOTES_DIR'
     @inject
     def __init__(
         self,
@@ -610,7 +611,7 @@ class SQNotes:
             self.setup_database()
             
     def _get_default_notes_dir(self):
-        return self.DEFAULT_NOTE_DIR
+        return self.sqnotes_config.get(key = self.DEFAULT_NOTES_DIR_KEY)
 
     def prompt_for_user_notes_path(self):
         user_input_notes_path = None

@@ -4,3 +4,4 @@ INIT_GLOBALS:
     value: no
   - key: database_is_set_up
     value: no
+DEFAULT_NOTES_DIR: '~/sqnotes_notes'
