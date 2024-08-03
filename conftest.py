@@ -368,6 +368,17 @@ def mock_builtin_open():
         yield mock
     
 @pytest.fixture
+def mock_subprocess_result():
+    subprocess_return_mock = Mock()
+    yield subprocess_return_mock
+
+@pytest.fixture
+def mock_subprocess_run(mock_subprocess_result):
+    with patch('subprocess.run') as mock:
+        mock.return_value = mock_subprocess_result
+        yield mock
+    
+@pytest.fixture
 def mock_decrypt_note_into_temp_file():
     with patch.object(EncryptedNoteHelper, 'decrypt_note_into_temp_file') as mock:
         yield mock
