@@ -351,15 +351,17 @@ def describe_the_new_note_method():
         sqnotes_obj,
         test_notes_directory,
     ):
-        mock_get_new_note_name.side_effect = ["test.txt.gpg"]
+        new_note_name = "test.txt.gpg"
+        mock_get_new_note_name.side_effect = [new_note_name]
         mock_get_input.return_value = "test content"
         mock_write_encrypted_note.return_value = True
         sqnotes_obj.new_note()
         _, called_kwargs = mock_write_encrypted_note.call_args
         mock_write_encrypted_note.assert_called_once()
+        expected_path = test_notes_directory / new_note_name
         assert (
             called_kwargs["note_file_path"]
-            == test_notes_directory + os.sep + "test.txt.gpg"
+            == str(expected_path)
         )
 
     @pytest.mark.usefixtures(
