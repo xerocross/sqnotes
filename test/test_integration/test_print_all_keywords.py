@@ -55,8 +55,7 @@ def describe_print_all_keywords():
                                  "mock_transaction")
         def it_prints_no_keywords_message(
                                     mock_print_to_so,
-                                    sqnotes_obj : SQNotes,
-                                    database_service : DatabaseService,
+                                    sqnotes_obj : SQNotes
                                     ):
             sqnotes_obj.print_all_keywords()
             output = get_all_mocked_print_output(mocked_print=mock_print_to_so)

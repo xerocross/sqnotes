@@ -6,11 +6,12 @@ import tempfile
 from datetime import datetime
 import sqlite3
 import re
+import sys
 
 from dotenv import load_dotenv
 from sqnotes import interface_copy
-from sqnotes.printer_helper import print_to_so, PrinterHelper
-import sys
+from sqnotes.printer_helper import PrinterHelper
+
 from sqnotes.manual import Manual
 from sqnotes.command_validator import CommandValidator
 from sqnotes.encrypted_note_helper import EncryptedNoteHelper, GPGSubprocessException
@@ -343,7 +344,7 @@ class SQNotes:
             print(kw)
         if len(keywords) == 0:
             message = interface_copy.NO_KEYWORDS_IN_DATABASE()
-            print_to_so(message)
+            self.printer_helper.print_to_so(message)
 
     def notes_list(self):
         self.logger.debug("printing notes list")
