@@ -104,7 +104,6 @@ class SQNotes:
         sqnotes_logger.configure(debug=DEBUGGING)
         self.logger = sqnotes_logger.get_logger("SQNotes")
         self.user_configuration_helper = user_configuration_helper
-        self.CONFIG_DIR_OVERRIDE = None
         self._INITIAL_GLOBALS = INIT_GLOBALS
         self._INITIAL_SETTINGS = INIT_SETTINGS
         self.database_service = database_service
@@ -752,7 +751,6 @@ class SQNotes:
         print(message)
 
     def startup(self):
-        self._load_setup_configuration()
         self._setup_user_configuration()
 
     def _setup_user_configuration(self):
@@ -763,19 +761,6 @@ class SQNotes:
             initial_globals=self._INITIAL_GLOBALS,
             initial_settings=self._INITIAL_SETTINGS,
         )
-
-    def _load_setup_configuration(self):
-
-        if self.CONFIG_DIR_OVERRIDE is not None:
-            self.CONFIG_DIR = self.CONFIG_DIR_OVERRIDE
-            self.logger.debug(
-                f"config dir override set;setting sqnotes CONFIG_DIR = {self.CONFIG_DIR}"
-            )
-        else:
-            self.CONFIG_DIR = os.path.expanduser(os.getenv("DEFAULT_CONFIG_DIR_PATH"))
-            self.logger.debug(f" setting sqnotes CONFIG_DIR = {self.CONFIG_DIR}")
-            
-        self.CONFIG_FILE = os.path.join(self.CONFIG_DIR, "config.ini")
 
     def _set_configured_text_editor(self, editor):
         if editor in self._get_supported_text_editors():
