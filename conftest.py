@@ -84,7 +84,8 @@ def sqnotes_obj(test_configuration_dir,
                 user_configuration_helper,
                 mock_path_input_helper,
                 mock_encrypted_note_helper,
-                sqnotes_config_with_mocked_data):
+                sqnotes_config_with_mocked_data,
+                mock_config_data):
     
     
     class SQNotesTestConfigurationModule(Module):
@@ -97,9 +98,10 @@ def sqnotes_obj(test_configuration_dir,
             binder.bind(EncryptedNoteHelper, to=mock_encrypted_note_helper, scope=singleton)
             binder.bind(SQNotesConfig, to=sqnotes_config_with_mocked_data, scope=singleton )
     
+    mock_config_data['USER_CONFIG_DIR'] = test_configuration_dir
+    
     injector = Injector([SQNotesTestConfigurationModule()])
     sqnotes_instance : SQNotes = injector.get(SQNotes)
-    sqnotes_instance.set_config_dir_override(config_dir_override = test_configuration_dir)
     yield sqnotes_instance
     
 @pytest.fixture

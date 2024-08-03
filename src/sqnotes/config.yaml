@@ -5,3 +5,5 @@ INIT_GLOBALS:
   - key: database_is_set_up
     value: no
 DEFAULT_NOTES_DIR: '~/sqnotes_notes'
+USER_CONFIG_DIR: '~/.sqnotes'
+USER_CONFIG_FILE_NAME: ''

@@ -85,6 +85,7 @@ class SQNotes:
     NOT_INITIALIZED = 18
     GPG_ERROR = 12
     DEFAULT_NOTES_DIR_KEY = 'DEFAULT_NOTES_DIR'
+    USER_CONFIG_DIR_KEY = 'USER_CONFIG_DIR'
     @inject
     def __init__(
         self,
@@ -369,6 +370,26 @@ class SQNotes:
     def run_git_command(self, args):
         subprocess.call(["git"] + args, cwd=self.NOTES_DIR)
 
+    def open_database(self):
+        notes_dir = self.get_notes_dir_from_config()
+        if notes_dir is None:
+            raise NotesDirNotSelectedException()
+        self.DB_PATH = self._get_db_file_path(notes_dir)
+        self.logger.debug(f"opening database at {self.DB_PATH}")
+
+        try:
+            self.database_service.connect(
+                db_file_path=self._get_db_file_path(notes_dir)
+            )
+        except Exception as e:
+            self.logger.error(e)
+            raise CouldNotOpenDatabaseException()
+
+        is_database_set_up = self._check_is_database_set_up()
+        if not is_database_set_up:
+            self.logger.debug("found database not set up")
+            self.setup_database()
+
     def _get_input_from_text_editor(self, TEXT_EDITOR):
         with tempfile.NamedTemporaryFile(delete=False) as temp_file:
             temp_filename = temp_file.name
@@ -563,53 +584,11 @@ class SQNotes:
             all_notes.extend(files)
         return all_notes
 
-    def set_config_dir_override(self, config_dir_override):
-        self.CONFIG_DIR_OVERRIDE = config_dir_override
+    def _get_user_config_dir(self):
+        configured_path =  self.sqnotes_config.get(key = self.USER_CONFIG_DIR_KEY)
+        expanded_path = os.path.expanduser(configured_path)
+        return expanded_path
 
-    def _load_setup_configuration(self):
-        # Configurable directory for storing notes and database location
-        self.DEFAULT_NOTE_DIR = os.path.expanduser(os.getenv("DEFAULT_NOTES_PATH"))
-
-        if self.CONFIG_DIR_OVERRIDE is not None:
-            self.CONFIG_DIR = self.CONFIG_DIR_OVERRIDE
-            self.logger.debug(
-                f"config dir override set;setting sqnotes CONFIG_DIR = {self.CONFIG_DIR}"
-            )
-        else:
-            self.CONFIG_DIR = os.path.expanduser(os.getenv("DEFAULT_CONFIG_DIR_PATH"))
-            self.logger.debug(f" setting sqnotes CONFIG_DIR = {self.CONFIG_DIR}")
-        self.CONFIG_FILE = os.path.join(self.CONFIG_DIR, "config.ini")
-
-    def _setup_user_configuration(self):
-        self.logger.debug(
-            f"setting config module config dir value to {self.CONFIG_DIR}"
-        )
-        self.user_configuration_helper._set_config_dir(config_dir=self.CONFIG_DIR)
-        self.user_configuration_helper.open_or_create_and_open_user_config_file(
-            initial_globals=self._INITIAL_GLOBALS,
-            initial_settings=self._INITIAL_SETTINGS,
-        )
-
-    def open_database(self):
-        notes_dir = self.get_notes_dir_from_config()
-        if notes_dir is None:
-            raise NotesDirNotSelectedException()
-        self.DB_PATH = self._get_db_file_path(notes_dir)
-        self.logger.debug(f"opening database at {self.DB_PATH}")
-
-        try:
-            self.database_service.connect(
-                db_file_path=self._get_db_file_path(notes_dir)
-            )
-        except Exception as e:
-            self.logger.error(e)
-            raise CouldNotOpenDatabaseException()
-
-        is_database_set_up = self._check_is_database_set_up()
-        if not is_database_set_up:
-            self.logger.debug("found database not set up")
-            self.setup_database()
-            
     def _get_default_notes_dir(self):
         return self.sqnotes_config.get(key = self.DEFAULT_NOTES_DIR_KEY)
 
@@ -776,6 +755,28 @@ class SQNotes:
         self._load_setup_configuration()
         self._setup_user_configuration()
 
+    def _setup_user_configuration(self):
+        user_config_dir = self._get_user_config_dir()
+        self.user_configuration_helper._set_config_dir(config_dir=user_config_dir)
+        
+        self.user_configuration_helper.open_or_create_and_open_user_config_file(
+            initial_globals=self._INITIAL_GLOBALS,
+            initial_settings=self._INITIAL_SETTINGS,
+        )
+
+    def _load_setup_configuration(self):
+
+        if self.CONFIG_DIR_OVERRIDE is not None:
+            self.CONFIG_DIR = self.CONFIG_DIR_OVERRIDE
+            self.logger.debug(
+                f"config dir override set;setting sqnotes CONFIG_DIR = {self.CONFIG_DIR}"
+            )
+        else:
+            self.CONFIG_DIR = os.path.expanduser(os.getenv("DEFAULT_CONFIG_DIR_PATH"))
+            self.logger.debug(f" setting sqnotes CONFIG_DIR = {self.CONFIG_DIR}")
+            
+        self.CONFIG_FILE = os.path.join(self.CONFIG_DIR, "config.ini")
+
     def _set_configured_text_editor(self, editor):
         if editor in self._get_supported_text_editors():
             self.user_configuration_helper.set_setting_to_user_config(
@@ -939,9 +940,6 @@ def main():
 
     sqnotes = __get_sqnotes()
     sqnotes.startup()
-
-
-
 
     if args.command == "init":
         sqnotes.initialize()

@@ -87,6 +87,19 @@ def describe_sqnotes():
             all_notes = sqnotes_obj._get_all_note_paths(notes_dir=test_notes_directory)
             assert all_notes == expected_value
             
+    def describe_get_user_config_dir():
+        
+        @patch('os.path.expanduser')
+        def it_applies_expanduser_to_get_the_configured_path(
+                                                 mock_path_expanduser,
+                                                 sqnotes_obj : SQNotes,
+                                                 mock_config_data
+                                                ):
+            expanded_path = 'expanded path'
+            mock_path_expanduser.return_value = expanded_path
+            mock_config_data[sqnotes_obj.USER_CONFIG_DIR_KEY] = 'configured path'
+            response = sqnotes_obj._get_user_config_dir()
+            assert response == expanded_path
 
 if __name__ == '__main__':
     unittest.main()
