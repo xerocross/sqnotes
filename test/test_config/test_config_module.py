@@ -1,13 +1,10 @@
 
 import pytest
 import os
-from unittest.mock import patch
-from injector import Injector, Module, provider
 from sqnotes.sqnotes_config_module import SQNotesConfig
 import logging
 
 logger = logging.getLogger(__name__)
-
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
 test_root = os.path.abspath(os.path.join(current_dir, "../"))
@@ -17,7 +14,7 @@ config_file = os.path.join(test_resources_root, 'test_config.yaml')
 def describe_config():
 
     def it_gets_value_from_config_file(
-                                    mock_sqnotes_config_from_resource_file
+                                    mock_sqnotes_config_from_resource_file : SQNotesConfig
                                     ):
         test_key = 'USER_CONFIG_DIR'
         expected_value = '~/.sqnotes'
