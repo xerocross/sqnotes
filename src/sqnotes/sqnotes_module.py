@@ -76,12 +76,8 @@ else:
     load_dotenv(env_file_path)
 
 
-
-
 SET_NOTES_PATH_INTERACTIVE_FLAG = (os.getenv("SET_NOTES_PATH_INTERACTIVE") == 'yes')
 IS_INITIALIZATION_GATE_REFACTORED_INSIDE_SQNOTES = (os.getenv("IS_INITIALIZATION_GATE_REFACTORED_INSIDE_SQNOTES") == 'yes')
-
-
 
 
 class SQNotes:
@@ -130,7 +126,7 @@ class SQNotes:
 
         try:
             self.open_database()
-        except Exception as e:
+        except Exception:
             message = (
                 interface_copy.COULD_NOT_OPEN_DATABASE()
                 + " "
