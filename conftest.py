@@ -147,7 +147,7 @@ def mock_transaction(database_service_open_in_memory : DatabaseService):
     
 @pytest.fixture
 def mock_print_to_so():
-    with patch('sqnotes.sqnotes_module.print_to_so') as mock:
+    with patch.object(PrinterHelper, 'print_to_so') as mock:
         yield mock
         
         
@@ -203,6 +203,13 @@ def test_configuration_dir():
         if os.path.isdir(temp_dir):
             shutil.rmtree(temp_dir)
             
+            
+@pytest.fixture
+def mock_get_all_note_paths():
+    with patch.object(SQNotes, '_get_all_note_paths') as mock:
+        mock.return_value = ['note1.txt', 'note2.txt', 'note3.txt']
+        yield mock
+
             
 @pytest.fixture
 def test_notes_directory(tmp_path):
