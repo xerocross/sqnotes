@@ -25,7 +25,8 @@ def describe_edit_note():
                                  "mock_open_database",
                                  "mock_get_notes_dir_from_config",
                                  "mock_get_configured_text_editor",
-                                 "mock_delete_temp_file")
+                                 "mock_delete_temp_file",
+            "mock_get_is_initialized")
         
         def it_exits (
                                             sqnotes_obj,
@@ -53,7 +54,8 @@ def describe_edit_note():
                                  "mock_get_notes_dir_from_config",
                                  "mock_get_configured_text_editor",
                                  "mock_delete_temp_file",
-                                 "mock_is_use_ascii_armor")
+                                 "mock_is_use_ascii_armor",
+            "mock_get_is_initialized")
         
         @patch('builtins.print')
         def it_prints_note_not_found_error (
@@ -92,7 +94,8 @@ def describe_edit_note():
                                  "mock_get_notes_dir_from_config",
                                  "mock_get_configured_text_editor",
                                  "mock_delete_temp_file",
-                                 "mock_is_use_ascii_armor")
+                                 "mock_is_use_ascii_armor",
+            "mock_get_is_initialized")
         def it_executes_without_throwing(
                                             sqnotes_obj,
                                             test_note_file,
@@ -122,7 +125,8 @@ def describe_edit_note():
                                  "mock_get_notes_dir_from_config",
                                  "mock_get_configured_text_editor",
                                  "mock_delete_temp_file",
-                                 "mock_is_use_ascii_armor")
+                                 "mock_is_use_ascii_armor",
+            "mock_get_is_initialized")
         def it_calls_to_edit_the_note_created_by_decrypting (
                                             sqnotes_obj,
                                             test_note_file,
@@ -151,7 +155,8 @@ def describe_edit_note():
                                  "mock_get_notes_dir_from_config",
                                  "mock_get_configured_text_editor",
                                  "mock_delete_temp_file",
-                                 "mock_is_use_ascii_armor")
+                                 "mock_is_use_ascii_armor",
+            "mock_get_is_initialized")
         def it_calls_to_decrypt_note (
                                             sqnotes_obj,
                                             test_note_file,
@@ -179,7 +184,8 @@ def describe_edit_note():
                                  "mock_get_notes_dir_from_config",
                                  "mock_get_configured_text_editor",
                                  "mock_delete_temp_file",
-                                 "mock_is_use_ascii_armor")
+                                 "mock_is_use_ascii_armor",
+            "mock_get_is_initialized")
         def it_calls_write_function_with_content_from_editor(
                                                             sqnotes_obj,
                                                             test_note_file,
@@ -211,7 +217,8 @@ def describe_edit_note():
                                  "mock_get_configured_text_editor",
                                  "mock_delete_temp_file",
                                  "mock_get_gpg_key_email",
-                                 "mock_is_use_ascii_armor")
+                                 "mock_is_use_ascii_armor",
+            "mock_get_is_initialized")
         def it_passes_gpg_key_email_into_write_function (
                                                             sqnotes_obj,
                                                             test_note_file,
@@ -249,7 +256,8 @@ def describe_edit_note():
                                      "mock_get_notes_dir_from_config",
                                      "mock_get_configured_text_editor",
                                      "mock_delete_temp_file",
-                                     "mock_get_gpg_key_email")
+                                     "mock_get_gpg_key_email",
+            "mock_get_is_initialized")
             @patch.object(SQNotes, '_is_use_ascii_armor', just_return(True))
             def it_passes_ascii_armor_yes_into_config_into_write_function (
                                                                 sqnotes_obj,
@@ -284,7 +292,8 @@ def describe_edit_note():
                                      "mock_get_notes_dir_from_config",
                                      "mock_get_configured_text_editor",
                                      "mock_delete_temp_file",
-                                     "mock_get_gpg_key_email")
+                                     "mock_get_gpg_key_email",
+            "mock_get_is_initialized")
             @patch.object(SQNotes, '_is_use_ascii_armor', just_return(False))
             def it_passes_ascii_armor_false_into_config_into_write_function (
                                                                 sqnotes_obj,
@@ -321,7 +330,8 @@ def describe_edit_note():
                                  "mock_get_notes_dir_from_config",
                                  "mock_get_configured_text_editor",
                                  "mock_delete_temp_file",
-                                 "mock_is_use_ascii_armor")
+                                 "mock_is_use_ascii_armor",
+            "mock_get_is_initialized")
         def it_exits(
                         sqnotes_obj,
                         test_note_file,
@@ -347,7 +357,8 @@ def describe_edit_note():
                                  "mock_get_notes_dir_from_config",
                                  "mock_get_configured_text_editor",
                                  "mock_delete_temp_file",
-                                 "mock_is_use_ascii_armor")
+                                 "mock_is_use_ascii_armor",
+            "mock_get_is_initialized")
         @patch('builtins.print')
         def it_prints_gpg_error_message(
                                     mock_print,

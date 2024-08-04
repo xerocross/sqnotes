@@ -40,6 +40,7 @@ def describe_the_new_note_method():
             "mock_get_configured_text_editor",
             "mock_get_notes_dir_from_config",
             "mock_get_input_from_text_editor",
+            "mock_get_is_initialized"
         )
         def it_exits(sqnotes_obj, mock_open_database):
             mock_open_database.side_effect = sqlite3.OperationalError
@@ -62,6 +63,7 @@ def describe_the_new_note_method():
             "mock_get_configured_text_editor",
             "mock_get_notes_dir_from_config",
             "mock_get_input_from_text_editor",
+            "mock_get_is_initialized"
         )
         def it_prints_database_error_message(
             mock_open_database, mock_get_input_from_text_editor, mock_print, sqnotes_obj
@@ -91,6 +93,7 @@ def describe_the_new_note_method():
         "mock_get_configured_text_editor",
         "mock_get_notes_dir_from_config",
         "mock_get_input_from_text_editor",
+            "mock_get_is_initialized"
     )
     @patch.object(EncryptedNoteHelper, "write_encrypted_note")
     def it_calls_to_get_input_from_text_editor(
@@ -121,6 +124,7 @@ def describe_the_new_note_method():
             "mock_get_configured_text_editor",
             "mock_get_notes_dir_from_config",
             "mock_get_input_from_text_editor",
+            "mock_get_is_initialized"
         )
         def it_prints_proper_error_message(
                                                 sqnotes_obj,
@@ -151,6 +155,7 @@ def describe_the_new_note_method():
             "mock_write_encrypted_note",
             "mock_insert_new_note_into_database",
             "mock_get_configured_text_editor",
+            "mock_get_is_initialized"
         )
         @patch.object(SQNotes, "_get_input_from_text_editor")
         @patch.object(SQNotes, "get_notes_dir_from_config")
@@ -183,6 +188,7 @@ def describe_the_new_note_method():
             "mock_get_gpg_key_email",
             "mock_open_database",
             "mock_write_encrypted_note",
+            "mock_get_is_initialized"
         )
         @patch.object(SQNotes, "_check_for_database_exception", just_return(True))
         @patch.object(SQNotes, "_get_input_from_text_editor")
@@ -220,6 +226,7 @@ def describe_the_new_note_method():
             "mock_get_gpg_key_email",
             "mock_open_database",
             "mock_write_encrypted_note",
+            "mock_get_is_initialized"
         )
         @patch.object(SQNotes, "_check_for_database_exception", just_return(True))
         @patch.object(SQNotes, "_get_input_from_text_editor")
@@ -253,6 +260,7 @@ def describe_the_new_note_method():
             "mock_get_gpg_key_email",
             "mock_open_database",
             "mock_write_encrypted_note",
+            "mock_get_is_initialized"
         )
         @patch.object(DatabaseService, "insert_new_note_into_database")
         @patch.object(SQNotes, "_get_input_from_text_editor")
@@ -283,7 +291,8 @@ def describe_the_new_note_method():
             "mock_get_new_note_name",
             "mock_write_encrypted_note",
             "mock_get_gpg_key_email",
-            "mock_get_notes_dir_from_config"
+            "mock_get_notes_dir_from_config",
+            "mock_get_is_initialized"
         )
         @patch.object(SQNotes, "_get_input_from_text_editor")
         def test_prints_unexpected_error_message(
@@ -313,6 +322,7 @@ def describe_the_new_note_method():
         "mock_commit_transaction",
         "mock_get_notes_dir_from_config",
         "mock_get_gpg_key_email",
+            "mock_get_is_initialized"
     )
     @patch.object(SQNotes, "_get_input_from_text_editor")
     def it_passes_content_from_editor_into_write_function(
@@ -341,6 +351,7 @@ def describe_the_new_note_method():
         "mock_check_text_editor_is_configured",
         "mock_commit_transaction",
         "mock_insert_new_note_into_database",
+            "mock_get_is_initialized"
     )
     @patch.object(EncryptedNoteHelper, "write_encrypted_note")
     @patch.object(SQNotes, "_get_input_from_text_editor")
@@ -376,6 +387,7 @@ def describe_the_new_note_method():
         "mock_check_text_editor_is_configured",
         "mock_commit_transaction",
         "mock_insert_new_note_into_database",
+            "mock_get_is_initialized"
     )
     @patch.object(SQNotes, "_get_input_from_text_editor", just_return("content"))
     @patch.object(EncryptedNoteHelper, "write_encrypted_note")
@@ -407,6 +419,7 @@ def describe_the_new_note_method():
             "mock_check_text_editor_is_configured",
             "mock_commit_transaction",
             "mock_insert_new_note_into_database",
+            "mock_get_is_initialized"
         )
         @patch.object(SQNotes, "_get_input_from_text_editor", just_return("content"))
         @patch.object(EncryptedNoteHelper, "write_encrypted_note")
@@ -431,6 +444,7 @@ def describe_the_new_note_method():
             "mock_check_text_editor_is_configured",
             "mock_commit_transaction",
             "mock_insert_new_note_into_database",
+            "mock_get_is_initialized"
         )
         @patch.object(SQNotes, "_get_input_from_text_editor", just_return("content"))
         @patch.object(EncryptedNoteHelper, "write_encrypted_note")
