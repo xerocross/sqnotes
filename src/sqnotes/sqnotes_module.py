@@ -378,18 +378,19 @@ class SQNotes:
         notes_dir = self.get_notes_dir_from_config()
         if notes_dir is None:
             raise NotesDirNotSelectedException()
-        self.DB_PATH = self._get_db_file_path(notes_dir)
-        self.logger.debug(f"opening database at {self.DB_PATH}")
+        configured_db_path = self._get_db_path_from_user_config()
+        
+        self.logger.debug(f"opening database at {configured_db_path}")
 
         try:
             self.database_service.connect(
-                db_file_path=self._get_db_file_path(notes_dir)
+                db_file_path=configured_db_path
             )
         except Exception as e:
             self.logger.error(e)
             raise CouldNotOpenDatabaseException()
 
-        is_database_set_up = self._check_is_database_set_up()
+        is_database_set_up = self._get_is_database_set_up()
         if not is_database_set_up:
             self.logger.debug("found database not set up")
             self.setup_database()
