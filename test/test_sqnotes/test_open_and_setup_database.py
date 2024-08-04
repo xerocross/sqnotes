@@ -13,7 +13,7 @@ def describe_open_database():
     
         @pytest.mark.usefixtures('mock_get_database_file_path',
                                  'mock_get_notes_dir_from_config')
-        @patch.object(SQNotes, '_check_is_database_set_up', just_return(True))
+        @patch.object(SQNotes, '_get_is_database_set_up', just_return(True))
         @patch.object(SQNotes, 'setup_database', do_nothing)
         @patch.object(DatabaseService, 'connect')
         
@@ -27,7 +27,7 @@ def describe_open_database():
             
         @pytest.mark.usefixtures('mock_get_database_file_path',
                                  'mock_get_notes_dir_from_config')
-        @patch.object(SQNotes, '_check_is_database_set_up', just_return(True))
+        @patch.object(SQNotes, '_get_is_database_set_up', just_return(True))
         @patch.object(SQNotes, 'setup_database')
         @patch.object(DatabaseService, 'connect')
         def it_does_not_setup_database(
@@ -43,7 +43,7 @@ def describe_open_database():
         
             @pytest.mark.usefixtures('mock_get_database_file_path',
                                      'mock_get_notes_dir_from_config')
-            @patch.object(SQNotes, '_check_is_database_set_up', just_return(True))
+            @patch.object(SQNotes, '_get_is_database_set_up', just_return(True))
             @patch.object(SQNotes, 'setup_database', do_nothing)
             @patch.object(DatabaseService, 'connect')
             def it_raises_could_not_open_database_exception(
@@ -59,7 +59,7 @@ def describe_open_database():
             
         @pytest.mark.usefixtures('mock_get_database_file_path',
                                  'mock_get_notes_dir_from_config')
-        @patch.object(SQNotes, '_check_is_database_set_up', just_return(False))
+        @patch.object(SQNotes, '_get_is_database_set_up', just_return(False))
         @patch.object(SQNotes, 'setup_database', do_nothing)
         @patch.object(DatabaseService, 'connect')
         def it_connects_database_service(
@@ -72,7 +72,7 @@ def describe_open_database():
             
         @pytest.mark.usefixtures('mock_get_database_file_path',
                                  'mock_get_notes_dir_from_config')
-        @patch.object(SQNotes, '_check_is_database_set_up', just_return(False))
+        @patch.object(SQNotes, '_get_is_database_set_up', just_return(False))
         @patch.object(DatabaseService, 'connect', do_nothing)
         @patch.object(SQNotes, 'setup_database')
         def it_calls_to_set_up_database(
@@ -88,7 +88,7 @@ def describe_open_database():
         
             @pytest.mark.usefixtures('mock_get_database_file_path',
                                      'mock_get_notes_dir_from_config')
-            @patch.object(SQNotes, '_check_is_database_set_up', just_return(False))
+            @patch.object(SQNotes, '_get_is_database_set_up', just_return(False))
             @patch.object(SQNotes, 'setup_database', do_nothing)
             @patch.object(DatabaseService, 'connect')
             def it_raises_could_not_open_database_exception(
