@@ -95,8 +95,8 @@ def sqnotes_config_with_mocked_data(mock_sqnotes_config_test_data):
     
 @pytest.fixture
 def sqnotes_obj(
-                database_service_open_in_memory, 
-                user_configuration_helper,
+                database_service, 
+                user_configuration_helper_for_integration,
                 mock_path_input_helper,
                 mock_encrypted_note_helper,
                 sqnotes_config_with_mocked_data,
@@ -107,9 +107,9 @@ def sqnotes_obj(
         
         def configure(self, binder):
             binder.bind(SQNotesLogger, to=SQNotesLogger(), scope=singleton)
-            binder.bind(UserConfigurationHelper, to=user_configuration_helper, scope=singleton)
+            binder.bind(UserConfigurationHelper, to=user_configuration_helper_for_integration, scope=singleton)
             binder.bind(PathInputHelper, to=mock_path_input_helper, scope=singleton)
-            binder.bind(DatabaseService, to=database_service_open_in_memory, scope=singleton)
+            binder.bind(DatabaseService, to=database_service, scope=singleton)
             binder.bind(EncryptedNoteHelper, to=mock_encrypted_note_helper, scope=singleton)
             binder.bind(SQNotesConfig, to=sqnotes_config_with_mocked_data, scope=singleton )
     
@@ -192,7 +192,7 @@ def database_service_connected_in_memory(database_service):
 
 @pytest.fixture
 def mock_get_database_file_path(database_service):
-    with patch.object(SQNotes, '_get_db_file_path') as mock:
+    with patch.object(SQNotes, '_get_db_path_from_user_config') as mock:
         mock.return_value = ':memory:'
         yield mock
 
@@ -234,7 +234,7 @@ def test_note_file(test_notes_directory):
 @pytest.fixture
 def mock_get_notes_dir_from_config(test_notes_directory):
     with patch.object(SQNotes, 'get_notes_dir_from_config') as mock:
-        mock.return_value = test_notes_directory
+        mock.return_value = str(test_notes_directory)
         yield mock
         
 @pytest.fixture
@@ -472,11 +472,26 @@ def sqnotes_config(sqnotes_config_data):
 
 @pytest.fixture
 def user_config_data():
-    data = {}
+    data = {
+        'global' : {},
+        'settings': {
+            'DB_FILE_PATH':':memory:'
+        },
+        
+    }
     yield data
     
     
-
+@pytest.fixture
+def user_configuration_helper_2(user_config_data, test_temp_config_dir):
+    injector = Injector()
+    user_config_helper : UserConfigurationHelper = injector.get(UserConfigurationHelper)
+    user_config_helper._set_config_dir(config_dir = test_temp_config_dir)
+    user_config_helper.data = user_config_data
+    
+    with patch.object(UserConfigurationHelper, 'get_setting_from_user_config', get_setting):
+        with patch.object(UserConfigurationHelper, 'get_global_from_user_config', get_global):
+            yield user_config_helper
     
 @pytest.fixture
 def user_configuration_helper_for_integration(user_config_data, test_temp_config_dir):
@@ -489,10 +504,26 @@ def user_configuration_helper_for_integration(user_config_data, test_temp_config
     def get_global (_, key):
         return user_config_data['global'][key]
     
-    with patch.object(UserConfigurationHelper, 'get_setting_from_user_config', get_setting):
-        with patch.object(UserConfigurationHelper, 'get_global_from_user_config', get_global):
-            yield user_config_helper
+    def set_setting (_, key, value):
+        user_config_data['settings'][key] = value
+        
+    def set_global (_, key, value):
+        user_config_data['global'][key] = value
     
+    get_setting_patcher = patch.object(UserConfigurationHelper, 'get_setting_from_user_config', get_setting)
+    get_global_patcher = patch.object(UserConfigurationHelper, 'get_global_from_user_config', get_global)
+    set_setting_patcher = patch.object(UserConfigurationHelper, 'set_setting_to_user_config', set_setting)
+    set_global_patcher = patch.object(UserConfigurationHelper, 'set_global_to_user_config', set_global)
+    get_setting_patcher.start()
+    get_global_patcher.start()
+    set_setting_patcher.start()
+    set_global_patcher.start()
+    yield user_config_helper
+    set_setting_patcher.stop()
+    get_global_patcher.stop()
+    get_setting_patcher.stop()
+    set_global_patcher.stop()
+
 @pytest.fixture
 def mock_call_gpg_subprocess_to_write_encrypted():
     with patch.object(EncryptedNoteHelper, '_call_gpg_subprocess_to_write_encrypted') as mock:
@@ -500,12 +531,19 @@ def mock_call_gpg_subprocess_to_write_encrypted():
         yield mock
     
 @pytest.fixture
-def sqnotes_real(sqnotes_config, user_configuration_helper_for_integration):
+def sqnotes_real(sqnotes_config, 
+                 user_configuration_helper_for_integration,
+                 database_service_open_in_memory
+                 ):
     class TestInjectionConfigurationModule(InjectionConfigurationModule):
     
         @provider
         def provide_config_file_path(self) -> str:
             return test_config_file
+        
+        @provider
+        def provider_database_service(self) -> DatabaseService:
+            return database_service_open_in_memory
         
         @provider
         def provide_sqnotes_config(self) -> SQNotesConfig:

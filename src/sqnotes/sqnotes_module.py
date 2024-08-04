@@ -550,13 +550,26 @@ class SQNotes:
         unique_tags = set(tags)
         return unique_tags
 
-    
-    def _get_db_file_path(self, notes_dir):
+    def _get_db_path_from_user_config(self):
+        return self.user_configuration_helper.get_setting_from_user_config(key = self.DB_FILE_PATH_KEY)
 
-        if os.getenv("TESTING") == "true":
-            return os.getenv("DATABASE_URL")
+    def _set_user_db_path(self, user_specified_directory = None):
+        db_file_name = self.sqnotes_config.get(key = self.DATABASE_FILE_NAME_KEY)
+        print(f"tried to get from db_file_name: {db_file_name}")
+        if user_specified_directory is not None:
+            full_file_path = os.path.join(user_specified_directory, db_file_name)
         else:
-            return os.path.join(notes_dir, os.getenv("DEFAULT_DATABASE_NAME"))
+            default_db_path = self._get_default_db_file_path()
+            full_file_path = os.path.join(default_db_path, db_file_name)
+        self.user_configuration_helper.set_setting_to_user_config(key=self.DB_FILE_PATH_KEY, value = full_file_path)
+
+    
+    def _get_default_db_file_path(self):
+        DATABASE_PATH = self.sqnotes_config.get(key = 'DATABASE_PATH')
+        database_path = DATABASE_PATH.replace('[notes_dir]', self.get_notes_dir_from_config())
+        expanded_path = os.path.expanduser(database_path)
+        return expanded_path
+        
 
     def get_notes_dir_from_config(self):
         self.logger.debug(f"about to call to get notes dir from config")
@@ -697,15 +710,15 @@ class SQNotes:
         self.printer_helper.print_to_so(interface_copy.INITIALIZATION_COMPLETE())
         self.user_configuration_helper.set_global_to_user_config(key=INITIALIZED, value="yes")
 
-    def _check_is_database_set_up(self):
+    def _get_is_database_set_up(self):
         is_set_up = (
-            self.user_configuration_helper.get_setting_from_user_config("database_is_setup")
+            self.user_configuration_helper.get_global_from_user_config(self.DATABASE_IS_SET_UP_KEY)
             == "yes"
         )
         return is_set_up
 
     def _set_database_is_set_up(self):
-        self.user_configuration_helper.set_setting_to_user_config("database_is_setup", "yes")
+        self.user_configuration_helper.set_global_to_user_config(key=self.DATABASE_IS_SET_UP_KEY, value="yes")
 
     def setup_database(self):
         print(interface_copy.SETTING_UP_DATABASE_MESSAGE())

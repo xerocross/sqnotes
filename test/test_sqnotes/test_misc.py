@@ -5,7 +5,12 @@ import pytest
 from sqnotes.sqnotes_module import SQNotes, NotesDirNotConfiguredException
 from sqnotes.user_configuration_helper import UserConfigurationHelper
 from sqnotes.database_service import DatabaseService
-from test.test_helper import do_nothing
+from test.test_helper import do_nothing, just_return
+from sqnotes.sqnotes_config_module import SQNotesConfig
+import sqnotes
+import logging
+
+logger = logging.getLogger("test_misc")
 
 
 def describe_sqnotes():
@@ -100,6 +105,132 @@ def describe_sqnotes():
             mock_config_data[sqnotes_obj.USER_CONFIG_DIR_KEY] = 'configured path'
             response = sqnotes_obj._get_user_config_dir()
             assert response == expanded_path
+            
+            
+    def describe_get_default_database_path():
+
+        @pytest.mark.usefixtures("mock_get_notes_dir_from_config")
+        @patch.object(SQNotesConfig, 'get')
+        def it_builds_path_from_configured_notes_dir (
+                                            mock_config_get,
+                                            sqnotes_obj : SQNotes,
+                                            test_notes_directory
+                                            ):
+            db_filename = 'sqnotes_index.db'
+            mock_config_get.return_value = "[notes_dir]/" + db_filename
+            default_db_file_path = sqnotes_obj._get_default_db_file_path()
+            
+            expected_path = os.path.join(test_notes_directory, db_filename)
+            assert default_db_file_path == expected_path
+            
+        
+        @pytest.mark.usefixtures("mock_get_notes_dir_from_config")
+        @patch('os.path.expanduser', lambda x : f"expanded:{x}")
+        @patch.object(SQNotesConfig, 'get')
+        def it_applies_user_expansion_to_configured_path (
+                                            mock_config_get,
+                                            sqnotes_obj : SQNotes,
+                                            test_notes_directory
+                                            ):
+            db_filename = 'sqnotes_index.db'
+            pre_expanded_path = f"~/{db_filename}"
+            mock_config_get.return_value = pre_expanded_path
+            default_db_file_path = sqnotes_obj._get_default_db_file_path()
+            expanded_path = f"expanded:{pre_expanded_path}"
+            assert default_db_file_path == expanded_path
+            
+            
+    def describe_set_user_db_path():
+        
+        def describe_user_input_is_empty():
+            @patch.object(SQNotes, '_get_default_db_file_path')
+            @patch.object(UserConfigurationHelper, 'set_setting_to_user_config')
+            def it_sets_the_default_to_user_config(
+                                                mock_set_setting_to_user_config,
+                                                mock_get_default_db_file_path,
+                                                sqnotes_obj : SQNotes,
+                                                mock_sqnotes_config_test_data
+                                                ):
+                
+                db_file_name = 'sqnotes_index.db'
+                mock_sqnotes_config_test_data[sqnotes_obj.DATABASE_FILE_NAME_KEY] = db_file_name
+                default_path = "/path/to/db/file"
+                mock_get_default_db_file_path.return_value = default_path
+                expected_saved_path = default_path + os.sep + db_file_name
+                sqnotes_obj._set_user_db_path()
+                mock_set_setting_to_user_config.assert_called_once_with(key=sqnotes_obj.DB_FILE_PATH_KEY, value = expected_saved_path)
+                
+                
+        def describe_user_specified_directory_set():
+        
+            @patch.object(UserConfigurationHelper, 'set_setting_to_user_config')
+            def it_sets_the_user_specified_path_to_user_config(
+                                                    mock_set_setting_to_user_config,
+                                                    sqnotes_obj : SQNotes,
+                                                    mock_sqnotes_config_test_data
+                                                        ):
+                db_file_name = 'sqnotes_index.db'
+                mock_sqnotes_config_test_data[sqnotes_obj.DATABASE_FILE_NAME_KEY] = db_file_name
+                user_specified_directory = "~/some_directory"
+                expected_saved_path = user_specified_directory + os.sep + db_file_name
+                sqnotes_obj._set_user_db_path(user_specified_directory=user_specified_directory)
+                mock_set_setting_to_user_config.assert_called_once_with(
+                            key=sqnotes_obj.DB_FILE_PATH_KEY, 
+                            value = expected_saved_path
+                        )
+        
+
+    def describe_get_db_file_path_from_user_config():
+        
+        @patch.object(UserConfigurationHelper, 'get_setting_from_user_config')
+        def it_returns_db_file_path_from_config(
+                                                mock_get_setting_from_user_config,
+                                                sqnotes_obj : SQNotes,
+                                            ):
+            configured_path = "configured/path"
+            mock_get_setting_from_user_config.return_value = configured_path
+            found_db_path = sqnotes_obj._get_db_path_from_user_config()
+            mock_get_setting_from_user_config.assert_called_once_with(key=sqnotes_obj.DB_FILE_PATH_KEY)
+            assert found_db_path == configured_path
+            
+    
+    def describe_setting_and_checking_database_is_set_up():
+        
+        def describe_get_is_database_set_up():
+            
+            def describe_user_config_globals_say_is_set_up():
+            
+                
+                def it_returns_true(
+                                                                sqnotes_obj,
+                                                                user_config_data
+                                                                    ):
+                    
+                    user_config_data['global'][sqnotes_obj.DATABASE_IS_SET_UP_KEY] = 'yes'
+                    assert sqnotes_obj._get_is_database_set_up()
+                    
+            def describe_user_config_globals_say_is_not_set_up():
+            
+                
+                def it_returns_false(
+                                                                sqnotes_obj,
+                                                                user_config_data
+                                                                    ):
+                    
+                    user_config_data['global'][sqnotes_obj.DATABASE_IS_SET_UP_KEY] = 'no'
+                    assert not sqnotes_obj._get_is_database_set_up()
+                
+        def describe_set_database_set_up():
+            
+
+            @patch.object(UserConfigurationHelper, 'set_global_to_user_config')
+            def it_sets_global_on_user_config_helper(
+                                                            mock_set_global,
+                                                            sqnotes_obj
+                                                                ):
+                sqnotes_obj._set_database_is_set_up()
+                mock_set_global.assert_called_once_with(key=sqnotes_obj.DATABASE_IS_SET_UP_KEY, value='yes')
+                    
 
 if __name__ == '__main__':
     unittest.main()
