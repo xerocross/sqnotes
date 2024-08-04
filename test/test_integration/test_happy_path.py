@@ -12,19 +12,18 @@ from sqnotes.encrypted_note_helper import EncryptedNoteHelper
 
 @pytest.fixture
 def sqnotes_with_real_data_in_memory_setup(
-                                    sqnotes_real,
+                                    sqnotes_real : SQNotes,
                                     user_config_data,
                                     test_temp_notes_dir
                                 ):
     user_config_data['global']['initialized'] = 'yes'
-    user_config_data['global']['database_is_setup'] = 'no'
+    user_config_data['global'][sqnotes_real.DATABASE_IS_SET_UP_KEY] = 'no'
     user_config_data['settings'].update({
                 'armor' : 'yes',
                 'gpg_key_email': 'test@test.com',
                 'text_editor' : 'vim',
                 'notes_path' : test_temp_notes_dir
             })
-    sqnotes_real.open_database()
     yield sqnotes_real
     
 
