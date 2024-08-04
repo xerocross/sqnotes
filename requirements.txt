@@ -1,8 +1,13 @@
+black==24.8.0
+click==8.1.7
 coverage==7.6.0
 exceptiongroup==1.2.2
 iniconfig==2.0.0
 injector==0.22.0
+mypy-extensions==1.0.0
 packaging==24.1
+pathspec==0.12.1
+platformdirs==4.2.2
 pluggy==1.5.0
 PyInputPlus==0.2.12
 PySimpleValidate==0.2.12
@@ -11,6 +16,8 @@ pytest-describe==2.2.0
 pytest-dotenv==0.5.2
 pytest-spec==3.2.0
 python-dotenv==1.0.1
+PyYAML==6.0.1
 six==1.16.0
 stdiomask==0.0.6
 tomli==2.0.1
+typing_extensions==4.12.2
