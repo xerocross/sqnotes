@@ -51,7 +51,7 @@ def mock_sqnotes_config_from_resource_file():
     
 @pytest.fixture
 def mock_config_data():
-    data = {}
+    data = {"IS_INITIALIZATION_GATE_REFACTORED_INSIDE_SQNOTES": "yes"}
     yield data
     
     

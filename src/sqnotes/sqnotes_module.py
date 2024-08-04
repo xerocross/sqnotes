@@ -110,7 +110,8 @@ class SQNotes:
 
 
     def new_note(self):
-        if IS_INITIALIZATION_GATE_REFACTORED_INSIDE_SQNOTES and not self._get_is_initialized():
+        initialization_gate_toggle = self.sqnotes_config.get("IS_INITIALIZATION_GATE_REFACTORED_INSIDE_SQNOTES") == "yes"
+        if initialization_gate_toggle and not self._get_is_initialized():
             print(interface_copy.SQNOTES_NOT_INITIALIZED_MESSAGE())
             exit(self.NOT_INITIALIZED)
         
@@ -195,6 +196,11 @@ class SQNotes:
             print(f"No notes found with keywords: {keywords}")
 
     def edit_note(self, filename):
+        initialization_gate_toggle = self.sqnotes_config.get("IS_INITIALIZATION_GATE_REFACTORED_INSIDE_SQNOTES") == "yes"
+        if initialization_gate_toggle and not self._get_is_initialized():
+            print(interface_copy.SQNOTES_NOT_INITIALIZED_MESSAGE())
+            exit(self.NOT_INITIALIZED)
+
         self.GPG_KEY_EMAIL = self.get_gpg_key_email()
         self.check_gpg_key_email()
         NOTES_DIR = self.get_notes_dir_from_config()

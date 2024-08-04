@@ -36,8 +36,8 @@ def describe_new_note():
                                                mock_print):
             with pytest.raises(SystemExit):
                 sqnotes_obj.new_note()
-                output = get_all_mocked_print_output(mocked_print = mock_print)
-                assert interface_copy.SQNOTES_NOT_INITIALIZED_MESSAGE() in output
+            output = get_all_mocked_print_output(mocked_print = mock_print)
+            assert interface_copy.SQNOTES_NOT_INITIALIZED_MESSAGE() in output
 
 
 

@@ -1,7 +1,8 @@
-VERSION : 0.1.2
+VERSION: 0.1.2
 INIT_GLOBALS:
-  initialized: 'no'
-  database_is_set_up: 'no'
-DEFAULT_NOTES_DIR: '~/sqnotes_notes'
-USER_CONFIG_DIR: '~/.sqnotes'
-USER_CONFIG_FILE_NAME: ''
+  initialized: "no"
+  database_is_set_up: "no"
+DEFAULT_NOTES_DIR: "~/sqnotes_notes"
+USER_CONFIG_DIR: "~/.sqnotes"
+USER_CONFIG_FILE_NAME: ""
+IS_INITIALIZATION_GATE_REFACTORED_INSIDE_SQNOTES: "no"
