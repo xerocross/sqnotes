@@ -494,8 +494,8 @@ def user_configuration_helper_for_integration(user_config_data, test_temp_config
             yield user_config_helper
     
 @pytest.fixture
-def gpg_subprocess_call():
-    with patch.object(EncryptedNoteHelper, '_call_gpg_subprocess') as mock:
+def mock_call_gpg_subprocess_to_write_encrypted():
+    with patch.object(EncryptedNoteHelper, '_call_gpg_subprocess_to_write_encrypted') as mock:
         mock.return_value = 0
         yield mock
     

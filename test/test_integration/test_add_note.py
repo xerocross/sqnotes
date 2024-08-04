@@ -22,13 +22,13 @@ def describe_sqnotes_integration():
             "mock_commit_transaction",
             "mock_NamedTemporaryFile_real"
         )
-        def it_creates_a_new_note_in_notes_dir(
+        def it_creates_a_new_note_in_notes_dir (
                             sqnotes_real : SQNotes,
                             mock_get_input_from_text_editor,
                             sqnotes_config_data,
                             user_config_data,
                             mock_get_new_note_name,
-                            gpg_subprocess_call,
+                            mock_call_gpg_subprocess_to_write_encrypted,
                             temp_note_file,
                             test_temp_notes_dir
                             ):
@@ -52,8 +52,8 @@ def describe_sqnotes_integration():
             
             expected_new_note_path = os.path.join(notes_dir, new_note_name)
             print(f"path: {expected_new_note_path}")
-            gpg_subprocess_call.assert_called()
-            _, kwargs = gpg_subprocess_call.call_args
+            mock_call_gpg_subprocess_to_write_encrypted.assert_called()
+            _, kwargs = mock_call_gpg_subprocess_to_write_encrypted.call_args
             in_commands = kwargs['in_commands']
             assert in_commands['infile'] == temp_note_file.name
             assert in_commands['output_path'] == expected_new_note_path

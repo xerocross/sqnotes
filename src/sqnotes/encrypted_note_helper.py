@@ -19,7 +19,7 @@ class EncryptedNoteHelper:
         self.logger = sqnotes_logger.get_logger(__name__)
         
     
-    def _call_gpg_subprocess(self, in_commands):
+    def _call_gpg_subprocess_to_write_encrypted(self, in_commands):
         note_file_path = in_commands['output_path']
         GPG_KEY_EMAIL = in_commands['GPG_KEY_EMAIL']
         infile = in_commands['infile']
@@ -54,7 +54,7 @@ class EncryptedNoteHelper:
             gpg_in_commands['USE_ASCII_ARMOR'] = config['USE_ASCII_ARMOR']
             
         try:
-            response = self._call_gpg_subprocess(in_commands = gpg_in_commands)
+            response = self._call_gpg_subprocess_to_write_encrypted(in_commands = gpg_in_commands)
             self._delete_temp_file(temp_file=temp_enc_filename)
             if response != 0:
                 raise GPGSubprocessException()
