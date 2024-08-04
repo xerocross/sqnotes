@@ -5,7 +5,7 @@ from unittest.mock import Mock, patch
 from sqnotes.sqnotes_module import SQNotes
 
 from test.test_helper import do_nothing, get_all_mocked_print_output,\
-    just_return
+    just_return, get_all_mocked_print_output_to_string
 from sqnotes.encrypted_note_helper import GPGSubprocessException
 from sqnotes import interface_copy
 
@@ -75,7 +75,7 @@ def describe_edit_note():
             mock_get_note_id_or_raise.return_value = 1
             with pytest.raises(SystemExit):
                 sqnotes_obj.edit_note(filename=test_note_file)
-            output = get_all_mocked_print_output(mocked_print = mock_print)
+            output = get_all_mocked_print_output_to_string(mocked_print = mock_print)
             expected_message = interface_copy.NOTE_NOT_FOUND_ERROR().format(test_note_file)
             exiting_message = interface_copy.EXITING()
             assert expected_message in output
@@ -375,7 +375,7 @@ def describe_edit_note():
             mock_decrypt_note_into_temp_file.side_effect = GPGSubprocessException()
             with pytest.raises(SystemExit):
                 sqnotes_obj.edit_note(filename=test_note_file)
-            output = get_all_mocked_print_output(mocked_print=mock_print)
+            output = get_all_mocked_print_output_to_string(mocked_print=mock_print)
             expected_message = interface_copy.GPG_SUBPROCESS_ERROR_MESSAGE()
             exiting_message = interface_copy.EXITING()
             assert expected_message in output
