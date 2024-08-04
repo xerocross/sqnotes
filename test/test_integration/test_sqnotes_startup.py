@@ -20,19 +20,27 @@ primary_config_file_path = os.path.join(sqnotes_dir, 'config.yaml')
 test_config_path = os.path.join(test_package_dir, 'resources/test_config.yaml')
 
 
+
 @pytest.fixture
-def sqnotes_config_data(tmp_path):
+def test_temp_config_dir(tmp_path):
+    temp_config = tmp_path / ".config"
+    temp_config.mkdir()
+    yield temp_config
+    
+@pytest.fixture
+def test_temp_notes_dir(tmp_path):
+    temp_notes = tmp_path / "sqnotes_notes"
+    temp_notes.mkdir()
+    yield temp_notes
+
+
+@pytest.fixture
+def sqnotes_config_data(test_temp_notes_dir, test_temp_config_dir):
     with open(primary_config_file_path, 'r') as file:
         data = yaml.safe_load(file)
 
-    
-    temp_config = tmp_path / ".config"
-    temp_config.mkdir()
-    
-    temp_notes = tmp_path / "sqnotes_notes"
-    temp_notes.mkdir()
-    data['USER_CONFIG_DIR'] = str(temp_config)
-    data ['DEFAULT_NOTES_DIR'] = str(temp_notes)
+    data['USER_CONFIG_DIR'] = str(test_temp_config_dir)
+    data ['DEFAULT_NOTES_DIR'] = str(test_temp_notes_dir)
     yield data
 
 @pytest.fixture
@@ -128,6 +136,7 @@ def describe_sqnotes():
             "mock_extract_and_save_keywords",
             "mock_insert_new_note_into_database",
             "mock_commit_transaction",
+            "mock_NamedTemporaryFile_real"
         )
         def it_creates_a_new_note_in_notes_dir(
                             sqnotes_real : SQNotes,
@@ -135,30 +144,36 @@ def describe_sqnotes():
                             sqnotes_config_data,
                             user_config_data,
                             mock_get_new_note_name,
-                            gpg_subprocess_call
+                            gpg_subprocess_call,
+                            temp_note_file,
+                            test_temp_notes_dir
                             ):
             test_note_content = "test note content"
             mock_get_input_from_text_editor.return_value = test_note_content
             notes_dir = sqnotes_config_data['DEFAULT_NOTES_DIR']
+            test_gpg_key_email = 'test@test.com'
             user_config_data['global'] = {
                 'initialized' : 'yes',
                 'database_is_set_up' : 'yes'
             }
             user_config_data['settings'] = {
                 'armor' : 'yes',
-                'gpg_key_email': 'test@test.com',
+                'gpg_key_email': test_gpg_key_email,
                 'text_editor' : 'vim',
                 'notes_path' : notes_dir
             }
             new_note_name = "test.txt.gpg"
             mock_get_new_note_name.side_effect = [new_note_name]
             sqnotes_real.new_note()
+            
             expected_new_note_path = os.path.join(notes_dir, new_note_name)
             print(f"path: {expected_new_note_path}")
             gpg_subprocess_call.assert_called()
             _, kwargs = gpg_subprocess_call.call_args
             in_commands = kwargs['in_commands']
-            assert in_commands == None
+            assert in_commands['infile'] == temp_note_file.name
+            assert in_commands['output_path'] == expected_new_note_path
+            assert in_commands['GPG_KEY_EMAIL'] == test_gpg_key_email
             
             
     

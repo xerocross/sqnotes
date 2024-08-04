@@ -17,21 +17,44 @@ class EncryptedNoteHelper:
     @inject
     def __init__(self, sqnotes_logger : SQNotesLogger):
         self.logger = sqnotes_logger.get_logger(__name__)
+        
+    
+    def _call_gpg_subprocess(self, in_commands):
+        note_file_path = in_commands['output_path']
+        GPG_KEY_EMAIL = in_commands['GPG_KEY_EMAIL']
+        infile = in_commands['infile']
+        subprocess_command = ['gpg', 
+                              '--yes',
+                              '--quiet', 
+                              '--batch', 
+                              '--output', 
+                              note_file_path, 
+                              '--encrypt', 
+                              '--recipient', 
+                              GPG_KEY_EMAIL, 
+                              infile]
+        
+        if 'USE_ASCII_ARMOR' in in_commands and in_commands['USE_ASCII_ARMOR'] == 'yes':
+            subprocess_command.insert(1, '--armor')
+        
+        return subprocess.call(subprocess_command)
+        
     
     def write_encrypted_note(self, note_file_path, note_content, config):
         with tempfile.NamedTemporaryFile(delete=False) as temp_enc_file:
             temp_enc_filename = temp_enc_file.name
             temp_enc_file.write(note_content.encode('utf-8'))
             
-        
-        GPG_KEY_EMAIL = config['GPG_KEY_EMAIL']
-            
-        subprocess_command = ['gpg', '--yes','--quiet', '--batch', '--output', note_file_path, '--encrypt', '--recipient', GPG_KEY_EMAIL, temp_enc_filename]
-        if 'USE_ASCII_ARMOR' in config and config['USE_ASCII_ARMOR']:
-            subprocess_command.insert(1, '--armor')
+        gpg_in_commands = {
+            'GPG_KEY_EMAIL' : config['GPG_KEY_EMAIL'],
+            'output_path' : note_file_path,
+            'infile' : temp_enc_filename
+        }
+        if 'USE_ASCII_ARMOR' in config:
+            gpg_in_commands['USE_ASCII_ARMOR'] = config['USE_ASCII_ARMOR']
             
         try:
-            response = subprocess.call(subprocess_command)
+            response = self._call_gpg_subprocess(in_commands = gpg_in_commands)
             self._delete_temp_file(temp_file=temp_enc_filename)
             if response != 0:
                 raise GPGSubprocessException()
