@@ -4,5 +4,7 @@ INIT_GLOBALS:
   database_is_set_up: "no"
 DEFAULT_NOTES_DIR: "~/sqnotes_notes"
 USER_CONFIG_DIR: "~/.sqnotes"
+DATABASE_PATH: "[notes_dir]/[database_file_name]"
+DATABASE_FILE_NAME: "sqnotes_index.db"
 USER_CONFIG_FILE_NAME: ""
 IS_INITIALIZATION_GATE_REFACTORED_INSIDE_SQNOTES: "no"
