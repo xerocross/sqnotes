@@ -7,6 +7,8 @@ import os
 import shutil
 from unittest.mock import Mock, patch, MagicMock
 from injector import Module, singleton
+import yaml
+import copy
 
 from sqnotes.user_configuration_helper import UserConfigurationHelper
 from sqnotes.encrypted_note_helper import EncryptedNoteHelper
@@ -15,15 +17,17 @@ from sqnotes.choose_text_editor import ChooseTextEditor
 from sqnotes.printer_helper import PrinterHelper
 from sqnotes.path_input_helper import PathInputHelper
 from sqnotes.sqnotes_config_module import SQNotesConfig
-
-from test.test_helper import do_nothing, get_all_mocked_print_output_to_string
-
-
+from sqnotes.injection_configuration_module import InjectionConfigurationModule
+from test.test_helper import do_nothing
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
+root_dir = current_dir
 test_root = os.path.abspath(os.path.join(current_dir, "test"))
 test_resources_root = os.path.join(test_root, 'resources')
 test_config_file = os.path.join(test_resources_root, 'test_config.yaml')
+sqnotes_dir = os.path.join(root_dir, "src/sqnotes")
+primary_config_file_path = os.path.join(sqnotes_dir, 'config.yaml')
+
 
 
 @pytest.fixture(scope='session', autouse=True)
@@ -48,12 +52,23 @@ def mock_sqnotes_config_from_resource_file():
     sqnotes_config : SQNotesConfig = injector.get(SQNotesConfig)
     yield sqnotes_config
     
+@pytest.fixture(scope='session')
+def mock_config_data():
+    with open(test_config_file, 'r') as file:
+        data = yaml.safe_load(file)
+    yield copy.deepcopy(data)
     
 @pytest.fixture
-def mock_config_data():
-    data = {"IS_INITIALIZATION_GATE_REFACTORED_INSIDE_SQNOTES": "yes"}
-    yield data
+def mock_sqnotes_config_test_data(test_temp_config_dir, 
+                                  test_temp_notes_dir, 
+                                  mock_config_data):
     
+    
+    data = mock_config_data
+    data['USER_CONFIG_DIR'] = str(test_temp_config_dir)
+    data ['DEFAULT_NOTES_DIR'] = str(test_temp_notes_dir)
+    yield data
+
     
 @pytest.fixture
 def mock_note_files(test_notes_directory):
@@ -70,22 +85,22 @@ def mock_note_files(test_notes_directory):
         
     
 @pytest.fixture
-def sqnotes_config_with_mocked_data(mock_config_data):
+def sqnotes_config_with_mocked_data(mock_sqnotes_config_test_data):
     with patch('yaml.safe_load') as mock_yaml_load:
         with patch('builtins.open'):
-            mock_yaml_load.return_value = mock_config_data
+            mock_yaml_load.return_value = mock_sqnotes_config_test_data
             injector = Injector()
             sqnotes_config : SQNotesConfig = injector.get(SQNotesConfig)
     yield sqnotes_config
     
 @pytest.fixture
-def sqnotes_obj(test_configuration_dir, 
+def sqnotes_obj(
                 database_service_open_in_memory, 
                 user_configuration_helper,
                 mock_path_input_helper,
                 mock_encrypted_note_helper,
                 sqnotes_config_with_mocked_data,
-                mock_config_data):
+                mock_sqnotes_config_test_data):
     
     
     class SQNotesTestConfigurationModule(Module):
@@ -98,8 +113,6 @@ def sqnotes_obj(test_configuration_dir,
             binder.bind(EncryptedNoteHelper, to=mock_encrypted_note_helper, scope=singleton)
             binder.bind(SQNotesConfig, to=sqnotes_config_with_mocked_data, scope=singleton )
     
-    mock_config_data['USER_CONFIG_DIR'] = test_configuration_dir
-    
     injector = Injector([SQNotesTestConfigurationModule()])
     sqnotes_instance : SQNotes = injector.get(SQNotes)
     yield sqnotes_instance
@@ -110,10 +123,10 @@ def mock_is_valid_path():
         yield mock
 
 @pytest.fixture
-def user_configuration_helper(test_configuration_dir):
+def user_configuration_helper(test_temp_config_dir):
     injector = Injector()
     user_configuration_helper : UserConfigurationHelper = injector.get(UserConfigurationHelper)
-    user_configuration_helper._set_config_dir(test_configuration_dir)
+    user_configuration_helper._set_config_dir(test_temp_config_dir)
     yield user_configuration_helper
 
 
@@ -195,17 +208,6 @@ def mock_open_database():
         yield mock
     
 
-
-@pytest.fixture
-def test_configuration_dir():
-    temp_dir = tempfile.mkdtemp()
-    try:
-        yield temp_dir
-    finally:
-        if os.path.isdir(temp_dir):
-            shutil.rmtree(temp_dir)
-            
-            
 @pytest.fixture
 def mock_get_all_note_paths():
     with patch.object(SQNotes, '_get_all_note_paths') as mock:
@@ -427,3 +429,94 @@ def mock_encrypted_note_helper():
     injector = Injector()
     encrypted_note_helper = injector.get(EncryptedNoteHelper)
     yield encrypted_note_helper
+    
+    
+
+@pytest.fixture
+def test_temp_config_dir(tmp_path):
+    temp_config = tmp_path / ".config"
+    temp_config.mkdir()
+    yield temp_config
+    
+@pytest.fixture
+def test_temp_notes_dir(tmp_path):
+    temp_notes = tmp_path / "sqnotes_notes"
+    temp_notes.mkdir()
+    yield temp_notes
+
+
+@pytest.fixture
+def sqnotes_config_data(test_temp_notes_dir, test_temp_config_dir):
+    with open(primary_config_file_path, 'r') as file:
+        data = yaml.safe_load(file)
+
+    data['USER_CONFIG_DIR'] = str(test_temp_config_dir)
+    data ['DEFAULT_NOTES_DIR'] = str(test_temp_notes_dir)
+    yield data
+
+@pytest.fixture
+def sqnotes_config(sqnotes_config_data):
+    class ConfigurationModule(InjectionConfigurationModule):
+        @provider
+        def provide_config_file_path(self) -> str:
+            return test_config_file
+        
+    with patch("builtins.open"):
+        with patch("yaml.safe_load") as safe_load:
+            safe_load.return_value = sqnotes_config_data
+            
+            injector = Injector([ConfigurationModule()])
+            sqnotes_config = injector.get(SQNotesConfig)
+    yield sqnotes_config
+
+
+@pytest.fixture
+def user_config_data():
+    data = {}
+    yield data
+    
+    
+
+    
+@pytest.fixture
+def user_configuration_helper_for_integration(user_config_data, test_temp_config_dir):
+    injector = Injector()
+    user_config_helper : UserConfigurationHelper = injector.get(UserConfigurationHelper)
+    user_config_helper._set_config_dir(config_dir = test_temp_config_dir)
+    def get_setting (_, key):
+        return user_config_data['settings'][key]
+    
+    def get_global (_, key):
+        return user_config_data['global'][key]
+    
+    with patch.object(UserConfigurationHelper, 'get_setting_from_user_config', get_setting):
+        with patch.object(UserConfigurationHelper, 'get_global_from_user_config', get_global):
+            yield user_config_helper
+    
+@pytest.fixture
+def gpg_subprocess_call():
+    with patch.object(EncryptedNoteHelper, '_call_gpg_subprocess') as mock:
+        mock.return_value = 0
+        yield mock
+    
+@pytest.fixture
+def sqnotes_real(sqnotes_config, user_configuration_helper_for_integration):
+    class TestInjectionConfigurationModule(InjectionConfigurationModule):
+    
+        @provider
+        def provide_config_file_path(self) -> str:
+            return test_config_file
+        
+        @provider
+        def provide_sqnotes_config(self) -> SQNotesConfig:
+            return sqnotes_config
+        
+        @provider
+        def provide_user_configuration_helper(self) -> UserConfigurationHelper:
+            return user_configuration_helper_for_integration
+    
+    injector = Injector([TestInjectionConfigurationModule()])
+    sqnotes_instance : SQNotes = injector.get(SQNotes)
+    yield sqnotes_instance
+
+    
