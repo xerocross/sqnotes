@@ -162,10 +162,10 @@ def describe_the_new_note_method():
         def it_exits(
             mock_get_notes_dir,
             mock_get_input_from_text_editor,
-            test_configuration_dir,
+            test_temp_config_dir,
             sqnotes_obj,
         ):
-            mock_get_notes_dir.return_value = test_configuration_dir
+            mock_get_notes_dir.return_value = test_temp_config_dir
             mock_get_input_from_text_editor.side_effect = (
                 TextEditorSubprocessException()
             )
@@ -197,11 +197,11 @@ def describe_the_new_note_method():
             mock_get_notes_dir,
             mock_get_input,
             mock_insert_new_note_into_database,
-            test_configuration_dir,
+            test_temp_config_dir,
             sqnotes_obj,
             mock_print,
         ):
-            mock_get_notes_dir.return_value = test_configuration_dir
+            mock_get_notes_dir.return_value = test_temp_config_dir
             mock_get_input.return_value = "test content"
             mock_insert_new_note_into_database.side_effect = Exception
 
@@ -235,10 +235,10 @@ def describe_the_new_note_method():
             mock_get_notes_dir,
             mock_get_input,
             mock_insert_new_note_into_database,
-            test_configuration_dir,
+            test_temp_config_dir,
             sqnotes_obj,
         ):
-            mock_get_notes_dir.return_value = test_configuration_dir
+            mock_get_notes_dir.return_value = test_temp_config_dir
             mock_get_input.return_value = "test content"
             mock_insert_new_note_into_database.side_effect = Exception
 
@@ -269,10 +269,10 @@ def describe_the_new_note_method():
             mock_get_notes_dir,
             mock_get_input,
             mock_insert_new_note_in_database,
-            test_configuration_dir,
+            test_temp_config_dir,
             sqnotes_obj,
         ):
-            mock_get_notes_dir.return_value = test_configuration_dir
+            mock_get_notes_dir.return_value = test_temp_config_dir
             mock_get_input.return_value = "test content"
             mock_insert_new_note_in_database.side_effect = Exception
 
