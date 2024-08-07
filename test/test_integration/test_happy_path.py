@@ -98,7 +98,7 @@ def describe_sqnotes_integration():
                 mock_call_gpg_subprocess_to_write_encrypted
             ):
             
-            test_note_content = "test note with #apple #pear #banana"
+            test_note_content = "test note with #apple #pear #banana Argentina"
             sqnotes_with_initialized_user_data.directly_insert_note(text=test_note_content)
             output = get_all_mocked_print_output_to_string(mocked_print = mock_print)      
             created_file_name = get_filename_from_confirmation_message(output)
@@ -123,8 +123,23 @@ def describe_sqnotes_integration():
             note_text = noteinfo.text
             assert note_text in output
             
+        @pytest.mark.usefixtures(
+            "mock_check_gpg_verified",
+            "mock_get_decrypted_content_in_memory_integration"
+        )
+        def it_returns_note_by_text_search (
+                                        sqnotes_with_notes : SQNotes,
+                                        created_notes,
+                                        mock_print
+                                       ):
+            test_search_term = ['Argentina']
+            sqnotes_with_notes.search_notes(search_queries = test_search_term)
+            output = get_all_mocked_print_output(mocked_print=mock_print)
+            noteinfo = created_notes[0]
+            note_text = noteinfo.text
+            assert note_text in output
             
-    
+            
     def describe_edit_note_method():
     
         @pytest.mark.usefixtures(
