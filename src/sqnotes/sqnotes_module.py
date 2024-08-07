@@ -236,8 +236,8 @@ class SQNotes:
                 temp_filename=temp_dec_filename
             )
 
-            print("edited_content:")
-            print(edited_content)
+            self.logger.debug("edited note content:")
+            self.logger.debug(edited_content)
             self.encrypted_note_helper.write_encrypted_note(
                 note_file_path=note_path, note_content=edited_content, config=config
             )
@@ -278,7 +278,7 @@ class SQNotes:
         is_found_any_matches = False
         notes_dir = self.get_notes_dir_from_config()
 
-        note_paths = self._get_all_note_paths(notes_dir=notes_dir)
+        note_paths = self._get_all_note_paths()
         queries_in_lower_case = [query.lower() for query in search_queries]
         for note_path in note_paths:
             try:
@@ -294,7 +294,6 @@ class SQNotes:
                     + " "
                     + interface_copy.EXITING()
                 )
-                print(f"printing message: {message}")
                 self.printer_helper.print_to_so(message)
                 exit(self.GPG_ERROR)
 
@@ -313,7 +312,7 @@ class SQNotes:
     def rescan_for_database(self):
         NOTES_DIR = self.get_notes_dir_from_config()
         self.open_database()
-        files = self._get_all_note_paths(notes_dir=NOTES_DIR)
+        files = self._get_all_note_paths()
         files_info = [
             FileInfo(path=file, base_name=os.path.basename(file)) for file in files
         ]
@@ -354,7 +353,7 @@ class SQNotes:
     def notes_list(self):
         self.logger.debug("printing notes list")
         notes_dir = self.get_notes_dir_from_config()
-        files = self._get_all_note_paths(notes_dir=notes_dir)
+        files = self._get_all_note_paths()
         filenames = [os.path.basename(file) for file in files]
         for file in filenames:
             self.logger.debug(f"note found: {file}")
@@ -460,6 +459,7 @@ class SQNotes:
             self._extract_and_save_keywords(note_id=note_id, note_content=note_content)
 
             self.database_service.commit_transaction()
+            return note_id
         except Exception as e:
             is_database_exception = self._check_for_database_exception(e)
             if is_database_exception:
@@ -556,7 +556,6 @@ class SQNotes:
 
     def _set_user_db_path(self, user_specified_directory = None):
         db_file_name = self.sqnotes_config.get(key = self.DATABASE_FILE_NAME_KEY)
-        print(f"tried to get from db_file_name: {db_file_name}")
         if user_specified_directory is not None:
             full_file_path = os.path.join(user_specified_directory, db_file_name)
         else:
@@ -577,6 +576,7 @@ class SQNotes:
         notes_dir_path = self.user_configuration_helper.get_setting_from_user_config(
             key=NOTES_PATH_KEY
         )
+        self.logger.debug(f"found {notes_dir_path}")
         if notes_dir_path is None:
             raise NotesDirNotConfiguredException()
         else:
@@ -593,7 +593,9 @@ class SQNotes:
         text_editor = self.user_configuration_helper.get_setting_from_user_config("text_editor")
         return text_editor is not None and text_editor != ""
 
-    def _get_all_note_paths(self, notes_dir):
+    def _get_all_note_paths(self):
+        notes_dir = self.get_notes_dir_from_config()
+        print(f"looking for notes in {notes_dir}")
         extensions = ["txt.gpg", "txt"]
         all_notes = []
         for ex in extensions:

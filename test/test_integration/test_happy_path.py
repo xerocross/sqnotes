@@ -4,28 +4,20 @@ from sqnotes.sqnotes_module import SQNotes
 
 import pytest
 import os
+import re
+import logging
 
-from unittest.mock import patch
-from conftest import test_temp_notes_dir
-from sqnotes.encrypted_note_helper import EncryptedNoteHelper
+from sqnotes import interface_copy
+from test.test_helper import get_all_mocked_print_output_to_string
 
+logger = logging.getLogger("happy path")
 
-@pytest.fixture
-def sqnotes_with_real_data_in_memory_setup(
-                                    sqnotes_real : SQNotes,
-                                    user_config_data,
-                                    test_temp_notes_dir
-                                ):
-    user_config_data['global']['initialized'] = 'yes'
-    user_config_data['global'][sqnotes_real.DATABASE_IS_SET_UP_KEY] = 'no'
-    user_config_data['settings'].update({
-                'armor' : 'yes',
-                'gpg_key_email': 'test@test.com',
-                'text_editor' : 'vim',
-                'notes_path' : test_temp_notes_dir
-            })
-    yield sqnotes_real
-    
+def get_filename_from_confirmation_message(confirmation_message):
+    note_added_message_pattern = interface_copy.NOTE_ADDED().format("([^']+)")
+    match = re.search(note_added_message_pattern, confirmation_message)
+    if not match:
+        raise Exception("no match for filename in confirmation message")
+    return match.group(1)
 
 def describe_sqnotes_integration():
 
@@ -34,85 +26,82 @@ def describe_sqnotes_integration():
         
         @pytest.mark.usefixtures(
             "mock_check_gpg_verified",
-            "mock_NamedTemporaryFile_real"
+            "mock_write_plaintext_to_temp_file",
+            "mock_call_gpg_subprocess_to_write_encrypted",
+            "mock_get_temp_plaintext_file"
         )
         def it_creates_a_new_note_in_notes_dir (
-                            sqnotes_with_real_data_in_memory_setup : SQNotes,
+                            sqnotes_with_initialized_user_data : SQNotes,
                             mock_get_input_from_text_editor,
                             mock_get_new_note_name,
-                            mock_call_gpg_subprocess_to_write_encrypted,
-                            temp_note_file,
-                            test_temp_notes_dir
+                            test_temp_notes_dir,
+                            mock_print,
                             ):
             test_note_content = "test note content"
             mock_get_input_from_text_editor.return_value = test_note_content
             
             new_note_name = "test.txt.gpg"
             mock_get_new_note_name.side_effect = [new_note_name]
-            sqnotes_with_real_data_in_memory_setup.new_note()
+            sqnotes_with_initialized_user_data.new_note()
+            output = get_all_mocked_print_output_to_string(mocked_print = mock_print)            
+            created_file_name = get_filename_from_confirmation_message(output)
+            created_file_path = os.path.join(test_temp_notes_dir, created_file_name)
+            with open(created_file_path, 'r') as file:
+                created_content = file.read()
+            assert created_content == f"encrypted: {test_note_content}"
+    
+    
+    def describe_after_directly_inserting_a_new_note():
+    
+        @pytest.mark.usefixtures(
+            "mock_check_gpg_verified",
+            "mock_NamedTemporaryFile_real",
+            "mock_call_gpg_subprocess_to_write_encrypted",
+            "mock_decrypt_note_into_temp_file"
+        )
+        def it_returns_note_from_get_all_notes_method(
+                                            sqnotes_with_initialized_user_data : SQNotes,
+                                            mock_print
+                ):
+            test_note_content = "test content"
+            sqnotes_with_initialized_user_data.directly_insert_note(text=test_note_content)
+            output = get_all_mocked_print_output_to_string(mocked_print = mock_print)      
+            created_file_name = get_filename_from_confirmation_message(output)
+            all_note_paths = sqnotes_with_initialized_user_data._get_all_note_paths()
+            note_names = [os.path.basename(p) for p in all_note_paths]
+            assert created_file_name in note_names
+    
+    def describe_edit_note_method():
+    
+        @pytest.mark.usefixtures(
+            "mock_check_gpg_verified",
+            "mock_call_gpg_subprocess_to_write_encrypted",
+            "mock_decrypt_note_into_temp_file_for_integration",
+            "plaintext_temp_file"
+        )
+        def it_writes_new_note_with_edited_content(
+                                            sqnotes_with_initialized_user_data : SQNotes,
+                                            test_temp_notes_dir,
+                                            mock_get_edited_note_content,
+                                            mock_print
+                                            ):
+    
+            test_note_content = "test content"
+            sqnotes_with_initialized_user_data.directly_insert_note(text=test_note_content)
+            output = get_all_mocked_print_output_to_string(mocked_print = mock_print)      
+            created_file_name = get_filename_from_confirmation_message(output)
+            created_file_path = os.path.join(test_temp_notes_dir, created_file_name)
+            mock_get_edited_note_content.return_value = "this has been edited"
+    
+            sqnotes_with_initialized_user_data.edit_note(filename=created_file_name)
             
-            expected_new_note_path = os.path.join(test_temp_notes_dir, new_note_name)
-            print(f"path: {expected_new_note_path}")
-            mock_call_gpg_subprocess_to_write_encrypted.assert_called()
-            _, kwargs = mock_call_gpg_subprocess_to_write_encrypted.call_args
-            in_commands = kwargs['in_commands']
-            assert in_commands['infile'] == temp_note_file.name
-            assert in_commands['output_path'] == expected_new_note_path
-            assert in_commands['GPG_KEY_EMAIL'] == 'test@test.com'
-            
-            
-    @pytest.fixture
-    def mock_decrypt_note_into_temp_file(temp_note_file):
-        
-        def mock_decrypt_into_temp(_, note_path):
-            decrypted_note_path = str(temp_note_file.name)
-            with open(decrypted_note_path, 'w') as file:
-                file.write('decrypted note content')
-            return decrypted_note_path
-        
-        with patch.object(EncryptedNoteHelper, 'decrypt_note_into_temp_file', mock_decrypt_into_temp) as mock:
-            yield mock
-            
-        
-    #
-    #
-    # def describe_edit_note_method():
-    #
-    #     @pytest.mark.usefixtures(
-    #         "mock_check_gpg_verified",
-    #         "mock_commit_transaction",
-    #         "mock_NamedTemporaryFile_real",
-    #         "mock_get_note_id_or_raise",
-    #     )
-    #     def it_writes_new_note_with_edited_content(
-    #                                         sqnotes_real_data_in_memory_setup : SQNotes,
-    #                                         sqnotes_config_data,
-    #                                         user_config_data,
-    #                                         temp_note_file,
-    #                                         test_temp_notes_dir,
-    #                                         mock_decrypt_note_into_temp_file,
-    #                                         mock_get_edited_note_content,
-    #                                         mock_call_gpg_subprocess_to_write_encrypted
-    #                                         ):
-    #         test_note_content = "test note content"
-    #         note_base_name = "note1.txt"
-    #         note_path = str(test_temp_notes_dir / note_base_name)
-    #         with open(note_path, 'w') as file:
-    #             file.write(test_note_content)
-    #         mock_get_edited_note_content.return_value = "edited_content"
-    #         test_gpg_key_email = 'test@test.com'
-    #
-    #         sqnotes_real_data_in_memory_setup.edit_note(filename=note_base_name)
-    #         mock_call_gpg_subprocess_to_write_encrypted.assert_called()
-    #         _, kwargs = mock_call_gpg_subprocess_to_write_encrypted.call_args
-    #         in_commands = kwargs['in_commands']
-    #
-    #         assert in_commands['infile'] == temp_note_file.name
-    #         assert in_commands['output_path'] == note_path
-    #         assert in_commands['GPG_KEY_EMAIL'] == test_gpg_key_email
-    #
-    #
-    #
+            with open(created_file_path, 'r') as note_file:
+                note_content = note_file.read()
+            assert note_content == f"encrypted: this has been edited"
+    
+    
 
-        
+
+    
+
             

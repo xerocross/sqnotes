@@ -18,7 +18,7 @@ from sqnotes.printer_helper import PrinterHelper
 from sqnotes.path_input_helper import PathInputHelper
 from sqnotes.sqnotes_config_module import SQNotesConfig
 from sqnotes.injection_configuration_module import InjectionConfigurationModule
-from test.test_helper import do_nothing
+from test.test_helper import do_nothing, just_return
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
 root_dir = current_dir
@@ -71,9 +71,9 @@ def mock_sqnotes_config_test_data(test_temp_config_dir,
 
     
 @pytest.fixture
-def mock_note_files(test_notes_directory):
+def mock_note_files(test_temp_notes_dir):
     notes = ['test1.txt.gpg', 'test2.txt.gpg']
-    note_paths = [test_notes_directory / n for n in notes]
+    note_paths = [test_temp_notes_dir / n for n in notes]
     for p in note_paths:
         with open(p, 'w'):
             pass
@@ -215,15 +215,15 @@ def mock_get_all_note_paths():
         yield mock
 
             
-@pytest.fixture
-def test_notes_directory(tmp_path):
-    temp_notes_path = tmp_path / "notes"
-    temp_notes_path.mkdir()
-    yield temp_notes_path
+# @pytest.fixture
+# def test_notes_directory(tmp_path):
+#     temp_notes_path = tmp_path / "notes"
+#     temp_notes_path.mkdir()
+#     yield temp_notes_path
             
 @pytest.fixture
-def test_note_file(test_notes_directory):
-    with tempfile.NamedTemporaryFile(mode='w', dir=test_notes_directory, delete=False) as temp_file:
+def test_note_file(test_temp_notes_dir):
+    with tempfile.NamedTemporaryFile(mode='w', dir=test_temp_notes_dir, delete=False) as temp_file:
         temp_filename = temp_file.name
     try:
         yield temp_filename
@@ -232,9 +232,9 @@ def test_note_file(test_notes_directory):
             os.remove(temp_filename)
     
 @pytest.fixture
-def mock_get_notes_dir_from_config(test_notes_directory):
+def mock_get_notes_dir_from_config(test_temp_notes_dir):
     with patch.object(SQNotes, 'get_notes_dir_from_config') as mock:
-        mock.return_value = str(test_notes_directory)
+        mock.return_value = str(test_temp_notes_dir)
         yield mock
         
 @pytest.fixture
@@ -248,10 +248,22 @@ def mock_get_initial_globals_from_config():
     with patch.object(SQNotes, '_get_initial_globals_from_config') as mock:
         yield mock
         
+    
 @pytest.fixture
-def mock_get_input_from_text_editor():
+def mock_user_input():
+    mock_user_input = {
+    'input' : 'test input'    
+    }
+    yield mock_user_input
+        
+def mock_get_input_from_text_editor_handler(_, text_editor, user_input):
+    
+    pass
+        
+@pytest.fixture
+def mock_get_input_from_text_editor(mock_user_input):
     with patch.object(SQNotes, '_get_input_from_text_editor') as mock:
-        mock.return_value = "edited content"
+        mock.return_value = mock_user_input['input']
         yield mock
         
 @pytest.fixture
@@ -283,7 +295,25 @@ def mock_insert_new_note_into_database():
     with patch.object(DatabaseService, 'insert_new_note_into_database') as mock:
         # mock.side_effect = [x for x in range(0, 20)]
         yield mock
+        
+@pytest.fixture
+def plaintext_temp_file(tmp_path):
+    with tempfile.NamedTemporaryFile(mode='w', dir=tmp_path, delete=False) as temp_file:
+        yield temp_file
    
+@pytest.fixture
+def mock_write_plaintext_to_temp_file(plaintext_temp_file):
+    plaintext_temp_file_path = plaintext_temp_file.name
+    def handler (_, note_content, config=None):
+        with open(plaintext_temp_file_path, 'w') as file:
+            file.write(note_content)
+        return plaintext_temp_file_path
+    
+    
+    patcher = patch.object(EncryptedNoteHelper, '_write_plaintext_to_temp_file', handler)
+    patcher.start()
+    yield
+    patcher.stop()
 
 @pytest.fixture
 def test_note_filename(test_note_file):
@@ -364,8 +394,8 @@ def mock_commit_transaction():
 
 
 @pytest.fixture
-def test_note_temp_file(test_notes_directory):
-    with tempfile.NamedTemporaryFile(mode='w', dir=test_notes_directory, delete=False) as temp_file:
+def test_note_temp_file(test_temp_notes_dir):
+    with tempfile.NamedTemporaryFile(mode='w', dir=test_temp_notes_dir, delete=False) as temp_file:
         temp_filename = temp_file.name
     try:
         yield temp_filename
@@ -410,6 +440,13 @@ def temp_note_file(tmp_path):
     with tempfile.NamedTemporaryFile(dir=tmp_path, delete=False) as temp_file:
         yield temp_file
 
+# @pytest.fixture
+# def temp_plaintext_file(tmp_path):
+#     temp_plaintext_file = tmp_path / "plaintext"
+#
+#
+#     with tempfile.NamedTemporaryFile(dir=tmp_path, delete=False) as temp_file:
+#         yield temp_file
 
 @pytest.fixture
 def mock_NamedTemporaryFile_real(temp_note_file):
@@ -417,6 +454,11 @@ def mock_NamedTemporaryFile_real(temp_note_file):
         mock.return_value.__enter__.return_value = temp_note_file
         yield mock
 
+@pytest.fixture
+def mock_get_temp_plaintext_file(plaintext_temp_file):
+    with patch.object(EncryptedNoteHelper, '_get_temp_plaintext_file') as mock:
+        mock.return_value = plaintext_temp_file.name
+        yield mock
 
 @pytest.fixture
 def mock_NamedTemporaryFile(mock_temp_file):
@@ -471,11 +513,12 @@ def sqnotes_config(sqnotes_config_data):
 
 
 @pytest.fixture
-def user_config_data():
+def user_config_data(test_temp_notes_dir):
     data = {
         'global' : {},
         'settings': {
-            'DB_FILE_PATH':':memory:'
+            'DB_FILE_PATH':':memory:',
+            "notes_path" : str(test_temp_notes_dir)
         },
         
     }
@@ -524,16 +567,36 @@ def user_configuration_helper_for_integration(user_config_data, test_temp_config
     get_setting_patcher.stop()
     set_global_patcher.stop()
 
+
+def mock_call_gpg_subprocess_write(_, in_commands):
+    note_file_path = in_commands['output_path']
+    infile = in_commands['infile']
+    with open(infile, 'r') as in_file:
+        infile_content = in_file.read()
+    print(f"in mock call to gpg: read content: {infile_content}")
+    with open(note_file_path, 'w') as out_file:
+        out_file.write(f"encrypted: {infile_content}")
+    return 0
+
 @pytest.fixture
-def mock_call_gpg_subprocess_to_write_encrypted():
-    with patch.object(EncryptedNoteHelper, '_call_gpg_subprocess_to_write_encrypted') as mock:
-        mock.return_value = 0
+def mock_call_gpg_subprocess_to_write_encrypted(plaintext_temp_file):
+    with patch.object(EncryptedNoteHelper, '_call_gpg_subprocess_to_write_encrypted', mock_call_gpg_subprocess_write) as mock:
         yield mock
+    
+@pytest.fixture
+def temp_database_file(tmp_path):
+    temp_database_file = tmp_path / "sqnotes_index.db"
+    patcher = patch.object(SQNotes, '_get_db_path_from_user_config', just_return(str(temp_database_file)))
+    patcher.start()
+    yield temp_database_file
+    patcher.stop()
+    
     
 @pytest.fixture
 def sqnotes_real(sqnotes_config, 
                  user_configuration_helper_for_integration,
-                 database_service_open_in_memory
+                 database_service,
+                 temp_database_file
                  ):
     class TestInjectionConfigurationModule(InjectionConfigurationModule):
     
@@ -543,7 +606,7 @@ def sqnotes_real(sqnotes_config,
         
         @provider
         def provider_database_service(self) -> DatabaseService:
-            return database_service_open_in_memory
+            return database_service
         
         @provider
         def provide_sqnotes_config(self) -> SQNotesConfig:
@@ -556,5 +619,41 @@ def sqnotes_real(sqnotes_config,
     injector = Injector([TestInjectionConfigurationModule()])
     sqnotes_instance : SQNotes = injector.get(SQNotes)
     yield sqnotes_instance
+
+@pytest.fixture
+def mock_gpg_key_email():
+    yield 'test@test.com'
+
+@pytest.fixture
+def sqnotes_with_initialized_user_data (
+                                    sqnotes_real : SQNotes,
+                                    user_config_data,
+                                    test_temp_notes_dir,
+                                    mock_gpg_key_email
+                                ):
+    user_config_data['global']['initialized'] = 'yes'
+    user_config_data['global'][sqnotes_real.DATABASE_IS_SET_UP_KEY] = 'no'
+    user_config_data['settings'].update({
+                'armor' : 'yes',
+                'gpg_key_email': mock_gpg_key_email,
+                'text_editor' : 'vim',
+                'notes_path' : test_temp_notes_dir
+            })
+    sqnotes_real.open_database()
+        
+    yield sqnotes_real
+    
+    
+@pytest.fixture
+def mock_decrypt_note_into_temp_file_for_integration(plaintext_temp_file):
+    
+    def mock_decrypt_into_temp(_, note_path):
+        decrypted_note_path = str(plaintext_temp_file.name)
+        with open(note_path, 'w') as file:
+            file.write('decrypted note content')
+        return decrypted_note_path
+    
+    with patch.object(EncryptedNoteHelper, 'decrypt_note_into_temp_file', mock_decrypt_into_temp) as mock:
+        yield mock
 
     

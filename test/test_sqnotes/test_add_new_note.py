@@ -360,7 +360,7 @@ def describe_the_new_note_method():
         mock_write_encrypted_note,
         mock_get_new_note_name,
         sqnotes_obj,
-        test_notes_directory,
+        test_temp_notes_dir,
     ):
         new_note_name = "test.txt.gpg"
         mock_get_new_note_name.side_effect = [new_note_name]
@@ -369,7 +369,7 @@ def describe_the_new_note_method():
         sqnotes_obj.new_note()
         _, called_kwargs = mock_write_encrypted_note.call_args
         mock_write_encrypted_note.assert_called_once()
-        expected_path = test_notes_directory / new_note_name
+        expected_path = test_temp_notes_dir / new_note_name
         assert (
             called_kwargs["note_file_path"]
             == str(expected_path)

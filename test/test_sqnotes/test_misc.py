@@ -85,11 +85,11 @@ def describe_sqnotes():
         def it_returns_list_of_notes_in_notes_dir(
                     sqnotes_obj,
                     mock_note_files,
-                    test_notes_directory
+                    test_temp_notes_dir
                 ):
             
             expected_value = mock_note_files
-            all_notes = sqnotes_obj._get_all_note_paths(notes_dir=test_notes_directory)
+            all_notes = sqnotes_obj._get_all_note_paths()
             assert all_notes == expected_value
             
     def describe_get_user_config_dir():
@@ -114,13 +114,13 @@ def describe_sqnotes():
         def it_builds_path_from_configured_notes_dir (
                                             mock_config_get,
                                             sqnotes_obj : SQNotes,
-                                            test_notes_directory
+                                            test_temp_notes_dir
                                             ):
             db_filename = 'sqnotes_index.db'
             mock_config_get.return_value = "[notes_dir]/" + db_filename
             default_db_file_path = sqnotes_obj._get_default_db_file_path()
             
-            expected_path = os.path.join(test_notes_directory, db_filename)
+            expected_path = os.path.join(test_temp_notes_dir, db_filename)
             assert default_db_file_path == expected_path
             
         
@@ -130,7 +130,7 @@ def describe_sqnotes():
         def it_applies_user_expansion_to_configured_path (
                                             mock_config_get,
                                             sqnotes_obj : SQNotes,
-                                            test_notes_directory
+                                            test_temp_notes_dir
                                             ):
             db_filename = 'sqnotes_index.db'
             pre_expanded_path = f"~/{db_filename}"
@@ -230,7 +230,7 @@ def describe_sqnotes():
                                                                 ):
                 sqnotes_obj._set_database_is_set_up()
                 mock_set_global.assert_called_once_with(key=sqnotes_obj.DATABASE_IS_SET_UP_KEY, value='yes')
-                    
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -39,16 +39,31 @@ class EncryptedNoteHelper:
         
         return subprocess.call(subprocess_command)
         
+        
+    def _get_temp_plaintext_file(self):
+        with tempfile.NamedTemporaryFile(delete=False) as temp_plaintext_file:
+            temp_file_path = temp_plaintext_file.name
+        return temp_file_path
+        
+        
+    def _write_plaintext_to_temp_file(self, note_content, config=None):
+        self.logger.debug(f"about to write  '{note_content}' to temp file")
+            
+        temp_enc_filename = self._get_temp_plaintext_file()
+        self.logger.debug(f"tempfile name: {temp_enc_filename}")
+        with open(temp_enc_filename, 'w') as open_tempfile:
+            open_tempfile.write(note_content)
+        return temp_enc_filename
     
     def write_encrypted_note(self, note_file_path, note_content, config):
-        with tempfile.NamedTemporaryFile(delete=False) as temp_enc_file:
-            temp_enc_filename = temp_enc_file.name
-            temp_enc_file.write(note_content.encode('utf-8'))
-            
+        temp_enc_filename = self._write_plaintext_to_temp_file(
+                                            note_content = note_content, 
+                                            config = config)
+        self.logger.debug(f"printed to temp file: {temp_enc_filename}")
         gpg_in_commands = {
             'GPG_KEY_EMAIL' : config['GPG_KEY_EMAIL'],
             'output_path' : note_file_path,
-            'infile' : temp_enc_filename
+            'infile' : str(temp_enc_filename)
         }
         if 'USE_ASCII_ARMOR' in config:
             gpg_in_commands['USE_ASCII_ARMOR'] = config['USE_ASCII_ARMOR']
