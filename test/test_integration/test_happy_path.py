@@ -8,7 +8,8 @@ import re
 import logging
 
 from sqnotes import interface_copy
-from test.test_helper import get_all_mocked_print_output_to_string
+from test.test_helper import get_all_mocked_print_output_to_string,\
+    get_all_mocked_print_output
 
 logger = logging.getLogger("happy path")
 
@@ -55,7 +56,6 @@ def describe_sqnotes_integration():
     
         @pytest.mark.usefixtures(
             "mock_check_gpg_verified",
-            "mock_NamedTemporaryFile_real",
             "mock_call_gpg_subprocess_to_write_encrypted",
             "mock_decrypt_note_into_temp_file"
         )
@@ -70,6 +70,60 @@ def describe_sqnotes_integration():
             all_note_paths = sqnotes_with_initialized_user_data._get_all_note_paths()
             note_names = [os.path.basename(p) for p in all_note_paths]
             assert created_file_name in note_names
+    
+    
+    
+    def describe_with_existing_note():
+        
+        class NoteInfo:
+            
+            def __init__(self, name, path, text):
+                self.name = name
+                self.path = path
+                self.text = text
+        
+        
+        @pytest.fixture
+        def created_notes():
+            created_notes = []
+            yield created_notes
+        
+        @pytest.fixture
+        def sqnotes_with_notes(
+                sqnotes_with_initialized_user_data : SQNotes, 
+                mock_print,
+                test_temp_notes_dir,
+                created_notes,
+                mock_check_gpg_verified,
+                mock_call_gpg_subprocess_to_write_encrypted
+            ):
+            
+            test_note_content = "test note with #apple #pear #banana"
+            sqnotes_with_initialized_user_data.directly_insert_note(text=test_note_content)
+            output = get_all_mocked_print_output_to_string(mocked_print = mock_print)      
+            created_file_name = get_filename_from_confirmation_message(output)
+            created_file_path = os.path.join(test_temp_notes_dir, created_file_name)
+            created_note_info = NoteInfo(name = created_file_name, path = created_file_path, text = test_note_content)
+            created_notes.append(created_note_info)
+            yield sqnotes_with_initialized_user_data
+            
+        @pytest.mark.usefixtures(
+            "mock_check_gpg_verified",
+            "mock_get_decrypted_content_in_memory_integration"
+        )
+        def it_returns_note_by_keyword(
+                                        sqnotes_with_notes : SQNotes,
+                                        created_notes,
+                                        mock_print
+                                       ):
+            test_keywords = ['apple']
+            sqnotes_with_notes.search_keywords(keywords=test_keywords)
+            output = get_all_mocked_print_output(mocked_print=mock_print)
+            noteinfo = created_notes[0]
+            note_text = noteinfo.text
+            assert note_text in output
+            
+            
     
     def describe_edit_note_method():
     

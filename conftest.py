@@ -283,11 +283,26 @@ def mock_exists():
     with patch('os.path.exists') as mock:
         yield mock
     
+
+    
 @pytest.fixture
 def mock_get_decrypted_content_in_memory():
+        
     with patch.object(EncryptedNoteHelper, 'get_decrypted_content_in_memory') as mock:
         mock.side_effect = [f"content{x}" for x in range(1, 20)]
         yield mock
+        
+
+        
+@pytest.fixture
+def mock_get_decrypted_content_in_memory_integration():
+    
+    def mock_get_decrypted_content_in_memory_handler(self, note_path):
+        with open(note_path, 'r') as open_file:
+            return open_file.read()
+    
+    with patch.object(EncryptedNoteHelper, 'get_decrypted_content_in_memory', mock_get_decrypted_content_in_memory_handler):
+        yield
      
 @pytest.fixture   
 def mock_insert_new_note_into_database():
@@ -573,7 +588,6 @@ def mock_call_gpg_subprocess_write(_, in_commands):
     infile = in_commands['infile']
     with open(infile, 'r') as in_file:
         infile_content = in_file.read()
-    print(f"in mock call to gpg: read content: {infile_content}")
     with open(note_file_path, 'w') as out_file:
         out_file.write(f"encrypted: {infile_content}")
     return 0
