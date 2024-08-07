@@ -455,14 +455,6 @@ def temp_note_file(tmp_path):
     with tempfile.NamedTemporaryFile(dir=tmp_path, delete=False) as temp_file:
         yield temp_file
 
-# @pytest.fixture
-# def temp_plaintext_file(tmp_path):
-#     temp_plaintext_file = tmp_path / "plaintext"
-#
-#
-#     with tempfile.NamedTemporaryFile(dir=tmp_path, delete=False) as temp_file:
-#         yield temp_file
-
 @pytest.fixture
 def mock_NamedTemporaryFile_real(temp_note_file):
     with patch('tempfile.NamedTemporaryFile') as mock:
