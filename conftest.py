@@ -4,7 +4,6 @@ from sqnotes.sqnotes_module import SQNotes
 from sqnotes.database_service import DatabaseService
 import tempfile
 import os
-import shutil
 from unittest.mock import Mock, patch, MagicMock
 from injector import Module, singleton
 import yaml
